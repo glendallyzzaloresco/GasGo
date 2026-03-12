@@ -1,0 +1,20 @@
+<svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="brandBlue_small" x1="0" y1="0" x2="52" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1a6db0" />
+      <stop offset="100%" stop-color="#38b6ff" />
+    </linearGradient>
+    <linearGradient id="brandOrange_small" x1="14" y1="4" x2="36" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffb347" />
+      <stop offset="100%" stop-color="#f46b45" />
+    </linearGradient>
+    <linearGradient id="brandGlow_small" x1="18" y1="18" x2="30" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fff5e6" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#ffd1a1" stop-opacity="0.35" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="52" height="52" rx="12" fill="url(#brandBlue_small)" />
+  <path d="M26 6C33 15 37 23 36 31C34 42 26 48 24 52C22 48 14 42 12 31C11 23 15 14 22 6L26 2Z" fill="url(#brandOrange_small)" />
+  <path d="M24 18C27 22 29 26 28 30C27 35 23 38 24 42C22 38 18 35 18 30C18 26 20 23 23 20Z" fill="url(#brandGlow_small)" />
+  <circle cx="24" cy="44" r="3" fill="#ffffff" fill-opacity="0.35" />
+</svg>

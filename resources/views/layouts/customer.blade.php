@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>@yield('title', 'GasGo - LPG Delivery')</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --gasgo-blue: #1a6db0;
+            --gasgo-blue-dark: #145a8f;
+            --gasgo-blue-light: #e8f4fc;
+            --gasgo-orange: #f7941d;
+            --gasgo-orange-dark: #e07d0a;
+            --gasgo-orange-light: #fff5e6;
+            --gasgo-gradient: linear-gradient(135deg, #1a6db0 0%, #2196f3 100%);
+            --gasgo-gradient-orange: linear-gradient(135deg, #f7941d 0%, #ff6b35 100%);
+        }
+        
+        * {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            overflow-x: hidden;
+            position: relative;
+            
+        }
+        .hero-section,
+        .promo-banner,
+        .how-it-works {
+        overflow: hidden;
+}
+        
+        /* ==================== NAVBAR ===c================= */
+        .navbar-gasgo {
+            background: white;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .navbar-gasgo .container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .navbar-gasgo.scrolled {
+            background: rgba(255,255,255,0.98);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+        
+        .navbar-brand img {
+            height: 50px;
+            transition: transform 0.3s ease;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            text-decoration: none;
+        }
+
+        .brand-text {
+            font-weight: 700;
+            color: var(--gasgo-blue);
+            font-size: 1.15rem;
+            line-height: 1;
+            display: inline-block;
+        }
+
+        .brand-text .go {
+            color: var(--gasgo-orange);
+        }
+
+        @media (max-width: 576px) {
+            .brand-text { display: none; }
+        }
+        
+        .navbar-brand:hover img {
+            transform: scale(1.05);
+        }
+        
+        .nav-link-gasgo {
+            color: #333 !important;
+            font-weight: 500;
+            padding: 10px 20px !important;
+            margin: 0 5px;
+            border-radius: 25px;
+            transition: color 0.25s ease, background 0.25s ease, transform 0.25s ease;
+            position: relative;
+        }
+        
+        .nav-link-gasgo::after {
+            content: '';
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            width: 0;
+            height: 3px;
+            background: var(--gasgo-orange);
+            transition: width 0.25s ease;
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+        
+        .nav-link-gasgo:hover::after,
+        .nav-link-gasgo.active::after {
+            width: 30px;
+        }
+
+        /* Navbar list defaults */
+        .navbar-nav {
+            gap: 0.5rem;
+        }
+
+        .navbar-nav .nav-item {
+            flex: 0 0 auto;
+        }
+
+        .nav-link-gasgo {
+            display: inline-flex;
+            align-items: center;
+            white-space: nowrap;
+            min-width: 56px;
+            justify-content: center;
+        }
+        
+        .nav-link-gasgo:hover,
+        .nav-link-gasgo.active {
+            color: var(--gasgo-blue) !important;
+        }
+        
+        .nav-link-gasgo i {
+            margin-right: 8px;
+            color: var(--gasgo-orange);
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: nowrap;
+        }
+        
+        .btn-nav-cart {
+            background: var(--gasgo-gradient-orange);
+            color: white !important;
+            padding: 10px 25px !important;
+            border-radius: 25px;
+            font-weight: 600;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-nav-cart:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(247, 148, 29, 0.4);
+        }
+        
+        .cart-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--gasgo-blue);
+            color: white;
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        .btn-nav-login {
+            border: 2px solid var(--gasgo-blue);
+            color: var(--gasgo-blue) !important;
+            padding: 8px 25px !important;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-left: 10px;
+        }
+        
+        .btn-nav-login:hover {
+            background: var(--gasgo-blue);
+            color: white !important;
+        }
+        
+        /* Mobile Navigation */
+        .navbar-toggler {
+            border: none;
+            padding: 10px;
+        }
+        
+        .navbar-toggler:focus {
+            box-shadow: none;
+        }
+        
+        .navbar-toggler-icon {
+            background-image: none;
+            position: relative;
+            width: 30px;
+            height: 20px;
+        }
+        
+        .navbar-toggler-icon::before,
+        .navbar-toggler-icon::after,
+        .navbar-toggler-icon span {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--gasgo-blue);
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+        
+        .navbar-toggler-icon::before { top: 0; }
+        .navbar-toggler-icon span { top: 50%; transform: translateY(-50%); }
+        .navbar-toggler-icon::after { bottom: 0; }
+        
+        /* ==================== MAIN CONTENT ==================== */
+        .main-content {
+            margin-top: 100px; /* match navbar footprint */
+            min-height: calc(100vh - 100px - 300px);
+        }
+        
+        body:has(> nav) .main-content {
+            margin-top: 100px;
+        }
+        
+        body:not(:has(> nav)) .main-content {
+            margin-top: 0;
+            min-height: calc(100vh - 300px);
+        }
+
+        /* Let Bootstrap control collapsed visibility; only style when expanded */
+        .navbar-collapse.show,
+        .navbar-collapse.collapsing {
+            gap: 1rem;
+        }
+        
+        /* ==================== BUTTONS ==================== */
+        .btn-gasgo {
+            background: var(--gasgo-gradient-orange);
+            border: none;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-gasgo::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .btn-gasgo:hover::before {
+            left: 100%;
+        }
+        
+        .btn-gasgo:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(247, 148, 29, 0.4);
+            color: white;
+        }
+        
+        .btn-gasgo-outline {
+            border: 2px solid var(--gasgo-blue);
+            color: var(--gasgo-blue);
+            background: transparent;
+            padding: 13px 38px;
+            border-radius: 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-gasgo-outline:hover {
+            background: var(--gasgo-blue);
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(26, 109, 176, 0.3);
+        }
+        
+        .btn-gasgo-blue {
+            background: var(--gasgo-gradient);
+            border: none;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-gasgo-blue:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(26, 109, 176, 0.4);
+            color: white;
+        }
+        
+        /* ==================== CARDS ==================== */
+        .gasgo-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+        
+        .gasgo-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+        }
+        
+        /* ==================== SECTION STYLING ==================== */
+        .section-padding {
+            padding: 80px 0;
+        }
+        
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--gasgo-blue);
+            margin-bottom: 15px;
+        }
+        
+        .section-subtitle {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 50px;
+        }
+        
+        /* ==================== FOOTER ==================== */
+        .footer-gasgo {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 80px 0 30px;
+        }
+        
+        .footer-logo {
+            height: 60px;
+            margin-bottom: 20px;
+        }
+        
+        .footer-desc {
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 25px;
+        }
+        
+        .footer-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 25px;
+            color: var(--gasgo-orange);
+        }
+        
+        .footer-links {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .footer-links li {
+            margin-bottom: 12px;
+        }
+        
+        .footer-links a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .footer-links a i {
+            margin-right: 10px;
+            color: var(--gasgo-orange);
+            width: 20px;
+        }
+        
+        .footer-links a:hover {
+            color: white;
+            padding-left: 10px;
+        }
+        
+        .social-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .social-links a {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .social-links a:hover {
+            background: var(--gasgo-orange);
+            transform: translateY(-5px);
+        }
+        
+        .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 50px;
+            padding-top: 30px;
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+        }
+        
+        /* ==================== ANIMATIONS ==================== */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+        
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        .animate-pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        /* ==================== SCROLL TO TOP ==================== */
+        .scroll-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: var(--gasgo-gradient-orange);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 999;
+            box-shadow: 0 5px 20px rgba(247, 148, 29, 0.4);
+        }
+        
+        .scroll-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .scroll-to-top:hover {
+            transform: translateY(-5px);
+        }
+        
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 991px) {
+            .navbar-collapse {
+                background: white;
+                padding: 20px;
+                border-radius: 15px;
+                margin-top: 15px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+                width: 100%;
+                position: static;
+            }
+
+            .navbar-nav {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                width: 100%;
+                gap: 0.25rem;
+            }
+
+            .navbar-nav .nav-item {
+                width: 100%;
+            }
+            
+            .nav-link-gasgo {
+                padding: 15px 20px !important;
+                border-radius: 10px;
+                margin: 0;
+                justify-content: flex-start;
+                width: 100%;
+            }
+            
+            .nav-link-gasgo::after {
+                display: none;
+            }
+            
+            .nav-link-gasgo:hover {
+                background: var(--gasgo-blue-light);
+            }
+            
+            .btn-nav-cart,
+            .btn-nav-login {
+                width: 100%;
+                text-align: center;
+                margin: 10px 0;
+            }
+
+            .nav-actions {
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .section-title {
+                font-size: 2rem;
+            }
+            
+            .section-padding {
+                padding: 50px 0;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                margin-top: 90px;
+            }
+            
+            .section-title {
+                font-size: 1.75rem;
+            }
+            
+            .btn-gasgo,
+            .btn-gasgo-outline {
+                padding: 12px 30px;
+                font-size: 0.95rem;
+            }
+        }
+
+        @media (min-width: 992px) {
+            .navbar-collapse {
+                display: flex !important;
+                align-items: center;
+                justify-content: space-between;
+                gap: 1rem;
+            }
+
+            .navbar-nav {
+                display: flex;
+                align-items: center;
+                flex-wrap: nowrap;
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .section-padding {
+                padding: 40px 0;
+            }
+            
+            .footer-gasgo {
+                padding: 50px 0 20px;
+            }
+        }
+        
+        /* ==================== CUSTOM SCROLLBAR ==================== */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--gasgo-blue);
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--gasgo-blue-dark);
+        }
+        
+        /* ==================== FORM STYLING ==================== */
+        .form-control-gasgo {
+            border: 2px solid #eee;
+            border-radius: 12px;
+            padding: 15px 20px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control-gasgo:focus {
+            border-color: var(--gasgo-orange);
+            box-shadow: 0 0 0 4px rgba(247, 148, 29, 0.15);
+        }
+        
+        /* ==================== BADGE ==================== */
+        .badge-gasgo {
+            background: var(--gasgo-orange);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .badge-blue {
+            background: var(--gasgo-blue);
+        }
+        
+        /* ==================== ALERT ==================== */
+        .alert-gasgo {
+            background: var(--gasgo-orange-light);
+            border: none;
+            border-left: 4px solid var(--gasgo-orange);
+            color: var(--gasgo-orange-dark);
+            border-radius: 0 12px 12px 0;
+            padding: 15px 20px;
+        }
+    </style>
+    
+    @yield('styles')
+</head>
+<body>
+    <!-- Navbar -->
+    @if (Route::currentRouteName() !== 'customer.login')
+    <nav class="navbar navbar-expand-lg navbar-gasgo">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url('/customer/customerDashboard') }}">
+                <img src="{{ asset('images/gasgo_logo-removebg-preview.png') }}" alt="GasGo Icon">
+                <span class="brand-text">Gas<span class="go">Go</span></span>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"><span></span></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav mx-auto">
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-gasgo @yield('nav-home')" href="{{ url('/customer/customerDashboard') }}">
+                            <i class="fas fa-home"></i>Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-gasgo @yield('nav-products')" href="{{ url('/customer/product') }}">
+                            <i class="fas fa-fire"></i>Products
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-gasgo @yield('nav-loyalty')" href="{{ url('/customer/loyaltyRewards') }}">
+                            <i class="fas fa-gift"></i>Rewards
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-gasgo @yield('nav-orders')" href="{{ url('/customer/orderHistory') }}">
+                            <i class="fas fa-receipt"></i>My Orders
+                        </a>
+                    </li>
+                </ul>
+                
+                <div class="nav-actions">
+                    <a href="{{ url('/customer/productCart') }}" class="nav-link btn-nav-cart">
+                        <i class="fas fa-shopping-cart me-2"></i>Cart
+                        <span class="cart-badge cart-count">0</span>
+                    </a>
+                    @auth
+                        <form action="{{ route('customer.logout') }}" method="POST" style="margin:0;">
+                            @csrf
+                            <button type="submit" class="nav-link btn-nav-login" style="border:2px solid var(--gasgo-blue);background:none;cursor:pointer;">
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout
+                            </button>
+                        </form>
+                    @else
+                        <a href="{{ url('/customer/loginRegistration') }}" class="nav-link btn-nav-login">
+                            <i class="fas fa-user me-2"></i>Login
+                        </a>
+                    @endauth
+                </div>
+            </div>
+        </div>
+    </nav>
+    @endif
+    
+    <!-- Main Content -->
+    <main class="main-content">
+        @yield('content')
+    </main>
+    
+    <!-- Footer -->
+    @if (Route::currentRouteName() !== 'customer.login')
+    <footer class="footer-gasgo">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <img src="{{ asset('images/logo.svg') }}" alt="GasGo" class="footer-logo">
+                    <p class="footer-desc">
+                        Your trusted partner for fast, reliable LPG delivery. Track your orders in real-time and earn rewards with every purchase.
+                    </p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+                
+                <div class="col-lg-2 col-md-6">
+                    <h5 class="footer-title">Quick Links</h5>
+                    <ul class="footer-links">
+                        <li><a href="{{ url('/customer/customerDashboard') }}"><i class="fas fa-chevron-right"></i>Home</a></li>
+                        <li><a href="{{ url('/customer/product') }}"><i class="fas fa-chevron-right"></i>Products</a></li>
+                        <li><a href="{{ url('/customer/loyaltyRewards') }}"><i class="fas fa-chevron-right"></i>Rewards</a></li>
+                        <li><a href="{{ url('/customer/orderHistory') }}"><i class="fas fa-chevron-right"></i>My Orders</a></li>
+                    </ul>
+                </div>
+                
+                <div class="col-lg-3 col-md-6">
+                    <h5 class="footer-title">Contact Us</h5>
+                    <ul class="footer-links">
+                        <li><a href="#"><i class="fas fa-map-marker-alt"></i>123 Gas Street, Metro City</a></li>
+                        <li><a href="tel:+639123456789"><i class="fas fa-phone"></i>+63 912 345 6789</a></li>
+                        <li><a href="mailto:info@gasgo.com"><i class="fas fa-envelope"></i>info@gasgo.com</a></li>
+                        <li><a href="#"><i class="fas fa-clock"></i>Mon-Sun: 6AM - 10PM</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2026 GasGo. All rights reserved. | <a href="#" class="text-decoration-none" style="color: var(--gasgo-orange);">Privacy Policy</a> | <a href="#" class="text-decoration-none" style="color: var(--gasgo-orange);">Terms of Service</a></p>
+            </div>
+        </div>
+    </footer>
+    @endif
+    
+    <!-- Scroll to Top Button -->
+    <div class="scroll-to-top" id="scrollToTop">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- AOS Animation JS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            easing: 'ease-out-cubic',
+            once: true,
+            offset: 50
+        });
+        
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar-gasgo');
+            const scrollToTop = document.getElementById('scrollToTop');
+            
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+                scrollToTop.classList.add('visible');
+            } else {
+                navbar.classList.remove('scrolled');
+                scrollToTop.classList.remove('visible');
+            }
+        });
+        
+        // Scroll to top functionality
+        document.getElementById('scrollToTop').addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        
+        // Update cart count from localStorage
+        function updateCartCount() {
+            const cart = JSON.parse(localStorage.getItem('gasgo_cart')) || [];
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.querySelectorAll('.cart-count').forEach(el => {
+                el.textContent = count;
+            });
+        }
+        
+        updateCartCount();
+    </script>
+    
+    @if(session('clear_cart'))
+    <script>
+        localStorage.removeItem('gasgo_cart');
+    </script>
+    @endif
+    
+    @auth
+    @else
+    @endauth
+    
+    @yield('scripts')
+</body>
+</html>
