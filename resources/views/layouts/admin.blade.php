@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'GasGo Admin')</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="{{ asset('bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('fontawesome/css/all.min.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -57,6 +57,36 @@
         }
         .sidebar-menu li a i { width: 20px; text-align: center; color: var(--gasgo-orange); }
         .sidebar-section { padding: 10px 24px 4px; font-size: .7rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,.35); }
+
+        /* ===== SUBMENU ===== */
+        .sidebar-submenu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height .3s ease;
+        }
+        .sidebar-submenu.open { max-height: 200px; }
+        .sidebar-submenu li a {
+            padding: 9px 24px 9px 52px;
+            font-size: .85rem;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-submenu li a::before {
+            content: '•';
+            margin-right: 8px;
+            color: var(--gasgo-orange);
+            font-size: .7rem;
+        }
+        .sidebar-submenu li a i { display: none; }
+        .submenu-toggle .submenu-arrow {
+            margin-left: auto;
+            font-size: .7rem;
+            transition: transform .3s;
+            color: rgba(255,255,255,.5);
+        }
+        .submenu-toggle.open .submenu-arrow { transform: rotate(90deg); }
 
         /* ===== TOP BAR ===== */
         .admin-topbar {
@@ -165,7 +195,6 @@
             <li><a href="{{ url('/admin/dashboard') }}" class="@yield('nav-dashboard')"><i class="fas fa-tachometer-alt"></i>Dashboard</a></li>
             <li><a href="{{ url('/admin/orders') }}" class="@yield('nav-orders')"><i class="fas fa-shopping-bag"></i>Orders</a></li>
             <li><a href="{{ url('/admin/products') }}" class="@yield('nav-products')"><i class="fas fa-fire"></i>Products</a></li>
-            <li><a href="{{ url('/admin/categories') }}" class="@yield('nav-categories')"><i class="fas fa-th-large"></i>Categories</a></li>
         </ul>
         <div class="sidebar-section">Delivery</div>
         <ul class="sidebar-menu">
@@ -181,6 +210,10 @@
         <ul class="sidebar-menu">
             <li><a href="{{ url('/admin/reports') }}" class="@yield('nav-reports')"><i class="fas fa-chart-bar"></i>Sales Reports</a></li>
             <li><a href="{{ url('/admin/customers') }}" class="@yield('nav-customers')"><i class="fas fa-users"></i>Customers</a></li>
+        </ul>
+        <div class="sidebar-section">Maintenance</div>
+        <ul class="sidebar-menu">
+            <li><a href="{{ url('/admin/settings') }}" class="@yield('nav-settings')"><i class="fas fa-cog"></i>Settings</a></li>
         </ul>
         <div class="sidebar-section">Account</div>
         <ul class="sidebar-menu">
@@ -231,7 +264,7 @@
         @yield('content')
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('bootstrap/js/bootstrap.bundle.min.js') }}"></script>
     <script>
         const sidebar = document.getElementById('adminSidebar');
         const overlay = document.getElementById('sidebarOverlay');
@@ -243,6 +276,17 @@
             sidebar.classList.remove('open');
             overlay.classList.remove('open');
         });
+
+        // Products submenu toggle
+        const productsToggle = document.getElementById('productsToggle');
+        const productsSubmenu = document.getElementById('productsSubmenu');
+        if (productsToggle && productsSubmenu) {
+            productsToggle.addEventListener('click', function (e) {
+                e.preventDefault();
+                this.classList.toggle('open');
+                productsSubmenu.classList.toggle('open');
+            });
+        }
     </script>
     @yield('scripts')
 </body>

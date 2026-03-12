@@ -214,4 +214,22 @@ class DashboardController extends Controller
             'newThisMonth'
         ));
     }
+
+    public function settings()
+    {
+        $appName = config('app.name');
+        $appEnv = config('app.env');
+        $appDebug = config('app.debug');
+        $dbConnection = config('database.default');
+        $cacheDriver = config('cache.default');
+        $queueDriver = config('queue.default');
+        $phpVersion = PHP_VERSION;
+        $laravelVersion = app()->version();
+
+        return view('admin.settings', compact(
+            'appName', 'appEnv', 'appDebug',
+            'dbConnection', 'cacheDriver', 'queueDriver',
+            'phpVersion', 'laravelVersion'
+        ));
+    }
 }

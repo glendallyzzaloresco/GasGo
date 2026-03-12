@@ -88,6 +88,25 @@ Route::prefix('admin')->group(function () {
     // Reports & Customers (static views for now)
     Route::get('/reports', [DashboardController::class, 'reports'])->name('admin.reports');
     Route::get('/customers', [DashboardController::class, 'customers'])->name('admin.customers');
+
+    // Settings / Maintenance
+    Route::get('/settings', [DashboardController::class, 'settings'])->name('admin.settings');
+    Route::post('/settings/clear-cache', function () {
+        \Artisan::call('cache:clear');
+        \Artisan::call('view:clear');
+        return back()->with('success', 'Cache cleared successfully.');
+    })->name('admin.settings.clear-cache');
+    Route::post('/settings/clear-logs', function () {
+        $logPath = storage_path('logs/laravel.log');
+        if (file_exists($logPath)) { file_put_contents($logPath, ''); }
+        return back()->with('success', 'Log file cleared successfully.');
+    })->name('admin.settings.clear-logs');
+    Route::get('/settings/log-tail', function () {
+        $logPath = storage_path('logs/laravel.log');
+        if (!file_exists($logPath)) { return response('Log file is empty.', 200); }
+        $lines = array_slice(file($logPath), -50);
+        return response(implode('', $lines), 200)->header('Content-Type', 'text/plain');
+    })->name('admin.settings.log-tail');
 });
 
 // ===== RIDER ROUTES =====

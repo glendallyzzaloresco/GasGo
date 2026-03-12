@@ -27,9 +27,17 @@
 @section('content')
 <!-- Top Actions -->
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-    <div class="search-box" style="position:relative;max-width:320px;">
-        <i class="fas fa-search" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#aaa;"></i>
-        <input type="text" id="searchProducts" placeholder="Search products..." style="border-radius:25px;padding:10px 20px 10px 42px;border:2px solid #e0e0e0;font-size:.88rem;width:100%;" onkeyup="searchProducts()">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="search-box" style="position:relative;">
+            <i class="fas fa-search" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#aaa;"></i>
+            <input type="text" id="searchProducts" placeholder="Search products..." style="border-radius:25px;padding:10px 20px 10px 42px;border:2px solid #e0e0e0;font-size:.88rem;width:280px;" onkeyup="filterProducts()">
+        </div>
+        <select id="categoryFilter" onchange="filterProducts()" style="border-radius:25px;padding:10px 18px;border:2px solid #e0e0e0;font-size:.88rem;background:#fff;cursor:pointer;">
+            <option value="">All Categories</option>
+            <option value="lpg-tank">LPG Tank</option>
+            <option value="accessories">Accessories</option>
+            <option value="regulator">Regulator</option>
+        </select>
     </div>
     <button class="btn" style="background:var(--gasgo-orange);color:#fff;border-radius:12px;font-weight:600;padding:10px 22px;" data-bs-toggle="modal" data-bs-target="#productModal" onclick="openAddProduct()">
         <i class="fas fa-plus me-2"></i>Add Product
@@ -39,7 +47,7 @@
 <!-- Products Grid -->
 <div class="row g-4" id="productsGrid">
     <!-- Product 1 -->
-    <div class="col-lg-3 col-md-4 col-sm-6 product-item">
+    <div class="col-lg-3 col-md-4 col-sm-6 product-item" data-category="lpg-tank">
         <div class="product-card">
             <img src="{{ asset('images/11kg.jpg') }}" alt="LPG 11kg">
             <div class="card-body">
@@ -60,7 +68,7 @@
         </div>
     </div>
     <!-- Product 2 -->
-    <div class="col-lg-3 col-md-4 col-sm-6 product-item">
+    <div class="col-lg-3 col-md-4 col-sm-6 product-item" data-category="lpg-tank">
         <div class="product-card">
             <img src="{{ asset('images/22kg.jpg') }}" alt="LPG 22kg">
             <div class="card-body">
@@ -81,7 +89,7 @@
         </div>
     </div>
     <!-- Product 3 -->
-    <div class="col-lg-3 col-md-4 col-sm-6 product-item">
+    <div class="col-lg-3 col-md-4 col-sm-6 product-item" data-category="lpg-tank">
         <div class="product-card">
             <img src="{{ asset('images/2kg.jpg') }}" alt="LPG 2kg">
             <div class="card-body">
@@ -102,7 +110,7 @@
         </div>
     </div>
     <!-- Product 4 -->
-    <div class="col-lg-3 col-md-4 col-sm-6 product-item">
+    <div class="col-lg-3 col-md-4 col-sm-6 product-item" data-category="regulator">
         <div class="product-card">
             <div style="width:100%;height:180px;background:linear-gradient(135deg,var(--gasgo-blue-light),#fff);display:flex;align-items:center;justify-content:center;">
                 <i class="fas fa-tools" style="font-size:3rem;color:var(--gasgo-blue);opacity:.5;"></i>
@@ -214,10 +222,13 @@
     function openAddProduct() {
         document.getElementById('productModalTitle').textContent = 'Add New Product';
     }
-    function searchProducts() {
+    function filterProducts() {
         const q = document.getElementById('searchProducts').value.toLowerCase();
+        const cat = document.getElementById('categoryFilter').value.toLowerCase();
         document.querySelectorAll('.product-item').forEach(item => {
-            item.style.display = item.textContent.toLowerCase().includes(q) ? '' : 'none';
+            const matchesText = item.textContent.toLowerCase().includes(q);
+            const matchesCat = !cat || (item.dataset.category || '').toLowerCase() === cat;
+            item.style.display = (matchesText && matchesCat) ? '' : 'none';
         });
     }
 </script>
