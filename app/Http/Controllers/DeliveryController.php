@@ -36,12 +36,28 @@ class DeliveryController extends Controller
 
         Order::where('id', $validated['order_id'])->update(['status' => 'assigned']);
 
+        if ($request->expectsJson() || $request->ajax()) {
+            $delivery->load(['rider', 'order']);
+
+            return response()->json([
+                'message' => 'Rider assigned to order.',
+                'order_id' => (int) $validated['order_id'],
+                'status' => 'assigned',
+                'rider_name' => $delivery->rider->name ?? 'Rider',
+            ]);
+        }
+
         return redirect()->back()->with('success', 'Rider assigned to order.');
     }
 
     // Rider: view assigned delivery details
     public function show(Delivery $delivery)
     {
+        // Authorize: rider can only view their own deliveries
+        if ($delivery->rider_id !== Auth::id()) {
+            abort(403, 'Unauthorized');
+        }
+
         $delivery->load(['order.orderItems', 'order.user']);
 
         return view('rider.delivery', compact('delivery'));
@@ -50,6 +66,11 @@ class DeliveryController extends Controller
     // Rider: update delivery status
     public function updateStatus(Request $request, Delivery $delivery)
     {
+        // Authorize: rider can only update their own deliveries
+        if ($delivery->rider_id !== Auth::id()) {
+            abort(403, 'Unauthorized');
+        }
+
         $validated = $request->validate([
             'status' => 'required|in:assigned,picked_up,out_for_delivery,delivered,failed',
         ]);
@@ -58,6 +79,10 @@ class DeliveryController extends Controller
 
         if ($validated['status'] === 'picked_up') {
             $updateData['picked_up_at'] = now();
+        }
+
+        if ($validated['status'] === 'out_for_delivery') {
+            $delivery->order->update(['status' => 'out_for_delivery']);
         }
 
         if ($validated['status'] === 'delivered') {
@@ -70,12 +95,27 @@ class DeliveryController extends Controller
 
         $delivery->update($updateData);
 
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'message' => 'Delivery status updated.',
+                'delivery_id' => $delivery->id,
+                'status' => $delivery->status,
+                'is_completed' => in_array($delivery->status, ['delivered', 'failed'], true),
+                'delivered_at' => $delivery->delivered_at?->format('M d g:i A'),
+            ]);
+        }
+
         return redirect()->back()->with('success', 'Delivery status updated.');
     }
 
     // Rider: update current GPS location
     public function updateLocation(Request $request, Delivery $delivery)
     {
+        // Authorize: rider can only update their own deliveries
+        if ($delivery->rider_id !== Auth::id()) {
+            abort(403, 'Unauthorized');
+        }
+
         $validated = $request->validate([
             'latitude'  => 'required|numeric',
             'longitude' => 'required|numeric',
@@ -89,15 +129,42 @@ class DeliveryController extends Controller
         return response()->json(['message' => 'Location updated.']);
     }
 
+    // Rider: get current delivery location (for map updates)
+    public function getLocation(Delivery $delivery)
+    {
+        // Authorize: rider can only view their own deliveries
+        if ($delivery->rider_id !== Auth::id()) {
+            abort(403, 'Unauthorized');
+        }
+
+        return response()->json([
+            'latitude' => $delivery->latitude ?? $delivery->order->latitude,
+            'longitude' => $delivery->longitude ?? $delivery->order->longitude,
+        ]);
+    }
+
     // Rider: upload proof of delivery
     public function uploadProof(Request $request, Delivery $delivery)
     {
+        // Authorize: rider can only update their own deliveries
+        if ($delivery->rider_id !== Auth::id()) {
+            abort(403, 'Unauthorized');
+        }
+
         $validated = $request->validate([
-            'proof_photo' => 'required|image|max:2048',
+            'proof_photo'    => 'required|image|max:2048',
+            'delivery_notes' => 'nullable|string|max:500',
         ]);
 
         $path = $request->file('proof_photo')->store('delivery-proofs', 'public');
-        $delivery->update(['proof_photo' => $path]);
+        $delivery->update([
+            'proof_photo'    => $path,
+            'delivery_notes' => $validated['delivery_notes'] ?? null,
+        ]);
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json(['message' => 'Proof of delivery uploaded successfully.']);
+        }
 
         return redirect()->back()->with('success', 'Proof of delivery uploaded.');
     }

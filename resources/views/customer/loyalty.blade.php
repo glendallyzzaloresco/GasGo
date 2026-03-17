@@ -84,9 +84,21 @@
 
 <section class="container section-padding" style="position:relative;z-index:2;">
     @php
+        $isGuest = !Auth::check();
         $completedOrders = Auth::check() ? \App\Models\Order::where('user_id', Auth::id())->where('status', 'delivered')->count() : 0;
         $stampCount = $completedOrders % 10;
+        $currentBalance = $balance ?? 0;
     @endphp
+
+    @if ($isGuest)
+        <div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4" role="alert" data-aos="fade-up">
+            <div>
+                <strong>Guest Mode:</strong> You can browse rewards now. Log in to track your points and redeem perks.
+            </div>
+            <a href="{{ route('customer.login') }}" class="btn btn-gasgo btn-sm">Log In / Register</a>
+        </div>
+    @endif
+
     <div class="row g-4">
         <!-- Loyalty Card -->
         <div class="col-lg-6" data-aos="fade-right">
@@ -108,7 +120,6 @@
             <div class="progress-card h-100 d-flex flex-column justify-content-center">
                 @php
                     $nextRewardTarget = 200;
-                    $currentBalance = $balance ?? 0;
                     $remaining = max(0, $nextRewardTarget - $currentBalance);
                     $progressPercent = $nextRewardTarget > 0 ? min(100, ($currentBalance / $nextRewardTarget) * 100) : 0;
                 @endphp
@@ -157,7 +168,9 @@
                     <h5 class="fw-bold">{{ $reward['name'] }}</h5>
                     <p class="text-muted small">{{ $reward['desc'] }}</p>
                     <p class="points-needed"><i class="fas fa-star me-1"></i>{{ $reward['cost'] }} Points</p>
-                    @if ($currentBalance >= $reward['cost'])
+                    @if ($isGuest)
+                        <a href="{{ route('customer.login') }}" class="btn btn-gasgo-outline btn-sm w-100">Log in to Redeem</a>
+                    @elseif ($currentBalance >= $reward['cost'])
                         <button class="btn btn-gasgo btn-sm w-100">Redeem Now</button>
                     @else
                         <button class="btn btn-gasgo-outline btn-sm w-100" disabled>{{ $reward['cost'] - $currentBalance }} Points Needed</button>
@@ -168,50 +181,5 @@
         </div>
     </div>
 
-    <!-- Points History -->
-    <div class="mt-5" data-aos="fade-up">
-        <div class="progress-card">
-            <h5 class="fw-bold mb-3" style="color:var(--gasgo-blue);"><i class="fas fa-history me-2" style="color:var(--gasgo-orange);"></i>Points History</h5>
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr style="background:var(--gasgo-blue-light);font-size:.85rem;">
-                            <th style="color:var(--gasgo-blue);">Date</th>
-                            <th style="color:var(--gasgo-blue);">Description</th>
-                            <th style="color:var(--gasgo-blue);">Type</th>
-                            <th style="color:var(--gasgo-blue);">Points</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($points as $point)
-                        @php
-                            $pointColor = ($point->type === 'earned') ? '#27ae60' : '#e74c3c';
-                            $pointSymbol = ($point->type === 'earned') ? '+' : '-';
-                        @endphp
-                        <tr>
-                            <td>{{ $point->created_at->format('M d, Y') }}</td>
-                            <td>{{ $point->description }}</td>
-                            <td>
-                                @if ($point->type === 'earned')
-                                    <span class="badge" style="background:#d4edda;color:#155724;">Earned</span>
-                                @else
-                                    <span class="badge" style="background:#fde8e8;color:#b42318;">Redeemed</span>
-                                @endif
-                            </td>
-                            <td class="fw-bold @if($point->type === 'earned') text-success @else text-danger @endif">{{ $pointSymbol }}{{ $point->points }}</td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="4" class="text-center text-muted py-4">
-                                <i class="fas fa-inbox fa-2x mb-2 d-block" style="opacity:.4;"></i>
-                                No points history yet. Complete orders to earn points!
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
 </section>
 @endsection

@@ -1,0 +1,7 @@
+{
+  "extends": "stylelint-config-standard",
+  "ignoreFiles": ["resources/views/**/*.blade.php", "node_modules"],
+  "rules": {
+    "no-empty-source": null
+  }
+}

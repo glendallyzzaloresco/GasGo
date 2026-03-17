@@ -80,5 +80,36 @@ class DatabaseSeeder extends Seeder
             'image' => null,
             'is_active' => true,
         ]);
+
+        // Freebie Products for Loyalty Rewards
+        Product::create([
+            'name' => 'Free LPG Tank (Reward)',
+            'description' => 'Complimentary LPG Tank - Loyalty Reward for Bulk Orders',
+            'price' => 0.00,
+            'stock' => 999,
+            'weight' => '11kg',
+            'image' => 'images/11kg.jpg',
+            'is_active' => true,
+        ]);
+
+        Product::create([
+            'name' => 'Dish Washer Paste (Freebie)',
+            'description' => 'Free Dish Washer Paste - Small Order Loyalty Reward',
+            'price' => 0.00,
+            'stock' => 999,
+            'weight' => '0.2kg',
+            'image' => null,
+            'is_active' => true,
+        ]);
+
+        Product::create([
+            'name' => 'Cloth Hanger Set (Freebie)',
+            'description' => 'Free Cloth Hanger Set - Small Order Loyalty Reward',
+            'price' => 0.00,
+            'stock' => 999,
+            'weight' => '0.1kg',
+            'image' => null,
+            'is_active' => true,
+        ]);
     }
 }

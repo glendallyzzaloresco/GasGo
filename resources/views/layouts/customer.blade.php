@@ -209,6 +209,103 @@
             background: var(--gasgo-blue);
             color: white !important;
         }
+
+        .account-dropdown {
+            position: relative;
+        }
+
+        .btn-nav-account {
+            border: 2px solid var(--gasgo-blue);
+            color: var(--gasgo-blue) !important;
+            background: white;
+            padding: 8px 18px !important;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-nav-account:hover,
+        .btn-nav-account.show {
+            background: var(--gasgo-blue);
+            color: white !important;
+        }
+
+        .account-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--gasgo-gradient);
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: 700;
+            box-shadow: 0 6px 16px rgba(26, 109, 176, 0.22);
+        }
+
+        .account-dropdown-menu {
+            border: none;
+            border-radius: 18px;
+            box-shadow: 0 18px 40px rgba(0,0,0,0.12);
+            padding: 10px;
+            min-width: 260px;
+            margin-top: 12px;
+        }
+
+        .account-summary {
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--gasgo-blue-light) 0%, #ffffff 100%);
+            margin-bottom: 8px;
+        }
+
+        .account-summary .name {
+            font-weight: 700;
+            color: var(--gasgo-blue);
+            margin-bottom: 2px;
+        }
+
+        .account-summary .meta {
+            font-size: 0.82rem;
+            color: #6c757d;
+            line-height: 1.4;
+        }
+
+        .account-dropdown-menu .dropdown-item {
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-weight: 500;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .account-dropdown-menu .dropdown-item:hover {
+            background: var(--gasgo-orange-light);
+            color: var(--gasgo-orange-dark);
+        }
+
+        .account-dropdown-menu .dropdown-item i {
+            color: var(--gasgo-orange);
+            width: 18px;
+        }
+
+        .account-dropdown-menu .dropdown-divider {
+            margin: 8px 0;
+        }
+
+        .account-logout-btn {
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+        }
         
         /* Mobile Navigation */
         .navbar-toggler {
@@ -370,16 +467,40 @@
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: white;
             padding: 80px 0 30px;
+            text-align: center;
+        }
+        
+        .footer-gasgo .row {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            width: 100%;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .footer-gasgo .row > div {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            text-align: left;
         }
         
         .footer-logo {
             height: 60px;
             margin-bottom: 20px;
+            display: block;
+            margin-left: 0;
+            margin-right: 0;
         }
         
         .footer-desc {
             color: rgba(255,255,255,0.7);
             margin-bottom: 25px;
+            text-align: justify;
         }
         
         .footer-title {
@@ -387,15 +508,21 @@
             font-weight: 700;
             margin-bottom: 25px;
             color: var(--gasgo-orange);
+            text-align: left;
         }
         
         .footer-links {
             list-style: none;
             padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+            text-align: left;
         }
         
         .footer-links li {
-            margin-bottom: 12px;
+            margin-bottom: 0;
         }
         
         .footer-links a {
@@ -421,6 +548,7 @@
             display: flex;
             gap: 15px;
             margin-top: 25px;
+            justify-content: flex-start;
         }
         
         .social-links a {
@@ -562,7 +690,8 @@
             }
             
             .btn-nav-cart,
-            .btn-nav-login {
+            .btn-nav-login,
+            .btn-nav-account {
                 width: 100%;
                 text-align: center;
                 margin: 10px 0;
@@ -572,6 +701,10 @@
                 width: 100%;
                 flex-direction: column;
                 align-items: stretch;
+            }
+
+            .account-dropdown-menu {
+                min-width: 100%;
             }
             
             .section-title {
@@ -622,6 +755,7 @@
             
             .footer-gasgo {
                 padding: 50px 0 20px;
+                position: relative;
             }
         }
         
@@ -685,12 +819,18 @@
     @yield('styles')
 </head>
 <body>
+    @php
+        $navCartCount = Auth::check()
+            ? \App\Models\Cart::where('user_id', Auth::id())->sum('quantity')
+            : collect(session('cart', []))->sum(fn ($qty) => (int) $qty);
+    @endphp
+
     <!-- Navbar -->
     @if (Route::currentRouteName() !== 'customer.login')
     <nav class="navbar navbar-expand-lg navbar-gasgo">
         <div class="container">
             <a class="navbar-brand" href="{{ url('/customer/customerDashboard') }}">
-                <img src="{{ asset('images/gasgo_logo-removebg-preview.png') }}" alt="GasGo Icon">
+                <img src="{{ asset('images/logo-gasgo.png') }}" alt="GasGo Icon">
                 <span class="brand-text">Gas<span class="go">Go</span></span>
             </a>
             
@@ -725,15 +865,27 @@
                 <div class="nav-actions">
                     <a href="{{ url('/customer/productCart') }}" class="nav-link btn-nav-cart">
                         <i class="fas fa-shopping-cart me-2"></i>Cart
-                        <span class="cart-badge cart-count">0</span>
+                        <span class="cart-badge cart-count">{{ $navCartCount }}</span>
                     </a>
                     @auth
-                        <form action="{{ route('customer.logout') }}" method="POST" style="margin:0;">
-                            @csrf
-                            <button type="submit" class="nav-link btn-nav-login" style="border:2px solid var(--gasgo-blue);background:none;cursor:pointer;">
-                                <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        <div class="dropdown account-dropdown">
+                            <button class="btn btn-nav-account dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="account-avatar">{{ strtoupper(substr(Auth::user()->name, 0, 1)) }}</span>
+                                <span>My Account</span>
                             </button>
-                        </form>
+                            <div class="dropdown-menu dropdown-menu-end account-dropdown-menu">
+                                <div class="account-summary">
+                                    <div class="name">{{ Auth::user()->name }}</div>
+                                </div>
+                                <a class="dropdown-item" href="{{ route('customer.profile') }}">
+                                    <i class="fas fa-user-circle"></i>Profile Settings
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <button class="dropdown-item account-logout-btn" onclick="logoutAjax()" style="border:none;background:none;cursor:pointer;width:100%;text-align:left;">
+                                    <i class="fas fa-sign-out-alt"></i>Logout
+                                </button>
+                            </div>
+                        </div>
                     @else
                         <a href="{{ url('/customer/loginRegistration') }}" class="nav-link btn-nav-login">
                             <i class="fas fa-user me-2"></i>Login
@@ -755,8 +907,8 @@
     <footer class="footer-gasgo">
         <div class="container">
             <div class="row g-4">
-                <div class="col-lg-4 col-md-6">
-                    <img src="{{ asset('images/logo.svg') }}" alt="GasGo" class="footer-logo">
+                <div class="col-lg-4 col-md-3">
+                    <img src="{{ asset('images/logo-gasgo.png') }}" alt="GasGo" class="footer-logo">
                     <p class="footer-desc">
                         Your trusted partner for fast, reliable LPG delivery. Track your orders in real-time and earn rewards with every purchase.
                     </p>
@@ -768,7 +920,7 @@
                     </div>
                 </div>
                 
-                <div class="col-lg-2 col-md-6">
+                <div class="col-lg-2 col-md-3">
                     <h5 class="footer-title">Quick Links</h5>
                     <ul class="footer-links">
                         <li><a href="{{ url('/customer/customerDashboard') }}"><i class="fas fa-chevron-right"></i>Home</a></li>
@@ -778,7 +930,7 @@
                     </ul>
                 </div>
                 
-                <div class="col-lg-3 col-md-6">
+                <div class="col-lg-3 col-md-3">
                     <h5 class="footer-title">Contact Us</h5>
                     <ul class="footer-links">
                         <li><a href="#"><i class="fas fa-map-marker-alt"></i>123 Gas Street, Metro City</a></li>
@@ -834,10 +986,10 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
         
-        // Update cart count from localStorage
-        function updateCartCount() {
-            const cart = JSON.parse(localStorage.getItem('gasgo_cart')) || [];
-            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+        const initialCartCount = Number('{{ (int) $navCartCount }}');
+
+        // Update visible cart badges from server-calculated count.
+        function updateCartCount(count = initialCartCount) {
             document.querySelectorAll('.cart-count').forEach(el => {
                 el.textContent = count;
             });
@@ -846,15 +998,15 @@
         updateCartCount();
     </script>
     
-    @if(session('clear_cart'))
-    <script>
-        localStorage.removeItem('gasgo_cart');
-    </script>
-    @endif
-    
     @auth
     @else
     @endauth
+    
+    <!-- AJAX Route Configuration -->
+    @include('components.ajax-routes')
+    
+    <!-- AJAX Utilities -->
+    <script src="{{ asset('js/ajax-utils.js') }}"></script>
     
     @yield('scripts')
 </body>

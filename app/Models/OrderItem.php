@@ -16,6 +16,7 @@ class OrderItem extends Model
         'quantity',
         'price',
         'subtotal',
+        'is_reward',
     ];
 
     protected function casts(): array
@@ -23,6 +24,7 @@ class OrderItem extends Model
         return [
             'price' => 'decimal:2',
             'subtotal' => 'decimal:2',
+            'is_reward' => 'boolean',
         ];
     }
 

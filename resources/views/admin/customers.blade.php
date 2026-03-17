@@ -17,6 +17,15 @@
         width:40px; height:40px; border-radius:50%; display:flex; align-items:center;
         justify-content:center; font-weight:700; color:#fff; font-size:.88rem; flex-shrink:0;
     }
+    .filter-state {
+        font-size: .78rem;
+        color: #64748b;
+        opacity: 0;
+        transition: opacity .18s ease;
+    }
+    .filter-state.active {
+        opacity: 1;
+    }
 </style>
 @endsection
 
@@ -63,12 +72,18 @@
         <i class="fas fa-search"></i>
         <input type="text" id="searchCustomers" placeholder="Search customers..." onkeyup="searchCustomers()">
     </div>
-    <select class="form-select form-select-sm" style="border-radius:10px;width:auto;">
-        <option>All Customers</option>
-        <option>Loyalty Members</option>
-        <option>Active This Month</option>
-        <option>Inactive</option>
-    </select>
+    <div class="d-flex align-items-center gap-3">
+        <div class="text-muted" style="font-size:.85rem;">
+            Showing <strong id="customersVisibleCount">{{ $customerStats->count() }}</strong> of <strong>{{ $customerStats->count() }}</strong> customers
+        </div>
+        <div class="filter-state" id="customersFilterState"><i class="fas fa-circle-notch fa-spin me-1"></i>Filtering...</div>
+        <select id="customerCategoryFilter" class="form-select form-select-sm" style="border-radius:10px;width:auto;" onchange="searchCustomers()">
+            <option value="all">All Customers</option>
+            <option value="loyalty">Loyalty Members</option>
+            <option value="active">Active This Month</option>
+            <option value="inactive">Inactive</option>
+        </select>
+    </div>
 </div>
 
 <div class="gasgo-table">
@@ -92,7 +107,10 @@
                     $colorClasses = ['bg-primary', 'bg-warning', 'bg-success', 'bg-info', 'bg-danger'];
                     $colorIndex = abs(crc32($stat['customer']->id)) % count($colorClasses);
                 @endphp
-                <tr>
+                <tr
+                    data-has-loyalty="{{ $stat['loyaltyTier'] ? '1' : '0' }}"
+                    data-is-active="{{ ($stat['lastOrder'] && $stat['lastOrder']->created_at->isCurrentMonth()) ? '1' : '0' }}"
+                >
                     <td>
                         <div class="d-flex align-items-center gap-2">
                             <div class="customer-avatar" style="background:linear-gradient(135deg,#1a6db0,#2196f3);">{{ $initials }}</div>
@@ -131,6 +149,11 @@
                     </td>
                 </tr>
             @endforelse
+            <tr id="customersNoResults" style="display:none;">
+                <td colspan="8" class="text-center text-muted py-4">
+                    <i class="fas fa-search me-2"></i>No customers match your filter.
+                </td>
+            </tr>
         </tbody>
     </table>
 </div>
@@ -138,11 +161,61 @@
 
 @section('scripts')
 <script>
+    let customersFilterTimer = null;
+
+    function queueCustomersFilter() {
+        const state = document.getElementById('customersFilterState');
+        if (state) state.classList.add('active');
+
+        if (customersFilterTimer) {
+            clearTimeout(customersFilterTimer);
+        }
+
+        customersFilterTimer = setTimeout(() => {
+            searchCustomers();
+            if (state) state.classList.remove('active');
+        }, 90);
+    }
+
     function searchCustomers() {
         const q = document.getElementById('searchCustomers').value.toLowerCase();
+        const category = document.getElementById('customerCategoryFilter').value;
+        let visible = 0;
+
         document.querySelectorAll('#customersTable tbody tr').forEach(row => {
-            row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+            if (row.id === 'customersNoResults') {
+                return;
+            }
+
+            const textMatch = row.textContent.toLowerCase().includes(q);
+            const hasLoyalty = row.dataset.hasLoyalty === '1';
+            const isActive = row.dataset.isActive === '1';
+
+            let categoryMatch = true;
+            if (category === 'loyalty') categoryMatch = hasLoyalty;
+            if (category === 'active') categoryMatch = isActive;
+            if (category === 'inactive') categoryMatch = !isActive;
+
+            const show = textMatch && categoryMatch;
+            row.style.display = show ? '' : 'none';
+
+            if (show) visible++;
         });
+
+        document.getElementById('customersVisibleCount').textContent = visible;
+        document.getElementById('customersNoResults').style.display = visible === 0 ? '' : 'none';
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchCustomers');
+        const categorySelect = document.getElementById('customerCategoryFilter');
+        if (searchInput) {
+            searchInput.onkeyup = queueCustomersFilter;
+        }
+        if (categorySelect) {
+            categorySelect.onchange = queueCustomersFilter;
+        }
+        searchCustomers();
+    });
 </script>
 @endsection

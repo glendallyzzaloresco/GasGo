@@ -13,7 +13,7 @@ class RiderController extends Controller
     // Rider: dashboard with active deliveries and stats
     public function dashboard()
     {
-        $activeDeliveries = Delivery::with('order.user')
+        $activeDeliveries = Delivery::with('order.user', 'order.orderItems.product')
             ->where('rider_id', Auth::id())
             ->whereNotIn('status', ['delivered', 'failed'])
             ->get();
@@ -22,7 +22,57 @@ class RiderController extends Controller
             ->where('status', 'delivered')
             ->count();
 
-        return view('rider.dashboard', compact('activeDeliveries', 'completedCount'));
+        // Get available orders (approved but not yet assigned to any rider)
+        $availableOrders = \App\Models\Order::with('user', 'orderItems.product')
+            ->where('status', 'approved')
+            ->whereDoesntHave('delivery') // Orders without delivery records
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        return view('rider.dashboard', compact('activeDeliveries', 'completedCount', 'availableOrders'));
+    }
+
+    // Rider: accept an available order
+    public function acceptOrder(Request $request, $orderId)
+    {
+        $order = \App\Models\Order::findOrFail($orderId);
+
+        // Check if order is still available
+        if ($order->status !== 'approved' || $order->delivery()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This order is no longer available.'
+            ], 400);
+        }
+
+        // Check rider availability
+        $rider = Rider::where('user_id', Auth::id())->first();
+        if (!$rider || $rider->availability !== 'available') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please set your status to "Available" before accepting orders.'
+            ], 400);
+        }
+
+        // Create delivery and assign to this rider
+        $delivery = Delivery::create([
+            'order_id' => $order->id,
+            'rider_id' => Auth::id(),
+            'status' => 'assigned',
+            'assigned_at' => now(),
+            'latitude' => null,
+            'longitude' => null,
+        ]);
+
+        // Update order status
+        $order->update(['status' => 'assigned']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Order accepted successfully!',
+            'delivery_id' => $delivery->id
+        ]);
     }
 
     // Rider: view and update own profile
@@ -47,6 +97,13 @@ class RiderController extends Controller
             ['user_id' => Auth::id()],
             $validated
         );
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'message' => 'Profile updated successfully.',
+                'availability' => $validated['availability'],
+            ]);
+        }
 
         return redirect()->route('rider.profile')->with('success', 'Profile updated.');
     }
@@ -161,5 +218,71 @@ class RiderController extends Controller
         }
 
         return redirect()->route('admin.riders')->with('error', 'Rider not found.');
+    }
+
+    // Rider: view active route with all deliveries/waypoints
+    public function route()
+    {
+        $activeDeliveries = Delivery::with('order.user')
+            ->where('rider_id', Auth::id())
+            ->whereNotIn('status', ['delivered', 'failed'])
+            ->orderBy('assigned_at', 'asc')
+            ->get();
+
+        $deliveredCount = Delivery::where('rider_id', Auth::id())
+            ->where('status', 'delivered')
+            ->whereDate('delivered_at', today())
+            ->count();
+
+        $totalAmount = $activeDeliveries->sum(function($delivery) {
+            return $delivery->order->total_amount ?? 0;
+        });
+
+        // Calculate approximate distance (simple estimation)
+        $totalDistance = count($activeDeliveries) * 2.5; // 2.5km average per stop
+
+        return view('rider.route', compact('activeDeliveries', 'deliveredCount', 'totalAmount', 'totalDistance'));
+    }
+
+    // Rider: Live route map view
+    public function liveRouteMap()
+    {
+        $activeDeliveries = Delivery::with('order.user', 'order.orderItems.product')
+            ->where('rider_id', Auth::id())
+            ->whereNotIn('status', ['delivered', 'failed'])
+            ->orderBy('assigned_at', 'asc')
+            ->get();
+
+        return view('rider.route-map', compact('activeDeliveries'));
+    }
+
+    // Rider: get route waypoints as JSON (for map rendering)
+    public function routeWaypoints()
+    {
+        $deliveries = Delivery::with('order')
+            ->where('rider_id', Auth::id())
+            ->whereNotIn('status', ['delivered', 'failed'])
+            ->orderBy('assigned_at', 'asc')
+            ->get();
+
+        $waypoints = $deliveries->map(function($delivery, $index) {
+            return [
+                'id' => $delivery->id,
+                'order_number' => $delivery->order->order_number,
+                'customer_name' => $delivery->order->user->name,
+                'address' => $delivery->order->delivery_address,
+                'latitude' => $delivery->order->latitude,
+                'longitude' => $delivery->order->longitude,
+                'status' => $delivery->status,
+                'amount' => $delivery->order->total_amount,
+                'waypoint_number' => $index + 1,
+                'contact' => $delivery->order->contact_number,
+            ];
+        });
+
+        return response()->json([
+            'waypoints' => $waypoints,
+            'total' => count($waypoints),
+        ]);
     }
 }

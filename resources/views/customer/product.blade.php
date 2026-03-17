@@ -189,32 +189,16 @@
 @endsection
 
 @section('scripts')
-<div id="productData" data-authenticated="{{ Auth::check() ? '1' : '0' }}" style="display:none;"></div>
 <script>
-// Check if user is authenticated
-const isAuthenticated = document.getElementById('productData').dataset.authenticated === '1';
-
 function addToCart(id, name, price, image) {
-    // Check if user is authenticated
-    if (!isAuthenticated) {
-        window.location.href = "{{ route('customer.login') }}";
-        return;
-    }
-    
-    let cart = JSON.parse(localStorage.getItem('gasgo_cart')) || [];
-    const existing = cart.find(item => item.id === id);
-    if (existing) { existing.quantity++; } else { cart.push({ id, name, price, image, quantity: 1 }); }
-    localStorage.setItem('gasgo_cart', JSON.stringify(cart));
-    updateCartCount();
-    var toast = document.createElement('div');
-    toast.className = 'position-fixed bottom-0 end-0 p-3'; toast.style.zIndex = '9999';
-    toast.innerHTML = '<div class="toast show align-items-center text-white border-0" style="background:var(--gasgo-blue);border-radius:12px;"><div class="d-flex"><div class="toast-body"><i class="fas fa-check-circle me-2"></i>' + name + ' added to cart!</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>';
-    document.body.appendChild(toast);
-    setTimeout(function() { toast.remove(); }, 2500);
+    addToCartAjax(id, 1).catch(error => {
+        console.error('Add to cart error:', error);
+    });
 }
 
 document.querySelectorAll('.add-to-cart-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
         addToCart(parseInt(this.dataset.id), this.dataset.name, parseFloat(this.dataset.price), this.dataset.image);
     });
 });

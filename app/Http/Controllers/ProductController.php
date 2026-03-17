@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Freebie;
 use App\Models\Product;
 use Illuminate\Http\Request;
 
@@ -11,6 +12,7 @@ class ProductController extends Controller
     public function index()
     {
         $products = Product::where('is_active', true)
+            ->where('price', '>', 0)
             ->orderBy('name')
             ->get();
 
@@ -26,9 +28,15 @@ class ProductController extends Controller
     // Admin: list all products (including inactive)
     public function adminIndex()
     {
-        $products = Product::orderBy('created_at', 'desc')->get();
+        // Products that are for sale (price > 0)
+        $products = Product::where('price', '>', 0)
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        // Freebies (separate from products)
+        $freebies = Freebie::orderBy('created_at', 'desc')->get();
 
-        return view('admin.products', compact('products'));
+        return view('admin.products', compact('products', 'freebies'));
     }
 
     // Admin: store a new product

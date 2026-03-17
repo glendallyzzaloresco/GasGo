@@ -142,9 +142,14 @@
                     <h5 class="fw-bold mb-0" style="color:var(--gasgo-blue);">
                         <i class="fas fa-satellite-dish me-2" style="color:var(--gasgo-orange);"></i>Live Tracking
                     </h5>
-                    <span id="liveIndicator" style="font-size:.82rem;color:#27ae60;font-weight:600;">
-                        <span class="live-dot"></span>Live
-                    </span>
+                    <div class="d-flex align-items-center gap-3">
+                        <span id="distanceIndicator" style="font-size:.82rem;color:var(--gasgo-orange);font-weight:600;display:none;">
+                            <i class="fas fa-route me-1"></i><span id="distanceValue">--</span> km away
+                        </span>
+                        <span id="liveIndicator" style="font-size:.82rem;color:#27ae60;font-weight:600;">
+                            <span class="live-dot"></span>Live
+                        </span>
+                    </div>
                 </div>
                 <div class="map-container">
                     <div class="map-overlay" id="mapOverlay">
@@ -224,6 +229,12 @@
                     <span class="text-muted">Delivery Fee</span>
                     <span>₱{{ number_format($order->delivery_fee, 2) }}</span>
                 </div>
+                @if ((float) $order->discount > 0)
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Reward Discount</span>
+                    <span style="color:#1e7e34;">-₱{{ number_format($order->discount, 2) }}</span>
+                </div>
+                @endif
                 <div class="d-flex justify-content-between mt-1 pt-2" style="border-top:2px solid var(--gasgo-orange);font-weight:700;font-size:1.1rem;">
                     <span>Total</span>
                     <span style="color:var(--gasgo-orange);">₱{{ number_format($order->total_amount, 2) }}</span>
@@ -314,7 +325,12 @@
 @endsection
 
 @section('scripts')
-<script async defer src="https://maps.googleapis.com/maps/api/js?key={{ env('GOOGLE_MAPS_API_KEY') }}"></script>
+<!-- Leaflet CSS and JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="{{ asset('css/leaflet-custom.css') }}" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ asset('js/leaflet-utils.js') }}"></script>
+
 <script>
 (function() {
     // Read data from HTML attributes
@@ -344,6 +360,8 @@
     let map = null;
     let riderMarker = null;
     let destMarker = null;
+    let waypointMarkers = [];
+    let polyline = null;
     let bounds = null;
     let currentStatus = orderStatus;
 
@@ -359,73 +377,66 @@
 
         document.getElementById('mapOverlay').classList.add('hidden');
 
-        const mapElement = document.getElementById('trackingMap');
-        const centerLat = deliveryLat && deliveryLng ? deliveryLat : lat;
-        const centerLng = deliveryLat && deliveryLng ? deliveryLng : lng;
+        // Initialize Leaflet map
+        map = initLeafletMap('trackingMap', lat, lng, 15);
 
-        map = new google.maps.Map(mapElement, {
-            zoom: 15,
-            center: { lat: centerLat, lng: centerLng },
-            mapTypeId: google.maps.MapTypeId.ROADMAP,
-            styles: [
-                {
-                    featureType: 'all',
-                    elementType: 'labels.text',
-                    stylers: [{ color: '#494949' }]
-                },
-                {
-                    featureType: 'water',
-                    elementType: 'geometry',
-                    stylers: [{ color: '#e9e9e9' }]
-                }
-            ]
+        bounds = L.latLngBounds();
+
+        // Rider marker (orange pulsing)
+        riderMarker = L.marker([lat, lng], {
+            icon: L.divIcon({
+                className: 'rider-marker-icon',
+                html: `
+                    <div class="rider-icon-container" style="
+                        width: 50px;
+                        height: 50px;
+                        background: #f7941d;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-size: 22px;
+                        border: 4px solid white;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                        animation: riderPulse 2s infinite;
+                    ">
+                        <i class="fas fa-motorcycle"></i>
+                    </div>
+                    <style>
+                    @keyframes riderPulse {
+                        0%, 100% {
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 0 0 rgba(247, 148, 29, 0.7);
+                        }
+                        50% {
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 0 20px rgba(247, 148, 29, 0);
+                        }
+                    }
+                    </style>
+                `,
+                iconSize: [50, 50],
+                iconAnchor: [25, 25]
+            })
         });
+        riderMarker.addTo(map);
+        riderMarker.bindPopup('<div style="padding:8px;"><b>🏍️ Your Rider</b><br><small>Live location</small></div>');
+        bounds.extend(riderMarker.getLatLng());
 
-        bounds = new google.maps.LatLngBounds();
-
-        // Rider marker
-        riderMarker = new google.maps.Marker({
-            position: { lat: lat, lng: lng },
-            map: map,
-            title: 'Rider Location',
-            icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 12,
-                fillColor: '#f7941d',
-                fillOpacity: 1,
-                strokeColor: 'white',
-                strokeWeight: 3
-            }
-        });
-        riderMarker.addListener('click', function() {
-            new google.maps.InfoWindow({ content: '<div style="padding:8px;"><b>Rider Location</b></div>' }).open(map, riderMarker);
-        });
-        bounds.extend(riderMarker.getPosition());
-
-        // Destination marker
+        // Destination marker (blue)
         if (deliveryLat && deliveryLng) {
-            destMarker = new google.maps.Marker({
-                position: { lat: deliveryLat, lng: deliveryLng },
-                map: map,
-                title: 'Delivery Address',
-                icon: {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 12,
-                    fillColor: '#1a6db0',
-                    fillOpacity: 1,
-                    strokeColor: 'white',
-                    strokeWeight: 3
-                }
+            destMarker = createCustomMarker(deliveryLat, deliveryLng, {
+                color: '#1a6db0',
+                iconType: 'circle',
+                size: 24
             });
-            destMarker.addListener('click', function() {
-                new google.maps.InfoWindow({ content: '<div style="padding:8px;"><b>Delivery Address</b></div>' }).open(map, destMarker);
-            });
-            bounds.extend(destMarker.getPosition());
+            destMarker.addTo(map);
+            destMarker.bindPopup('<div style="padding:8px;"><b>Your Delivery Address</b></div>');
+            bounds.extend(destMarker.getLatLng());
         }
 
         // Fit bounds
-        if (bounds.isEmpty() === false) {
-            map.fitBounds(bounds, 50);
+        if (!bounds.isEmpty()) {
+            map.fitBounds(bounds, { padding: [50, 50] });
         }
     }
 
@@ -433,15 +444,16 @@
         if (!map) {
             initMap(lat, lng);
         } else if (riderMarker) {
-            riderMarker.setPosition({ lat: lat, lng: lng });
-            
+            smoothMoveMarker(riderMarker, lat, lng, 2000); // 2 second smooth animation
+
             if (destMarker) {
-                bounds = new google.maps.LatLngBounds();
-                bounds.extend(riderMarker.getPosition());
-                bounds.extend(destMarker.getPosition());
-                map.fitBounds(bounds, 50);
+                bounds = L.latLngBounds([
+                    riderMarker.getLatLng(),
+                    destMarker.getLatLng()
+                ]);
+                map.fitBounds(bounds, { padding: [50, 50] });
             } else {
-                map.panTo({ lat: lat, lng: lng });
+                map.panTo([lat, lng]);
             }
         }
     }
@@ -484,6 +496,11 @@
             updateRiderPosition(parseFloat(data.rider_lat), parseFloat(data.rider_lng));
         }
 
+        // Render waypoints from rider's route
+        if (data.waypoints && Array.isArray(data.waypoints) && data.waypoints.length > 0 && map) {
+            renderWaypoints(data.waypoints, parseFloat(data.rider_lat), parseFloat(data.rider_lng));
+        }
+
         // Update map overlay message
         const overlay = document.getElementById('mapOverlay');
         const msg = document.getElementById('mapMessage');
@@ -511,6 +528,68 @@
         if (data.estimated_delivery) {
             const estEl = document.getElementById('estimatedTime');
             if (estEl) estEl.textContent = data.estimated_delivery;
+        }
+    }
+
+    function renderWaypoints(waypoints, riderLat, riderLng) {
+        // Clear existing waypoint markers
+        if (waypointMarkers && waypointMarkers.length > 0) {
+            waypointMarkers.forEach(marker => map.removeLayer(marker));
+        }
+        waypointMarkers = [];
+
+        // Clear existing polyline
+        if (polyline) {
+            map.removeLayer(polyline);
+            polyline = null;
+        }
+
+        // Build waypoint path for polyline
+        const waypointPath = [[riderLat, riderLng]];
+
+        // Create markers for each waypoint
+        waypoints.forEach((waypoint, index) => {
+            const waypointLat = parseFloat(waypoint.latitude);
+            const waypointLng = parseFloat(waypoint.longitude);
+            const isCurrentDelivery = waypoint.is_current === true || waypoint.is_current === 1 || waypoint.is_current === '1';
+
+            const position = [waypointLat, waypointLng];
+            waypointPath.push(position);
+
+            // Determine color and styling
+            let color = '#9e9e9e'; // Gray for pending
+            if (waypoint.status === 'completed') {
+                color = '#4caf50'; // Green
+            } else if (isCurrentDelivery) {
+                color = '#1a6db0'; // Blue for current
+            }
+
+            // Create numbered marker
+            const marker = createNumberedMarker(waypointLat, waypointLng, index + 1, color);
+            marker.addTo(map);
+
+            // Info window content
+            const popupContent = `
+                <div style="padding: 10px; max-width: 260px; font-family: system-ui;">
+                    <h6 style="margin: 0 0 8px 0; font-size: 14px;"><strong>Stop ${waypoint.sequence}</strong> - ${waypoint.customer}</h6>
+                    <p style="margin: 0 0 5px 0; font-size: 12px;"><strong>Address:</strong> ${waypoint.address}</p>
+                    <p style="margin: 0 0 5px 0; font-size: 12px;"><strong>Order:</strong> #${waypoint.order_number}</p>
+                    <p style="margin: 0 0 5px 0; font-size: 12px;"><strong>Amount:</strong> ₱${parseFloat(waypoint.amount).toFixed(2)}</p>
+                    <p style="margin: 0; font-size: 12px;"><span style="display: inline-block; padding: 2px 6px; background-color: ${color}; color: white; border-radius: 3px; font-size: 11px;">${waypoint.status.toUpperCase()}</span></p>
+                </div>
+            `;
+            marker.bindPopup(popupContent);
+
+            waypointMarkers.push(marker);
+        });
+
+        // Draw polyline connecting all waypoints
+        if (waypointPath.length > 1) {
+            polyline = drawRouteLine(map, waypointPath, {
+                color: '#2196f3',
+                weight: 3,
+                opacity: 0.6
+            });
         }
     }
 

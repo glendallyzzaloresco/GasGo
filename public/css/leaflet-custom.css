@@ -1,0 +1,219 @@
+/**
+ * Custom Leaflet Styles for GASGOProject
+ * Enhances map markers, popups, and animations
+ */
+
+/* Remove default Leaflet attribution prefix */
+.leaflet-control-attribution {
+    font-size: 10px;
+}
+
+/* Custom Popup Styling */
+.leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.leaflet-popup-content {
+    margin: 0;
+    min-width: 200px;
+    line-height: 1.5;
+}
+
+.leaflet-popup-tip {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Close button styling */
+.leaflet-popup-close-button {
+    font-size: 20px;
+    padding: 4px 8px;
+    color: #666;
+}
+
+.leaflet-popup-close-button:hover {
+    color: #333;
+}
+
+/* Custom Marker Containers */
+.leaflet-custom-marker,
+.leaflet-pulsing-marker-container,
+.leaflet-numbered-marker-container {
+    background: transparent;
+    border: none;
+}
+
+/* Pulsing Marker Animation Styles */
+.leaflet-pulsing-marker {
+    position: relative;
+    z-index: 1000;
+}
+
+.pulse-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    opacity: 0;
+    animation: pulse-animation 2s ease-out infinite;
+}
+
+@keyframes pulse-animation {
+    0% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
+    50% {
+        transform: scale(1.8);
+        opacity: 0.3;
+    }
+    100% {
+        transform: scale(2.5);
+        opacity: 0;
+    }
+}
+
+/* Numbered Circle Markers */
+.leaflet-numbered-marker {
+    transition: transform 0.2s ease;
+}
+
+.leaflet-numbered-marker:hover {
+    transform: scale(1.1);
+}
+
+/* Map Container */
+.leaflet-container {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Zoom Controls */
+.leaflet-control-zoom a {
+    width: 32px;
+    height: 32px;
+    line-height: 32px;
+    font-size: 18px;
+    border-radius: 6px;
+}
+
+.leaflet-control-zoom {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.leaflet-control-zoom a:first-child {
+    border-radius: 6px 6px 0 0;
+}
+
+.leaflet-control-zoom a:last-child {
+    border-radius: 0 0 6px 6px;
+}
+
+/* Polyline Animation (optional - for route drawing animation) */
+@keyframes dash {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+.leaflet-interactive.animated-route {
+    stroke-dasharray: 10;
+    stroke-dashoffset: 1000;
+    animation: dash 2s linear forwards;
+}
+
+/* Marker Cluster Styles (if using marker clustering plugin) */
+.marker-cluster-small {
+    background-color: rgba(33, 150, 243, 0.6);
+}
+
+.marker-cluster-small div {
+    background-color: rgba(33, 150, 243, 0.8);
+    color: white;
+    font-weight: bold;
+}
+
+.marker-cluster-medium {
+    background-color: rgba(247, 148, 29, 0.6);
+}
+
+.marker-cluster-medium div {
+    background-color: rgba(247, 148, 29, 0.8);
+    color: white;
+    font-weight: bold;
+}
+
+.marker-cluster-large {
+    background-color: rgba(231, 76, 60, 0.6);
+}
+
+.marker-cluster-large div {
+    background-color: rgba(231, 76, 60, 0.8);
+    color: white;
+    font-weight: bold;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .leaflet-popup-content-wrapper {
+        max-width: 260px;
+    }
+
+    .leaflet-control-zoom a {
+        width: 28px;
+        height: 28px;
+        line-height: 28px;
+        font-size: 16px;
+    }
+}
+
+/* Custom styles for GasGo brand colors */
+.leaflet-marker-gasgo-blue {
+    filter: hue-rotate(200deg);
+}
+
+.leaflet-marker-gasgo-orange {
+    filter: hue-rotate(20deg);
+}
+
+/* Loading state for map */
+.leaflet-container.loading {
+    background: linear-gradient(135deg, #f5fbff 0%, #edf6ff 100%);
+}
+
+.leaflet-container.loading::after {
+    content: "Loading map...";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--gasgo-blue, #1a6db0);
+    font-weight: 600;
+    z-index: 1000;
+}
+
+/* Smooth tile loading */
+.leaflet-tile {
+    transition: opacity 0.2s;
+}
+
+/* Custom tooltip styles */
+.leaflet-tooltip {
+    padding: 6px 10px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+    border-top-color: rgba(0, 0, 0, 0.8);
+}

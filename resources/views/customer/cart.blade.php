@@ -22,6 +22,12 @@
         display: flex; align-items: center; gap: 16px; padding: 18px 24px;
         border-bottom: 1px solid #f0f0f0; transition: background .2s;
     }
+    .cart-item input[type="checkbox"] {
+        width: 20px; height: 20px; cursor: pointer; flex-shrink: 0;
+    }
+    .cart-item input[type="checkbox"]:checked + img {
+        border: 2px solid var(--gasgo-orange);
+    }
     .cart-item:hover { background: #fafafa; }
     .cart-item:last-child { border-bottom: none; }
     .cart-item img { width: 70px; height: 70px; border-radius: 12px; object-fit: cover; background: var(--gasgo-blue-light); }
@@ -68,142 +74,163 @@
 </section>
 
 <section class="container section-padding cart-container">
-    <div class="row g-4" id="cartWrapper">
-        <!-- Will be rendered by JS -->
-    </div>
-</section>
-@endsection
-
-@section('scripts')
-<script>
-function renderCart() {
-    const cart = JSON.parse(localStorage.getItem('gasgo_cart')) || [];
-    const wrapper = document.getElementById('cartWrapper');
-
-    if (cart.length === 0) {
-        wrapper.innerHTML = `
+    <div class="row g-4">
+        @if($cartItems->isEmpty())
             <div class="col-12">
                 <div class="cart-card">
                     <div class="empty-cart">
                         <i class="fas fa-shopping-cart"></i>
                         <h4 class="fw-bold" style="color:var(--gasgo-blue);">Your Cart is Empty</h4>
                         <p class="text-muted">Browse our products and add items to your cart</p>
-                        <a href="{{ url('/customer/product') }}" class="btn btn-gasgo mt-2"><i class="fas fa-fire me-2"></i>Browse Products</a>
+                        <a href="{{ route('customer.products') }}" class="btn btn-gasgo mt-2">
+                            <i class="fas fa-fire me-2"></i>Browse Products
+                        </a>
                     </div>
                 </div>
-            </div>`;
-        return;
-    }
-
-    let subtotal = 0;
-    let itemsHtml = '';
-    cart.forEach((item, idx) => {
-        const sub = item.price * item.quantity;
-        subtotal += sub;
-        const imgSrc = item.image || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70'%3E%3Crect width='70' height='70' fill='%23e8f4fc'/%3E%3C/svg%3E";
-        itemsHtml += `
-        <div class="cart-item" data-index="${idx}">
-            <img src="${imgSrc}" alt="${item.name}">
-            <div class="item-details">
-                <div class="item-name">${item.name}</div>
-                <div class="item-price">₱${item.price.toLocaleString('en-PH', {minimumFractionDigits:2})}</div>
             </div>
-            <div class="qty-control">
-                <button onclick="changeQty(${idx},-1)"><i class="fas fa-minus" style="font-size:.7rem;"></i></button>
-                <span>${item.quantity}</span>
-                <button onclick="changeQty(${idx},1)"><i class="fas fa-plus" style="font-size:.7rem;"></i></button>
-            </div>
-            <div class="item-subtotal">₱${sub.toLocaleString('en-PH', {minimumFractionDigits:2})}</div>
-            <button class="remove-btn" onclick="removeItem(${idx})"><i class="fas fa-trash-alt"></i></button>
-        </div>`;
-    });
+        @else
+            <div class="col-lg-8">
+                <div class="cart-card">
+                    <div style="padding:20px 24px 10px;border-bottom:1px solid #f0f0f0;">
+                        <h5 class="fw-bold mb-0" style="color:var(--gasgo-blue);">
+                            <i class="fas fa-box me-2"></i><span id="cart-items-count">Cart Items ({{ $cartItems->sum('quantity') }})</span>
+                        </h5>
+                    </div>
 
-    const deliveryFee = 50;
-    const total = subtotal + deliveryFee;
+                    @foreach($cartItems as $item)
+                        <div class="cart-item" data-product-id="{{ $item->product_id ?? $item->product->id }}">
+                            <input type="checkbox" class="item-checkbox" value="{{ $item->product_id ?? $item->product->id }}" checked>
+                            <img src="{{ $item->product->image ? asset($item->product->image) : '' }}" alt="{{ $item->product->name }}">
+                            <div class="item-details">
+                                <div class="item-name">{{ $item->product->name }}</div>
+                                <div class="item-price" data-unit-price="{{ $item->product->price }}">₱{{ number_format($item->product->price, 2) }}</div>
+                            </div>
 
-    wrapper.innerHTML = `
-        <div class="col-lg-8">
-            <div class="cart-card">
-                <div style="padding:20px 24px 10px;border-bottom:1px solid #f0f0f0;">
-                    <h5 class="fw-bold mb-0" style="color:var(--gasgo-blue);"><i class="fas fa-box me-2"></i>Cart Items (${cart.length})</h5>
+                            <div class="qty-control">
+                                <button class="qty-btn-minus" data-product-id="{{ $item->product_id ?? $item->product->id }}" data-quantity="{{ max(1, $item->quantity - 1) }}" {{ $item->quantity <= 1 ? 'disabled' : '' }}>
+                                    <i class="fas fa-minus" style="font-size:.7rem;"></i>
+                                </button>
+                                <span class="item-quantity">{{ $item->quantity }}</span>
+                                <button class="qty-btn-plus" data-product-id="{{ $item->product_id ?? $item->product->id }}" data-quantity="{{ $item->quantity + 1 }}">
+                                    <i class="fas fa-plus" style="font-size:.7rem;"></i>
+                                </button>
+                            </div>
+
+                            <div class="item-subtotal">₱{{ number_format($item->product->price * $item->quantity, 2) }}</div>
+
+                            <button class="remove-btn" data-product-id="{{ $item->product_id ?? $item->product->id }}">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    @endforeach
                 </div>
-                ${itemsHtml}
             </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="cart-summary">
-                <h5><i class="fas fa-receipt me-2"></i>Order Summary</h5>
-                <div class="summary-row"><span>Subtotal</span><span>₱${subtotal.toLocaleString('en-PH',{minimumFractionDigits:2})}</span></div>
-                <div class="summary-row"><span>Delivery Fee</span><span>₱${deliveryFee.toFixed(2)}</span></div>
-                <div class="summary-row total"><span>Total</span><span class="value">₱${total.toLocaleString('en-PH',{minimumFractionDigits:2})}</span></div>
-                <a href="{{ url('/customer/checkout') }}" class="btn btn-gasgo w-100 mt-3 btn-checkout-sync">
-                    <i class="fas fa-lock me-2"></i>Proceed to Checkout
-                </a>
-                <a href="{{ url('/customer/product') }}" class="btn btn-gasgo-outline w-100 mt-2" style="padding:12px;">
-                    <i class="fas fa-arrow-left me-2"></i>Continue Shopping
-                </a>
-            </div>
-        </div>`;
 
-    // Attach checkout handler
-    const checkoutBtn = document.querySelector('.btn-checkout-sync');
-    if (checkoutBtn) {
-        checkoutBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            syncCartAndCheckout();
+            <div class="col-lg-4">
+                <div class="cart-summary">
+                    <h5><i class="fas fa-receipt me-2"></i>Order Summary</h5>
+                    <div class="summary-row"><span>Subtotal</span><span>₱{{ number_format($total, 2) }}</span></div>
+                    <div class="summary-row"><span>Delivery Fee</span><span>₱50.00</span></div>
+                    <div class="summary-row total"><span>Total</span><span class="value">₱{{ number_format($total + 50, 2) }}</span></div>
+
+                    <a href="{{ route('customer.checkout') }}" class="btn btn-gasgo w-100 mt-3" onclick="proceedCheckout(event)">
+                        <i class="fas fa-lock me-2"></i>Proceed to Checkout
+                    </a>
+                    <a href="{{ route('customer.products') }}" class="btn btn-gasgo-outline w-100 mt-2" style="padding:12px;">
+                        <i class="fas fa-arrow-left me-2"></i>Continue Shopping
+                    </a>
+                </div>
+            </div>
+        @endif
+    </div>
+</section>
+@endsection
+
+@section('scripts')
+<script>
+// Handle quantity button clicks
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.qty-btn-minus')) {
+        const btn = e.target.closest('.qty-btn-minus');
+        const productId = btn.dataset.productId;
+        const quantity = parseInt(btn.dataset.quantity);
+        updateQuantity(productId, quantity);
+    }
+    
+    if (e.target.closest('.qty-btn-plus')) {
+        const btn = e.target.closest('.qty-btn-plus');
+        const productId = btn.dataset.productId;
+        const quantity = parseInt(btn.dataset.quantity);
+        updateQuantity(productId, quantity);
+    }
+    
+    if (e.target.closest('.remove-btn')) {
+        const btn = e.target.closest('.remove-btn');
+        const productId = btn.dataset.productId;
+        removeItem(productId);
+    }
+});
+
+function updateQuantity(productId, quantity) {
+    updateCartItemAjax(productId, quantity).catch(error => {
+        // Error already shown in toast
+    });
+}
+
+function removeItem(productId) {
+    if (confirm('Are you sure you want to remove this item?')) {
+        removeCartItemAjax(productId).catch(error => {
+            // Error already shown in toast
         });
     }
 }
 
-function changeQty(index, delta) {
-    let cart = JSON.parse(localStorage.getItem('gasgo_cart')) || [];
-    cart[index].quantity = Math.max(1, cart[index].quantity + delta);
-    localStorage.setItem('gasgo_cart', JSON.stringify(cart));
-    renderCart(); updateCartCount();
+function getSelectedItems() {
+    const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+    return Array.from(checkboxes).map(cb => parseInt(cb.value));
 }
 
-function removeItem(index) {
-    let cart = JSON.parse(localStorage.getItem('gasgo_cart')) || [];
-    cart.splice(index, 1);
-    localStorage.setItem('gasgo_cart', JSON.stringify(cart));
-    renderCart(); updateCartCount();
-}
-
-function syncCartAndCheckout() {
-    const cart = JSON.parse(localStorage.getItem('gasgo_cart')) || [];
-    if (!cart.length) return;
-
-    // Build a hidden form to POST cart items to the sync endpoint
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '{{ route("customer.cart.sync") }}';
-
-    // CSRF token
-    const csrf = document.createElement('input');
-    csrf.type = 'hidden';
-    csrf.name = '_token';
-    csrf.value = '{{ csrf_token() }}';
-    form.appendChild(csrf);
-
-    // Add each cart item
-    cart.forEach((item, i) => {
-        const idInput = document.createElement('input');
-        idInput.type = 'hidden';
-        idInput.name = 'items[' + i + '][product_id]';
-        idInput.value = item.id;
-        form.appendChild(idInput);
-
-        const qtyInput = document.createElement('input');
-        qtyInput.type = 'hidden';
-        qtyInput.name = 'items[' + i + '][quantity]';
-        qtyInput.value = item.quantity;
-        form.appendChild(qtyInput);
+function clearSelectedAjax() {
+    const selectedIds = getSelectedItems();
+    if (selectedIds.length === 0) {
+        showToast('No items selected', 'warning');
+        return;
+    }
+    
+    if (!confirm(`Remove ${selectedIds.length} selected item(s)?`)) {
+        return;
+    }
+    
+    // Remove each selected item
+    selectedIds.forEach(productId => {
+        removeCartItemAjax(productId).catch(error => {
+            console.error('Error removing item:', error);
+        });
     });
-
-    document.body.appendChild(form);
-    form.submit();
 }
 
-renderCart();
+function proceedCheckout(event) {
+    const selectedIds = getSelectedItems();
+    if (selectedIds.length === 0) {
+        event.preventDefault();
+        showToast('Please select at least one item to checkout', 'warning');
+    }
+}
+
+// Toggle all checkboxes
+function toggleAllCheckboxes(checked) {
+    document.querySelectorAll('.item-checkbox').forEach(cb => {
+        cb.checked = checked;
+    });
+}
+
+// Update selected count in real-time
+document.querySelectorAll('.item-checkbox').forEach(cb => {
+    cb.addEventListener('change', function() {
+        const selectedCount = document.querySelectorAll('.item-checkbox:checked').length;
+        const totalCount = document.querySelectorAll('.item-checkbox').length;
+        console.log(`Selected: ${selectedCount}/${totalCount}`);
+    });
+});
 </script>
 @endsection

@@ -29,6 +29,9 @@
     .order-item-row img { width: 50px; height: 50px; border-radius: 10px; object-fit: cover; background: var(--gasgo-blue-light); }
     .order-item-row .item-name { font-weight: 600; color: #333; font-size: .92rem; }
     .order-item-row .item-qty { font-size: .82rem; color: #888; }
+    .order-item-row.reward-item { background: #f0f9ff; border-left: 3px solid #28a745; padding: 10px 12px; border-radius: 8px; }
+    .order-item-row.reward-item .item-name { color: #155724; }
+    .reward-badge { display: inline-block; background: #28a745; color: white; padding: 4px 12px; border-radius: 12px; font-size: .7rem; font-weight: 700; margin-left: 8px; }
     .order-footer {
         display: flex; justify-content: space-between; align-items: center;
         padding: 14px 24px; background: #fafafa; flex-wrap: wrap; gap: 10px;
@@ -110,32 +113,67 @@
             </div>
             <div class="order-body">
                 @foreach ($order->orderItems as $item)
-                <div class="order-item-row">
-                    <img src="{{ $item->product && $item->product->image ? asset($item->product->image) : asset('images/11kg.jpg') }}" alt="{{ $item->product_name }}">
+                <div class="order-item-row @if($item->is_reward) reward-item @endif">
+                    @if($item->is_reward)
+                        <div style="width:50px;height:50px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#28a745,#20c997);color:white;font-size:1.5rem;">
+                            @if(str_contains($item->product_name, 'LPG'))
+                                <i class="fas fa-gas-pump"></i>
+                            @elseif(str_contains($item->product_name, 'Paste'))
+                                <i class="fas fa-soap"></i>
+                            @elseif(str_contains($item->product_name, 'Hanger'))
+                                <i class="fas fa-hanger"></i>
+                            @else
+                                <i class="fas fa-gift"></i>
+                            @endif
+                        </div>
+                    @else
+                        <img src="{{ $item->product && $item->product->image ? asset($item->product->image) : asset('images/2kg.jpg') }}" alt="{{ $item->product_name }}">
+                    @endif
                     <div>
-                        <div class="item-name">{{ $item->product_name }}</div>
-                        <div class="item-qty">Qty: {{ $item->quantity }} &times; ₱{{ number_format($item->price, 2) }}</div>
+                        <div class="item-name">
+                            {{ $item->product_name }}
+                            @if($item->is_reward)
+                                <span class="reward-badge"><i class="fas fa-gift me-1"></i>FREE</span>
+                            @endif
+                        </div>
+                        <div class="item-qty">
+                            Qty: {{ $item->quantity }}
+                            @if(!$item->is_reward)
+                                &times; ₱{{ number_format($item->price, 2) }}
+                            @else
+                                &times; ₱0.00
+                            @endif
+                        </div>
                     </div>
                 </div>
                 @endforeach
             </div>
             <div class="order-footer">
-                <span class="order-total">Total: ₱{{ number_format($order->total_amount, 2) }}</span>
+                <div>
+                    <span class="order-total">Total: ₱{{ number_format($order->total_amount, 2) }}</span>
+                    @if ((float) $order->discount > 0)
+                        <div style="font-size:.8rem;color:#1e7e34;font-weight:600;">
+                            <i class="fas fa-tag me-1"></i>Reward Discount Applied: ₱{{ number_format($order->discount, 2) }}
+                        </div>
+                    @endif
+                </div>
                 <div class="d-flex gap-2">
                     @if(in_array($order->status, ['pending', 'approved', 'assigned', 'out_for_delivery']))
                         <a href="{{ route('customer.tracking', $order) }}" class="btn btn-gasgo btn-sm"><i class="fas fa-map-marker-alt me-1"></i>Track</a>
                     @endif
                     @if($order->status === 'delivered' || $order->status === 'cancelled')
                         @php
-                            $reorderItems = $order->orderItems->map(function($i) {
-                                return [
-                                    'id' => $i->product_id,
-                                    'name' => $i->product_name,
-                                    'price' => (float)$i->price,
-                                    'image' => $i->product && $i->product->image ? asset($i->product->image) : '',
-                                    'quantity' => $i->quantity,
-                                ];
-                            })->values();
+                            $reorderItems = $order->orderItems
+                                ->where('is_reward', false)
+                                ->map(function($i) {
+                                    return [
+                                        'id' => $i->product_id,
+                                        'name' => $i->product_name,
+                                        'price' => (float)$i->price,
+                                        'image' => $i->product && $i->product->image ? asset($i->product->image) : '',
+                                        'quantity' => $i->quantity,
+                                    ];
+                                })->values();
                         @endphp
                         <button class="btn btn-gasgo-outline btn-sm reorder-btn"
                             data-items='@json($reorderItems)'>
@@ -160,14 +198,6 @@
 @endsection
 
 @section('scripts')
-@if(session('success'))
-<script>
-    // Clear localStorage cart after successful order placement
-    localStorage.removeItem('gasgo_cart');
-    if (typeof updateCartCount === 'function') updateCartCount();
-</script>
-@endif
-
 <script>
 // Filter tabs
 document.querySelectorAll('.filter-tab').forEach(tab => {
@@ -183,19 +213,18 @@ document.querySelectorAll('.filter-tab').forEach(tab => {
 
 // Reorder
 function reorder(items) {
-    let cart = JSON.parse(localStorage.getItem('gasgo_cart')) || [];
-    items.forEach(function(item) {
-        const existing = cart.find(c => c.id === item.id);
-        if (existing) { existing.quantity += item.quantity; }
-        else { cart.push(item); }
+    if (!Array.isArray(items) || !items.length) {
+        return;
+    }
+
+    syncCartAjax(items).catch(error => {
+        // Error already shown in toast
     });
-    localStorage.setItem('gasgo_cart', JSON.stringify(cart));
-    if (typeof updateCartCount === 'function') updateCartCount();
-    window.location.href = '{{ url("/customer/productCart") }}';
 }
 
 document.querySelectorAll('.reorder-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
         var items = JSON.parse(this.dataset.items);
         reorder(items);
     });
