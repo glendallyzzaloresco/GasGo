@@ -33,6 +33,32 @@
     .payment-option .pay-icon.cash { background: linear-gradient(135deg, #27ae60, #2ecc71); }
     .payment-option .pay-icon.gcash { background: linear-gradient(135deg, #007dfe, #00b0ff); }
 
+    .freebie-option {
+        border: 2px solid #eee;
+        border-radius: 14px;
+        padding: 14px;
+        height: 100%;
+        cursor: pointer;
+        transition: all .25s;
+        position: relative;
+    }
+    .freebie-option:hover {
+        border-color: var(--gasgo-orange);
+        background: var(--gasgo-orange-light);
+    }
+    .freebie-option input[type="radio"] {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+    }
+    .freebie-option.selected {
+        border-color: var(--gasgo-orange);
+        background: var(--gasgo-orange-light);
+    }
+    .freebie-title { font-weight: 700; color: #333; font-size: .95rem; }
+    .freebie-desc { color: #666; font-size: .82rem; margin-bottom: 6px; }
+    .freebie-stock { color: #1e7e34; font-size: .8rem; font-weight: 600; }
+
     /* Summary sidebar */
     .order-summary {
         background: white; border-radius: 20px; padding: 28px;
@@ -46,7 +72,7 @@
     }
     .summary-item.total .val { color: var(--gasgo-orange); }
     .order-item-mini { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f8f8f8; }
-    .order-item-mini img { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; background: var(--gasgo-blue-light); }
+    .order-item-mini img { width: 46px; height: 46px; border-radius: 8px; object-fit: contain; background: #fff; }
     .order-item-mini .name { font-weight: 600; font-size: .85rem; color: #333; }
     .order-item-mini .qty { font-size: .78rem; color: #888; }
 
@@ -63,6 +89,10 @@
         background: var(--gasgo-orange); color: white; border: none; border-radius: 8px;
         width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
         cursor: pointer; font-size: .85rem;
+    }
+    .map-search-wrap .search-btn.loading {
+        opacity: .85;
+        cursor: wait;
     }
     .map-hint { font-size: .78rem; color: #888; margin-top: 8px; }
     .map-search-results {
@@ -87,6 +117,10 @@
 </section>
 
 <section class="container section-padding" style="position:relative;z-index:2;">
+    @php
+        $smallRewardCount = (int) ($rewardPreview['small_reward_count'] ?? 0);
+        $freebieChoices = $availableFreebies ?? collect();
+    @endphp
     <form action="{{ route('customer.order.store') }}" method="POST" id="checkoutForm">
         @csrf
         <div class="row g-4">
@@ -115,16 +149,17 @@
                             <label class="form-label"><i class="fas fa-map me-1" style="color:var(--gasgo-orange)"></i>Pin Your Location</label>
                             <div class="map-search-wrap">
                                 <input type="text" id="mapSearch" placeholder="Search address or place..." autocomplete="off">
-                                <button type="button" class="search-btn" onclick="searchAddress()"><i class="fas fa-search"></i></button>
+                                <button type="button" class="search-btn" id="mapSearchBtn" onclick="searchAddress()"><i class="fas fa-search" id="mapSearchBtnIcon"></i></button>
                                 <div class="map-search-results" id="searchResults"></div>
                             </div>
                             <div id="checkoutMap"></div>
-                            <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex justify-content-between align-items-center" style="margin-top: 12px;">
                                 <p class="map-hint mb-0"><i class="fas fa-info-circle me-1"></i>Click on the map or drag the pin to set your exact delivery location</p>
                                 <button type="button" class="btn btn-sm mt-1" style="background:var(--gasgo-blue);color:white;border-radius:8px;font-size:.78rem;" onclick="useMyLocation()"><i class="fas fa-crosshairs me-1"></i>Use My Location</button>
                             </div>
                             <input type="hidden" name="latitude" id="latitude" value="{{ old('latitude') }}">
                             <input type="hidden" name="longitude" id="longitude" value="{{ old('longitude') }}">
+                            <input type="hidden" name="address_full" id="addressFull" value="{{ old('address_full') }}">
                         </div>
                     </div>
                 </div>
@@ -154,6 +189,46 @@
                     </div>
                     <input type="hidden" name="payment_method" id="paymentMethod" value="cash">
                 </div>
+
+                @if ($smallRewardCount > 0)
+                    <div class="checkout-card">
+                        <h5><i class="fas fa-gift"></i>Select Your Freebie</h5>
+                        <p class="text-muted mb-3" style="font-size:.88rem;">
+                            Your order qualifies for <strong>{{ $smallRewardCount }}</strong> freebie item{{ $smallRewardCount > 1 ? 's' : '' }}. Choose one freebie type below.
+                        </p>
+
+                        @if ($errors->has('selected_freebie_id'))
+                            <div class="alert alert-danger py-2 px-3" style="font-size:.85rem;">
+                                {{ $errors->first('selected_freebie_id') }}
+                            </div>
+                        @endif
+
+                        @if ($freebieChoices->isEmpty())
+                            <div class="alert alert-warning mb-0">
+                                No freebies are currently available. Please try again later.
+                            </div>
+                        @else
+                            <div class="row g-3">
+                                @foreach ($freebieChoices as $freebie)
+                                    <div class="col-md-6">
+                                        <label class="freebie-option {{ (string) old('selected_freebie_id') === (string) $freebie->id ? 'selected' : '' }}">
+                                            <input
+                                                type="radio"
+                                                name="selected_freebie_id"
+                                                value="{{ $freebie->id }}"
+                                                {{ (string) old('selected_freebie_id') === (string) $freebie->id ? 'checked' : '' }}
+                                                required
+                                            >
+                                            <div class="freebie-title">{{ $freebie->name }}</div>
+                                            <div class="freebie-desc">{{ $freebie->description ?: 'Complimentary reward item' }}</div>
+                                            <div class="freebie-stock">{{ $freebie->stock }} available</div>
+                                        </label>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                @endif
             </div>
 
             <!-- Order Summary Sidebar -->
@@ -162,7 +237,11 @@
                     <h5><i class="fas fa-receipt me-2"></i>Order Summary</h5>
                     @foreach ($cartItems as $item)
                     <div class="order-item-mini">
-                        <img src="{{ $item->product->image ? asset($item->product->image) : '' }}" alt="{{ $item->product->name }}">
+                        @if($item->product->resolved_image)
+                            <img src="{{ $item->product->resolved_image }}" alt="{{ $item->product->name }}">
+                        @else
+                            <span class="text-muted small">No image available</span>
+                        @endif
                         <div class="flex-grow-1">
                             <div class="name">{{ $item->product->name }}</div>
                             <div class="qty">Qty: {{ $item->quantity }} &times; ₱{{ number_format($item->product->price, 2) }}</div>
@@ -170,29 +249,9 @@
                         <div class="fw-bold" style="font-size:.9rem;">₱{{ number_format($item->product->price * $item->quantity, 2) }}</div>
                     </div>
                     @endforeach
-                    @if (($rewardPreview['free_count'] ?? 0) > 0)
-                        <div class="summary-item mt-2" style="color:#1e7e34;">
-                            <span><i class="fas fa-gift me-1"></i>Free Tanks Reward</span>
-                            <span>+{{ $rewardPreview['free_count'] }} tank(s)</span>
-                        </div>
-                    @endif
-                    @if (!empty($rewardPreview['free_lines'] ?? []))
-                        <div class="text-muted" style="font-size:.78rem;line-height:1.35;">
-                            {{ implode(', ', $rewardPreview['free_lines']) }}
-                        </div>
-                    @endif
-                    @if (($rewardPreview['discount_amount'] ?? 0) > 0)
-                        <div class="summary-item" style="color:#1e7e34;">
-                            <span><i class="fas fa-tag me-1"></i>Reward Discount</span>
-                            <span>-₱{{ number_format($rewardPreview['discount_amount'], 2) }}</span>
-                        </div>
-                        <div class="text-muted" style="font-size:.78rem;line-height:1.35;">
-                            Bonus tank stock is limited. Equivalent discount applied for: {{ implode(', ', $rewardPreview['discount_lines']) }}
-                        </div>
-                    @endif
                     <div class="summary-item mt-2"><span>Subtotal</span><span>₱{{ number_format($subtotal, 2) }}</span></div>
                     <div class="summary-item"><span>Delivery Fee</span><span>₱50.00</span></div>
-                    <div class="summary-item total"><span>Total</span><span class="val">₱{{ number_format(($subtotal + 50) - ($rewardPreview['discount_amount'] ?? 0), 2) }}</span></div>
+                    <div class="summary-item total"><span>Total</span><span class="val">₱{{ number_format($subtotal + 50, 2) }}</span></div>
                     <button type="submit" class="btn btn-gasgo w-100 mt-3">
                         <i class="fas fa-check-circle me-2"></i>Place Order
                     </button>
@@ -206,7 +265,7 @@
 </section>
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 function selectPayment(el, method) {
@@ -215,13 +274,285 @@ function selectPayment(el, method) {
     document.getElementById('paymentMethod').value = method;
 }
 
-// --- Leaflet Map ---
-const defaultLat = 16.0433;  // Calasiao, Pangasinan
+const defaultLat = 16.0433;
 const defaultLng = 120.3654;
+const locationSearchUrl = "{{ route('geocode.search') }}";
+const locationReverseUrl = "{{ route('geocode.reverse') }}";
+
 let map, marker;
+let searchTimeout;
+let searchAbortController = null;
+let reverseAbortController = null;
+const searchCache = new Map();
+const reverseCache = new Map();
+
+function formatPinnedLocation(lat, lng) {
+    return 'Pinned location (' + lat.toFixed(6) + ', ' + lng.toFixed(6) + ')';
+}
+
+function normalizeBarangayQuery(query) {
+    return query
+        .replace(/\bbrgy\.?\b/ig, 'barangay')
+        .replace(/\bbrg\.?\b/ig, 'barangay')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function getAddressContext() {
+    const address = document.querySelector('[name="delivery_address"]').value.trim();
+    if (!address) {
+        return '';
+    }
+    const parts = address.split(',').map(part => part.trim()).filter(Boolean);
+    return parts.slice(-2).join(', ');
+}
+
+function buildSearchQueries(inputQuery) {
+    const base = inputQuery.replace(/\s+/g, ' ').trim();
+    const normalized = normalizeBarangayQuery(base);
+    const context = getAddressContext();
+    const querySet = new Set([base, normalized, normalized + ', Philippines']);
+
+    if (!/\bbarangay\b|\bbrgy\b/i.test(base)) {
+        querySet.add('Barangay ' + base);
+        querySet.add('Barangay ' + base + ', Philippines');
+    }
+
+    if (context) {
+        querySet.add(base + ', ' + context);
+        querySet.add(normalized + ', ' + context);
+        querySet.add(normalized + ', ' + context + ', Philippines');
+    }
+
+    return Array.from(querySet).filter(Boolean);
+}
+
+function composeMapLabel(street, suburb, city, full) {
+    const parts = [street, suburb, city].filter(Boolean);
+    if (parts.length > 0) {
+        return parts.join(', ');
+    }
+
+    if (full) {
+        return full.split(',').slice(0, 3).join(', ').trim();
+    }
+
+    return '';
+}
+
+
+
+function setMapSearchButtonLoading(isLoading) {
+    const btn = document.getElementById('mapSearchBtn');
+    const icon = document.getElementById('mapSearchBtnIcon');
+    if (!btn || !icon) {
+        return;
+    }
+    btn.classList.toggle('loading', isLoading);
+    icon.className = isLoading ? 'fas fa-spinner fa-spin' : 'fas fa-search';
+}
+
+function updateLocationFields(mapLabel, fullAddress, lat, lng, onlyIfEmpty = false) {
+    document.getElementById('mapSearch').value = mapLabel || fullAddress || '';
+    document.getElementById('addressFull').value = fullAddress || mapLabel || '';
+
+    if (typeof lat === 'number' && typeof lng === 'number') {
+        document.getElementById('latitude').value = lat.toFixed(7);
+        document.getElementById('longitude').value = lng.toFixed(7);
+    }
+
+    const deliveryAddress = document.querySelector('[name="delivery_address"]');
+    if (!onlyIfEmpty || !deliveryAddress.value.trim()) {
+        deliveryAddress.value = fullAddress || mapLabel || '';
+    }
+}
+
+function parseReversePayload(payload, lat, lng) {
+    const street = payload.street || null;
+    const suburb = payload.suburb || payload.address?.barangay || payload.address?.suburb || payload.address?.village || null;
+    const city = payload.city || payload.address?.city || payload.address?.town || payload.address?.municipality || null;
+    const state = payload.address?.state || payload.address?.province || null;
+    
+    // Compose clean full address with only essential parts (street, barangay, city, state)
+    const cleanParts = [street, suburb, city, state].filter(Boolean);
+    const full = cleanParts.length > 0 ? cleanParts.join(', ') : formatPinnedLocation(lat, lng);
+    
+    const mapLabel = composeMapLabel(street, suburb, city, full) || full;
+    return { street, suburb, city, full, mapLabel };
+}
+
+function reverseGeocode(lat, lng, zoomLevel = null) {
+    const zoom = Math.max(5, Math.min(18, Number.isFinite(zoomLevel) ? Math.round(zoomLevel) : 18));
+    const key = lat.toFixed(5) + ':' + lng.toFixed(5) + ':' + zoom;
+    setMapSearchButtonLoading(true);
+
+    if (reverseCache.has(key)) {
+        const cached = reverseCache.get(key);
+        updateLocationFields(cached.mapLabel, cached.full, lat, lng);
+        setMapSearchButtonLoading(false);
+        return;
+    }
+
+    if (reverseAbortController) {
+        reverseAbortController.abort();
+    }
+    reverseAbortController = new AbortController();
+
+    const params = new URLSearchParams({ lat: String(lat), lng: String(lng), zoom: String(zoom) });
+    fetch(locationReverseUrl + '?' + params.toString(), { signal: reverseAbortController.signal })
+        .then(r => r.json())
+        .then(data => {
+            const parsed = parseReversePayload(data, lat, lng);
+            reverseCache.set(key, parsed);
+            updateLocationFields(parsed.mapLabel, parsed.full, lat, lng);
+        })
+        .catch(error => {
+            if (error && error.name === 'AbortError') {
+                return;
+            }
+            const fallback = formatPinnedLocation(lat, lng);
+            updateLocationFields(fallback, fallback, lat, lng, true);
+        })
+        .finally(() => setMapSearchButtonLoading(false));
+}
+
+function scoreResult(result, query) {
+    const name = (result.display_name || '').toLowerCase();
+    const q = query.toLowerCase();
+    let score = 0;
+
+    if (name.startsWith(q)) score += 60;
+    if (name.includes(q)) score += 30;
+    if (/\bbarangay\b/.test(name)) score += 10;
+
+    const center = map.getCenter();
+    const lat = parseFloat(result.lat);
+    const lng = parseFloat(result.lon);
+    if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+        score -= Math.hypot(center.lat - lat, center.lng - lng) * 120;
+    }
+
+    return score;
+}
+
+function applySearchResult(result) {
+    const lat = parseFloat(result.lat);
+    const lng = parseFloat(result.lon);
+    map.setView([lat, lng], 17);
+    marker.setLatLng([lat, lng]);
+    reverseGeocode(lat, lng, 17);
+    document.getElementById('searchResults').style.display = 'none';
+}
+
+async function fetchSearchCandidates(query) {
+    if (searchCache.has(query)) {
+        return searchCache.get(query);
+    }
+
+    const bounds = map.getBounds();
+    const params = new URLSearchParams({
+        q: query,
+        left: String(bounds.getWest()),
+        top: String(bounds.getNorth()),
+        right: String(bounds.getEast()),
+        bottom: String(bounds.getSouth()),
+        limit: '8'
+    });
+
+    try {
+        const response = await fetch(locationSearchUrl + '?' + params.toString(), { signal: searchAbortController?.signal });
+        if (!response.ok) {
+            console.warn('Search API error:', response.status, response.statusText);
+            return [];
+        }
+
+        const payload = await response.json();
+        const results = Array.isArray(payload.results) ? payload.results : [];
+        searchCache.set(query, results);
+        return results;
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            return [];
+        }
+        console.error('Search fetch error:', error);
+        return [];
+    }
+}
+
+async function searchAddress(autoSelectFirst = false) {
+    const query = document.getElementById('mapSearch').value.trim();
+    if (query.length < 3) {
+        document.getElementById('searchResults').style.display = 'none';
+        return;
+    }
+
+    if (searchAbortController) {
+        searchAbortController.abort();
+    }
+    searchAbortController = new AbortController();
+
+    const container = document.getElementById('searchResults');
+    container.innerHTML = '<div class="result-item text-muted">Searching...</div>';
+    container.style.display = 'block';
+
+    try {
+        const variants = buildSearchQueries(query);
+        const settled = await Promise.allSettled(variants.map(fetchSearchCandidates));
+        const merged = [];
+
+        settled.forEach(item => {
+            if (item.status === 'fulfilled' && Array.isArray(item.value)) {
+                merged.push(...item.value);
+            }
+        });
+
+        const unique = [];
+        const seen = new Set();
+        merged.forEach(item => {
+            const key = item.place_id || item.display_name;
+            if (!seen.has(key)) {
+                seen.add(key);
+                unique.push(item);
+            }
+        });
+
+        const ranked = unique.sort((a, b) => scoreResult(b, query) - scoreResult(a, query)).slice(0, 6);
+        container.innerHTML = '';
+
+        if (ranked.length === 0) {
+            container.innerHTML = '<div class="result-item text-muted">No results found. Try adding city/municipality.</div>';
+            container.style.display = 'block';
+            return;
+        }
+
+        if (autoSelectFirst) {
+            applySearchResult(ranked[0]);
+            return;
+        }
+
+        ranked.forEach(result => {
+            const item = document.createElement('div');
+            item.className = 'result-item';
+            item.textContent = result.display_name;
+            item.addEventListener('click', function () {
+                applySearchResult(result);
+            });
+            container.appendChild(item);
+        });
+
+        container.style.display = 'block';
+    } catch (error) {
+        if (error && error.name === 'AbortError') {
+            return;
+        }
+        container.innerHTML = '<div class="result-item text-muted">Search unavailable. Please pin directly on map.</div>';
+        container.style.display = 'block';
+    }
+}
 
 function initMap() {
     map = L.map('checkoutMap').setView([defaultLat, defaultLng], 14);
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
         maxZoom: 19
@@ -231,85 +562,68 @@ function initMap() {
 
     marker.on('dragend', function () {
         const pos = marker.getLatLng();
-        updateLatLng(pos.lat, pos.lng);
-        reverseGeocode(pos.lat, pos.lng);
+        reverseGeocode(pos.lat, pos.lng, map.getZoom());
     });
 
     map.on('click', function (e) {
         marker.setLatLng(e.latlng);
-        updateLatLng(e.latlng.lat, e.latlng.lng);
-        reverseGeocode(e.latlng.lat, e.latlng.lng);
+        reverseGeocode(e.latlng.lat, e.latlng.lng, map.getZoom());
     });
 
-    // If address already has coordinates, use them
+    map.on('zoomend', function () {
+        const pos = marker.getLatLng();
+        reverseGeocode(pos.lat, pos.lng, map.getZoom());
+    });
+
     const existingLat = document.getElementById('latitude').value;
     const existingLng = document.getElementById('longitude').value;
+
     if (existingLat && existingLng) {
         const lat = parseFloat(existingLat);
         const lng = parseFloat(existingLng);
         map.setView([lat, lng], 16);
         marker.setLatLng([lat, lng]);
+        reverseGeocode(lat, lng, 16);
+    } else {
+        reverseGeocode(defaultLat, defaultLng, 14);
     }
 }
 
-function updateLatLng(lat, lng) {
-    document.getElementById('latitude').value = lat.toFixed(7);
-    document.getElementById('longitude').value = lng.toFixed(7);
+function useMyLocation() {
+    if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser.');
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        function (position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            map.setView([lat, lng], 17);
+            marker.setLatLng([lat, lng]);
+            document.getElementById('mapSearch').value = 'Getting your address...';
+            reverseGeocode(lat, lng, 17);
+        },
+        function () {
+            alert('Unable to get your location. Please allow location access.');
+        },
+        { enableHighAccuracy: true }
+    );
 }
 
-function reverseGeocode(lat, lng) {
-    fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&zoom=18&addressdetails=1', {
-        headers: { 'Accept-Language': 'en' }
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.display_name) {
-            document.querySelector('[name="delivery_address"]').value = data.display_name;
-        }
-    })
-    .catch(() => {});
+function resetPinnedLocation() {
+    map.setView([defaultLat, defaultLng], 14);
+    marker.setLatLng([defaultLat, defaultLng]);
+    document.getElementById('mapSearch').value = '';
+    document.getElementById('searchResults').style.display = 'none';
+    document.getElementById('latitude').value = '';
+    document.getElementById('longitude').value = '';
+    document.getElementById('addressFull').value = '';
 }
 
-let searchTimeout;
-function searchAddress() {
-    const q = document.getElementById('mapSearch').value.trim();
-    if (q.length < 3) return;
-    fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q) + '&countrycodes=ph&limit=5', {
-        headers: { 'Accept-Language': 'en' }
-    })
-    .then(r => r.json())
-    .then(results => {
-        const container = document.getElementById('searchResults');
-        container.innerHTML = '';
-        if (results.length === 0) {
-            container.innerHTML = '<div class="result-item text-muted">No results found</div>';
-            container.style.display = 'block';
-            return;
-        }
-        results.forEach(r => {
-            const div = document.createElement('div');
-            div.className = 'result-item';
-            div.textContent = r.display_name;
-            div.addEventListener('click', () => {
-                const lat = parseFloat(r.lat);
-                const lng = parseFloat(r.lon);
-                map.setView([lat, lng], 17);
-                marker.setLatLng([lat, lng]);
-                updateLatLng(lat, lng);
-                document.querySelector('[name="delivery_address"]').value = r.display_name;
-                document.getElementById('mapSearch').value = '';
-                container.style.display = 'none';
-            });
-            container.appendChild(div);
-        });
-        container.style.display = 'block';
-    })
-    .catch(() => {});
-}
-
-// Live search as user types
 document.addEventListener('DOMContentLoaded', function () {
     initMap();
+
     const searchInput = document.getElementById('mapSearch');
     searchInput.addEventListener('input', function () {
         clearTimeout(searchTimeout);
@@ -319,32 +633,32 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('searchResults').style.display = 'none';
         }
     });
-    searchInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); searchAddress(); }
+
+    searchInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            searchAddress(true);
+        }
     });
-    // Close results when clicking outside
-    document.addEventListener('click', function (e) {
-        if (!e.target.closest('.map-search-wrap')) {
+
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('.map-search-wrap')) {
             document.getElementById('searchResults').style.display = 'none';
         }
     });
+
+    const freebieOptions = document.querySelectorAll('.freebie-option');
+    freebieOptions.forEach(option => {
+        const radio = option.querySelector('input[type="radio"]');
+        option.addEventListener('click', function () {
+            freebieOptions.forEach(o => o.classList.remove('selected'));
+            option.classList.add('selected');
+            if (radio) {
+                radio.checked = true;
+            }
+        });
+    });
 });
-
-function useMyLocation() {
-    if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
-    navigator.geolocation.getCurrentPosition(
-        function (pos) {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            map.setView([lat, lng], 17);
-            marker.setLatLng([lat, lng]);
-            updateLatLng(lat, lng);
-            reverseGeocode(lat, lng);
-        },
-        function () { alert('Unable to get your location. Please allow location access.'); },
-        { enableHighAccuracy: true }
-    );
-}
 </script>
+@endpush
 
-@endsection

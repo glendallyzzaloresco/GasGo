@@ -501,6 +501,16 @@
         <p class="address-text">{{ $delivery->order->delivery_address }}</p>
     </div>
 
+    <!-- Customer Delivery Notes / Landmark -->
+    <div class="address-section">
+        <div class="section-header">
+            <i class="fas fa-sticky-note"></i>Delivery Notes / Landmark
+        </div>
+        <p class="address-text mb-0">
+            {{ $delivery->order->notes ?: 'No additional notes or landmark provided by customer.' }}
+        </p>
+    </div>
+
     <!-- Items -->
     <div class="mb-4">
         <h6 style="color:var(--gasgo-blue);font-weight:600;font-size:.9rem;"><i class="fas fa-box me-2" style="color:var(--gasgo-orange);"></i>Order Items</h6>

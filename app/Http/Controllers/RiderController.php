@@ -20,6 +20,7 @@ class RiderController extends Controller
 
         $completedCount = Delivery::where('rider_id', Auth::id())
             ->where('status', 'delivered')
+            ->whereDate('delivered_at', today())
             ->count();
 
         // Get available orders (approved but not yet assigned to any rider)
@@ -59,14 +60,14 @@ class RiderController extends Controller
         $delivery = Delivery::create([
             'order_id' => $order->id,
             'rider_id' => Auth::id(),
-            'status' => 'assigned',
+            'status' => 'out_for_delivery',
             'assigned_at' => now(),
             'latitude' => null,
             'longitude' => null,
         ]);
 
         // Update order status
-        $order->update(['status' => 'assigned']);
+        $order->update(['status' => 'out_for_delivery']);
 
         return response()->json([
             'success' => true,

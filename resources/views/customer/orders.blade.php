@@ -26,7 +26,7 @@
     .order-header .order-date { font-size: .85rem; color: #888; }
     .order-body { padding: 18px 24px; }
     .order-item-row { display: flex; align-items: center; gap: 14px; padding: 8px 0; }
-    .order-item-row img { width: 50px; height: 50px; border-radius: 10px; object-fit: cover; background: var(--gasgo-blue-light); }
+    .order-item-row img { width: 50px; height: 50px; border-radius: 10px; object-fit: contain; background: #fff; }
     .order-item-row .item-name { font-weight: 600; color: #333; font-size: .92rem; }
     .order-item-row .item-qty { font-size: .82rem; color: #888; }
     .order-item-row.reward-item { background: #f0f9ff; border-left: 3px solid #28a745; padding: 10px 12px; border-radius: 8px; }
@@ -64,6 +64,44 @@
 </section>
 
 <section class="container section-padding" style="position:relative;z-index:2;">
+    @php
+        $freebieNames = $orders
+            ->flatMap(function ($order) {
+                return $order->orderItems
+                    ->where('is_reward', true)
+                    ->pluck('product_name');
+            })
+            ->filter()
+            ->values();
+
+        $freebieImages = \App\Models\Freebie::query()
+            ->when($freebieNames->isNotEmpty(), function ($query) use ($freebieNames) {
+                $query->whereIn('name', $freebieNames->unique());
+            })
+            ->get(['name', 'image'])
+            ->mapWithKeys(function ($freebie) {
+                return [strtolower(trim($freebie->name)) => $freebie->image];
+            });
+
+        $resolveImageFromDb = function ($path) {
+            if (! $path) {
+                return null;
+            }
+
+            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                return $path;
+            }
+
+            $normalized = ltrim($path, '/');
+
+            if (str_starts_with($normalized, 'storage/') || str_starts_with($normalized, 'images/')) {
+                return asset($normalized);
+            }
+
+            return asset('storage/' . $normalized);
+        };
+    @endphp
+
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert" data-aos="fade-up">
             <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
@@ -113,21 +151,18 @@
             </div>
             <div class="order-body">
                 @foreach ($order->orderItems as $item)
+                @php
+                    $normalizedRewardName = strtolower(trim((string) preg_replace('/\s*\(freebie\)\s*$/i', '', $item->product_name)));
+                    $freebieImagePath = $freebieImages[$normalizedRewardName] ?? $freebieImages[strtolower(trim($item->product_name))] ?? null;
+                    $itemImage = $item->is_reward
+                        ? ($resolveImageFromDb($freebieImagePath) ?: ($item->product?->resolved_image ?: null))
+                        : ($item->product?->resolved_image ?: null);
+                @endphp
                 <div class="order-item-row @if($item->is_reward) reward-item @endif">
-                    @if($item->is_reward)
-                        <div style="width:50px;height:50px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#28a745,#20c997);color:white;font-size:1.5rem;">
-                            @if(str_contains($item->product_name, 'LPG'))
-                                <i class="fas fa-gas-pump"></i>
-                            @elseif(str_contains($item->product_name, 'Paste'))
-                                <i class="fas fa-soap"></i>
-                            @elseif(str_contains($item->product_name, 'Hanger'))
-                                <i class="fas fa-hanger"></i>
-                            @else
-                                <i class="fas fa-gift"></i>
-                            @endif
-                        </div>
+                    @if($itemImage)
+                        <img src="{{ $itemImage }}" alt="{{ $item->product_name }}">
                     @else
-                        <img src="{{ $item->product && $item->product->image ? asset($item->product->image) : asset('images/2kg.jpg') }}" alt="{{ $item->product_name }}">
+                        <span class="text-muted small">No image available</span>
                     @endif
                     <div>
                         <div class="item-name">
@@ -170,7 +205,7 @@
                                         'id' => $i->product_id,
                                         'name' => $i->product_name,
                                         'price' => (float)$i->price,
-                                        'image' => $i->product && $i->product->image ? asset($i->product->image) : '',
+                                        'image' => $i->product?->resolved_image ?? '',
                                         'quantity' => $i->quantity,
                                     ];
                                 })->values();
@@ -211,9 +246,10 @@ document.querySelectorAll('.filter-tab').forEach(tab => {
     });
 });
 
-// Reorder
+// Reorder function
 function reorder(items) {
     if (!Array.isArray(items) || !items.length) {
+        alert('No items to reorder');
         return;
     }
 

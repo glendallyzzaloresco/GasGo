@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cart;
+use App\Models\Freebie;
+use App\Models\Inventory;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -29,10 +32,20 @@ class OrderController extends Controller
     }
 
     // Customer: show checkout form
-    public function checkout()
+    public function checkout(Request $request)
     {
         if (! Auth::check()) {
             return redirect()->guest(route('customer.login'))->with('error', 'Please log in to continue to checkout.');
+        }
+
+        // Redirect admins to their dashboard
+        if (Auth::user()->role === 'admin') {
+            return redirect()->route('admin.dashboard')->with('info', 'Admins cannot access customer checkout.');
+        }
+
+        // Redirect riders to their dashboard
+        if (Auth::user()->role === 'rider') {
+            return redirect()->route('rider.dashboard')->with('info', 'Riders cannot access customer checkout.');
         }
 
         $cartItems = Cart::with('product')
@@ -43,14 +56,51 @@ class OrderController extends Controller
             return redirect()->route('customer.cart')->with('error', 'Your cart is empty.');
         }
 
-        $subtotal = $cartItems->sum(fn ($item) => $item->product->price * $item->quantity);
+        // Filter cart items by selected items from cart page
+        $selectedIds = $request->input('selected_items', []);
+        if (!empty($selectedIds)) {
+            $cartItems = $cartItems->whereIn('product_id', $selectedIds);
+        }
 
-        // Generate reward preview based on tiered loyalty system
+        if ($cartItems->isEmpty()) {
+            return redirect()->route('customer.cart')->with('error', 'No items selected for checkout.');
+        }
+
+        $subtotal = $cartItems->sum(fn ($item) => $item->product->price * $item->quantity);
+        $productFreebieOffset = 1000000;
+
+        $tableFreebies = Freebie::query()
+            ->where('is_active', true)
+            ->where('stock', '>', 0)
+            ->orderBy('name')
+            ->get();
+
+        $productFreebies = Product::query()
+            ->with('inventory')
+            ->where('is_active', true)
+            ->where('category', 'freebie')
+            ->whereHas('inventory', function ($query) {
+                $query->where('status', 'active')
+                    ->where('quantity_on_hand', '>', 0);
+            })
+            ->get()
+            ->map(function ($product) use ($productFreebieOffset) {
+                $product->id = $productFreebieOffset + (int) $product->id;
+                $product->stock = (int) ($product->inventory->quantity_on_hand ?? 0);
+                return $product;
+            });
+
+        $availableFreebies = $tableFreebies
+            ->concat($productFreebies)
+            ->sortBy('name')
+            ->values();
+
+        // Generate checkout freebie preview
         $rewardPreview = [
-            'has_rewards' => false,
-            'bulk_rewards' => [],
-            'small_rewards' => [],
+            'has_freebies' => false,
+            'freebies' => [],
             'total_items' => 0,
+            'small_reward_count' => 0,
         ];
 
         foreach ($cartItems as $item) {
@@ -61,26 +111,19 @@ class OrderController extends Controller
             $quantity = (int) $item->quantity;
             $rewardPreview['total_items'] += $quantity;
 
-            if ($quantity >= 10) {
-                // Tier A: Bulk order
-                $rewardPreview['has_rewards'] = true;
-                $rewardPreview['bulk_rewards'][] = [
+            if ($quantity >= 1 && $quantity <= 9) {
+                // Small order freebie
+                $rewardPreview['has_freebies'] = true;
+                $rewardPreview['small_reward_count']++;
+                $rewardPreview['freebies'][] = [
                     'product_name' => $item->product->name,
                     'quantity' => $quantity,
-                    'reward' => '1 Free LPG Tank',
-                ];
-            } elseif ($quantity >= 1 && $quantity <= 9) {
-                // Tier B: Small order
-                $rewardPreview['has_rewards'] = true;
-                $rewardPreview['small_rewards'][] = [
-                    'product_name' => $item->product->name,
-                    'quantity' => $quantity,
-                    'reward' => '1 Free Freebie (Paste or Hanger)',
+                    'freebie' => '1 Selected Freebie',
                 ];
             }
         }
 
-        return view('customer.checkout', compact('cartItems', 'subtotal', 'rewardPreview'));
+        return view('customer.checkout', compact('cartItems', 'subtotal', 'rewardPreview', 'availableFreebies'));
     }
 
     // Customer: place an order from cart
@@ -95,8 +138,10 @@ class OrderController extends Controller
             'contact_number'   => 'required|string|max:20',
             'payment_method'   => 'required|in:cash,gcash',
             'notes'            => 'nullable|string|max:500',
-            'latitude'         => 'nullable|numeric',
-            'longitude'        => 'nullable|numeric',
+            'latitude'         => 'required|numeric',
+            'longitude'        => 'required|numeric',
+            'address_full'     => 'required|string|max:500',
+            'selected_freebie_id' => 'nullable|integer',
         ]);
 
         $cartItems = Cart::with('product')
@@ -107,48 +152,108 @@ class OrderController extends Controller
             return redirect()->route('customer.cart')->with('error', 'Your cart is empty.');
         }
 
-        // Ensure reward products exist BEFORE transaction
-        $rewardLpgTank = \App\Models\Product::firstOrCreate(
-            ['name' => 'Free LPG Tank (Reward)'],
-            [
-                'description' => 'Complimentary LPG Tank - Loyalty Reward for Bulk Orders',
-                'price' => 0.00,
-                'stock' => 999,
-                'weight' => '11kg',
-                'is_active' => true,
-            ]
-        );
+        $smallRewardCount = 0;
+        foreach ($cartItems as $item) {
+            $quantity = (int) $item->quantity;
+            if ($quantity >= 1 && $quantity <= 9) {
+                $smallRewardCount++;
+            }
+        }
 
-        $rewardDishPaste = \App\Models\Product::firstOrCreate(
-            ['name' => 'Dish Washer Paste (Freebie)'],
-            [
-                'description' => 'Free Dish Washer Paste - Small Order Loyalty Reward',
-                'price' => 0.00,
-                'stock' => 999,
-                'weight' => '0.2kg',
-                'is_active' => true,
-            ]
-        );
+        $productFreebieOffset = 1000000;
+        $selectedFreebieId = isset($validated['selected_freebie_id']) ? (int) $validated['selected_freebie_id'] : null;
+        $isProductFreebieSelection = $selectedFreebieId !== null && $selectedFreebieId >= $productFreebieOffset;
+        $selectedProductFreebieId = $isProductFreebieSelection
+            ? (int) ($selectedFreebieId - $productFreebieOffset)
+            : null;
 
-        $rewardClothHanger = \App\Models\Product::firstOrCreate(
-            ['name' => 'Cloth Hanger Set (Freebie)'],
-            [
-                'description' => 'Free Cloth Hanger Set - Small Order Loyalty Reward',
-                'price' => 0.00,
-                'stock' => 999,
-                'weight' => '0.1kg',
-                'is_active' => true,
-            ]
-        );
+        if ($smallRewardCount > 0 && ! $selectedFreebieId) {
+            throw ValidationException::withMessages([
+                'selected_freebie_id' => 'Please select a freebie for your freebie item(s).',
+            ]);
+        }
 
-        $order = DB::transaction(function () use ($validated, $cartItems, $rewardLpgTank, $rewardDishPaste, $rewardClothHanger) {
+        $order = DB::transaction(function () use ($validated, $cartItems, $smallRewardCount, $selectedFreebieId, $isProductFreebieSelection, $selectedProductFreebieId) {
             $subtotal = 0;
             $deliveryFee = 50.00;
             $orderItems = [];
             $hasRewardItems = false;
+            $selectedFreebie = null;
+            $selectedFreebieProduct = null;
+            $selectedFreebieInventory = null;
+
+            if ($smallRewardCount > 0) {
+                if ($isProductFreebieSelection) {
+                    $selectedFreebieProduct = Product::query()
+                        ->whereKey($selectedProductFreebieId)
+                        ->where('is_active', true)
+                        ->where('category', 'freebie')
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $selectedFreebieProduct) {
+                        throw ValidationException::withMessages([
+                            'selected_freebie_id' => 'The selected freebie is no longer available.',
+                        ]);
+                    }
+
+                    $selectedFreebieInventory = Inventory::query()
+                        ->where('product_id', $selectedFreebieProduct->id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $selectedFreebieInventory || $selectedFreebieInventory->status !== 'active') {
+                        throw ValidationException::withMessages([
+                            'selected_freebie_id' => 'The selected freebie is currently unavailable.',
+                        ]);
+                    }
+
+                    if ((int) $selectedFreebieInventory->quantity_on_hand < $smallRewardCount) {
+                        throw ValidationException::withMessages([
+                            'selected_freebie_id' => 'Selected freebie has insufficient stock for this checkout.',
+                        ]);
+                    }
+                } else {
+                    $selectedFreebie = Freebie::query()
+                        ->whereKey($selectedFreebieId)
+                        ->where('is_active', true)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $selectedFreebie) {
+                        throw ValidationException::withMessages([
+                            'selected_freebie_id' => 'The selected freebie is no longer available.',
+                        ]);
+                    }
+
+                    if ((int) $selectedFreebie->stock < $smallRewardCount) {
+                        throw ValidationException::withMessages([
+                            'selected_freebie_id' => 'Selected freebie has insufficient stock for this checkout.',
+                        ]);
+                    }
+
+                    $selectedFreebieProduct = Product::firstOrCreate(
+                        ['name' => $selectedFreebie->name],
+                        [
+                            'description' => $selectedFreebie->description,
+                            'price' => 0.00,
+                            'stock' => max(999, (int) $selectedFreebie->stock),
+                            'weight' => 'reward',
+                            'image' => $selectedFreebie->image,
+                            'is_active' => true,
+                        ]
+                    );
+
+                    if (! $selectedFreebieProduct->is_active) {
+                        $selectedFreebieProduct->is_active = true;
+                        $selectedFreebieProduct->save();
+                    }
+                }
+            }
 
             foreach ($cartItems as $item) {
-                $product = \App\Models\Product::query()
+                $product = Product::query()
+                    ->with('inventory')
                     ->whereKey($item->product_id)
                     ->lockForUpdate()
                     ->first();
@@ -159,7 +264,18 @@ class OrderController extends Controller
                     ]);
                 }
 
-                if ($product->stock < $item->quantity) {
+                $inventory = Inventory::query()
+                    ->where('product_id', $product->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $inventory || $inventory->status !== 'active') {
+                    throw ValidationException::withMessages([
+                        'cart' => $product->name . ' is currently unavailable for ordering.',
+                    ]);
+                }
+
+                if ((int) $inventory->quantity_on_hand < (int) $item->quantity) {
                     throw ValidationException::withMessages([
                         'cart' => 'Insufficient stock for ' . $product->name . '. Please update your cart quantity.',
                     ]);
@@ -180,25 +296,11 @@ class OrderController extends Controller
                     'is_reward'    => false,
                 ];
 
-                // Tiered Loyalty System - Add reward item if applicable
-                if ($quantity >= 10) {
-                    // Tier A (Bulk): >= 10 items → Add 1 Free LPG Tank
+                // Small-order freebies are customer-selected.
+                if ($quantity >= 1 && $quantity <= 9) {
                     $orderItems[] = [
-                        'product_id'   => $rewardLpgTank->id,
-                        'product_name' => $rewardLpgTank->name,
-                        'quantity'     => 1,
-                        'price'        => 0,
-                        'subtotal'     => 0,
-                        'is_reward'    => true,
-                    ];
-                    $hasRewardItems = true;
-                } elseif ($quantity >= 1 && $quantity <= 9) {
-                    // Tier B (Small): 1-9 items → Add 1 Small Freebie (random)
-                    $freebieProduct = (rand(1, 2) === 1) ? $rewardDishPaste : $rewardClothHanger;
-                    
-                    $orderItems[] = [
-                        'product_id'   => $freebieProduct->id,
-                        'product_name' => $freebieProduct->name,
+                        'product_id'   => $selectedFreebieProduct->id,
+                        'product_name' => $selectedFreebieProduct->name,
                         'quantity'     => 1,
                         'price'        => 0,
                         'subtotal'     => 0,
@@ -208,7 +310,17 @@ class OrderController extends Controller
                 }
 
                 // Deduct stock only for regular items
-                $product->decrement('stock', $quantity);
+                $inventory->decrement('quantity_on_hand', $quantity);
+            }
+
+            if ($smallRewardCount > 0) {
+                if ($selectedFreebie) {
+                    $selectedFreebie->decrement('stock', $smallRewardCount);
+                }
+
+                if ($selectedFreebieInventory) {
+                    $selectedFreebieInventory->decrement('quantity_on_hand', $smallRewardCount);
+                }
             }
 
             $totalAmount = $subtotal + $deliveryFee;
@@ -327,6 +439,48 @@ class OrderController extends Controller
             'waypoints' => $waypoints,
             'waypoints_count' => count($waypoints),
         ]);
+    }
+
+    // Customer: cancel order before admin approval
+    public function cancelByCustomer(Order $order)
+    {
+        if (! Auth::check() || $order->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        if ($order->status !== 'pending') {
+            return redirect()->route('customer.tracking', $order)
+                ->with('error', 'Only pending orders can be cancelled before admin approval.');
+        }
+
+        DB::transaction(function () use ($order) {
+            $order->loadMissing('orderItems');
+
+            foreach ($order->orderItems as $item) {
+                if ($item->is_reward) {
+                    $freebie = Freebie::query()
+                        ->where('name', $item->product_name)
+                        ->first();
+
+                    if ($freebie) {
+                        $freebie->increment('stock', (int) $item->quantity);
+                    }
+
+                    continue;
+                }
+
+                if ($item->product_id) {
+                    Inventory::query()
+                        ->where('product_id', $item->product_id)
+                        ->increment('quantity_on_hand', (int) $item->quantity);
+                }
+            }
+
+            $order->update(['status' => 'cancelled']);
+        });
+
+        return redirect()->route('customer.orders')
+            ->with('success', 'Order cancelled successfully.');
     }
 
     // Admin: list all orders

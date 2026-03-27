@@ -1,4 +1,4 @@
-﻿@extends('layouts.customer')
+@extends('layouts.customer')
 
 @section('title', 'GasGo - Home')
 @section('nav-home', 'active')
@@ -99,149 +99,55 @@
     }
     .promo-banner h3 { font-weight: 700; }
 
-    /* ===== PROMO BANNER ===== */
-    .promo-banner {
-        background: linear-gradient(135deg, var(--gasgo-orange) 0%, #ff6b35 100%);
-        border-radius: 20px;
-        padding: 40px;
-        color: white;
-        margin-top: -40px;
-        position: relative;
-        z-index: 2;
-        box-shadow: 0 15px 50px rgba(247,148,29,.3);
-        animation: fadeInUp .8s ease-out .3s backwards;
-        border: 1px solid rgba(255,255,255,.1);
-        overflow: hidden;
-    }
-    .promo-banner::before {
-        content: '';
-        position: absolute;
-        top: -50%; right: -50%;
-        width: 200%; height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,.1) 0%, transparent 70%);
-        animation: float 6s ease-in-out infinite;
-    }
-    .promo-banner h3 { font-weight: 700; position: relative; z-index: 1; }
-    .promo-banner p { position: relative; z-index: 1; }
-    .btn-light:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0,0,0,.15);
-    }
-
-    /* ===== PRODUCT CARD ===== */
+    /* ===== FEATURED PRODUCTS ===== */
     .product-card {
         background: white;
         border-radius: 20px;
         overflow: hidden;
         box-shadow: 0 8px 30px rgba(0,0,0,.08);
-        transition: all .4s cubic-bezier(.34,.1,.64,.1);
-        height: 100%;
-        position: relative;
-        border: 1px solid rgba(0,0,0,.05);
+        transition: transform .35s, box-shadow .35s;
+        transform-style: preserve-3d;
     }
     .product-card:hover {
-        transform: translateY(-12px);
-        box-shadow: 0 20px 60px rgba(0,0,0,.15);
-        border-color: rgba(247,148,29,.2);
+        transform: translateY(-8px);
+        box-shadow: 0 16px 40px rgba(0,0,0,.14);
     }
     .product-card .product-img {
         height: 200px;
-        background: linear-gradient(135deg, #f0f4ff 0%, #fff 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        overflow: hidden;
+        background: white;
+        display: flex; align-items: center; justify-content: center;
     }
-    .product-card .product-img::after {
-        content: '';
-        position: absolute;
-        top: 0; left: -100%;
-        width: 100%; height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent);
-        animation: shimmer 3s infinite;
-    }
-    .product-card .product-img img {
-        max-height: 160px;
-        object-fit: contain;
-        transition: transform .4s ease-out;
-    }
-    .product-card:hover .product-img img { transform: scale(1.1); }
-    .product-card .product-body { padding: 20px; position: relative; z-index: 1; }
-    .product-card .product-body h5 {
-        font-weight: 700;
-        color: var(--gasgo-blue);
-        margin-bottom: 4px;
-        transition: color .3s ease-out;
-    }
-    .product-card:hover .product-body h5 { color: var(--gasgo-orange); }
-    .product-price {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--gasgo-orange);
-        transition: all .3s ease-out;
-    }
-    .product-card:hover .product-price { font-size: 1.4rem; }
-    .product-stock {
-        font-size: .8rem;
-        color: #27ae60;
-        font-weight: 500;
-        transition: all .3s ease-out;
-    }
+    .product-card .product-img img { max-height: 160px; object-fit: contain; }
+    .product-card .product-body { padding: 20px; }
+    .product-card .product-body h5 { font-weight: 700; color: #2f2f2f; margin-bottom: 4px; }
+    .product-price { font-size: 1.25rem; font-weight: 700; color: var(--gasgo-orange); }
+    .product-stock { font-size: .8rem; color: #27ae60; font-weight: 500; }
     .product-stock.out { color: #e74c3c; }
 
-    .add-to-cart-btn {
-        background: linear-gradient(135deg, var(--gasgo-blue) 0%, #2196f3 100%);
-        border: none;
-        color: white;
-        font-weight: 600;
-        transition: all .3s cubic-bezier(.34,.1,.64,.1);
-    }
-    .add-to-cart-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(26,109,176,.3);
-        background: linear-gradient(135deg, #1555a0 0%, #1976d2 100%);
-    }
-
     /* ===== HOW IT WORKS ===== */
-    .how-it-works { background: #f8f9fa; }
+    .how-it-works { background: white; }
     .step-card {
         text-align: center;
         padding: 30px 20px;
         border-radius: 20px;
-        transition: all .4s cubic-bezier(.34,.1,.64,.1);
-        background: white;
-        border: 1px solid rgba(0,0,0,.05);
+        transition: transform .3s, box-shadow .3s;
     }
     .step-card:hover {
-        transform: translateY(-10px);
-        box-shadow: 0 15px 40px rgba(0,0,0,.1);
-        border-color: rgba(247,148,29,.2);
+        transform: translateY(-6px);
+        box-shadow: 0 10px 30px rgba(0,0,0,.09);
     }
     .step-icon {
-        width: 80px;
-        height: 80px;
+        width: 80px; height: 80px;
         border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.8rem;
-        color: white;
-        margin: 0 auto 18px;
-        transition: all .4s cubic-bezier(.34,.1,.64,.1);
-        box-shadow: 0 8px 25px rgba(0,0,0,.15);
-        position: relative;
-    }
-    .step-card:hover .step-icon {
-        transform: scale(1.15) rotate(5deg);
-        box-shadow: 0 12px 35px rgba(0,0,0,.2);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.8rem; color: white; margin: 0 auto 18px;
     }
     .step-icon.blue { background: linear-gradient(135deg, #1a6db0, #2196f3); }
     .step-icon.orange { background: linear-gradient(135deg, #f7941d, #ff6b35); }
     .step-icon.green { background: linear-gradient(135deg, #27ae60, #2ecc71); }
     .step-icon.purple { background: linear-gradient(135deg, #8e44ad, #9b59b6); }
 
-    /* ===== WHY CARD ===== */
+    /* ===== WHY GASGO ===== */
     .why-card {
         background: white;
         border-radius: 16px;
@@ -249,112 +155,114 @@
         box-shadow: 0 4px 20px rgba(0,0,0,.06);
         height: 100%;
         border-top: 4px solid transparent;
-        transition: all .4s cubic-bezier(.34,.1,.64,.1);
-        position: relative;
-        overflow: hidden;
+        transition: all .3s;
     }
-    .why-card::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: linear-gradient(135deg, rgba(247,148,29,.05) 0%, transparent 100%);
-        opacity: 0;
-        transition: opacity .4s ease-out;
-    }
-    .why-card:hover {
-        border-top-color: var(--gasgo-orange);
-        transform: translateY(-8px);
-        box-shadow: 0 15px 40px rgba(0,0,0,.12);
-    }
-    .why-card:hover::before { opacity: 1; }
-    .why-card i {
-        font-size: 2rem;
-        margin-bottom: 14px;
-        display: block;
-        transition: all .4s cubic-bezier(.34,.1,.64,.1);
-    }
-    .why-card:hover i {
-        transform: scale(1.2) translateY(-5px);
-    }
-    .why-card h5 {
-        position: relative;
-        z-index: 1;
-        transition: color .3s ease-out;
-    }
-    .why-card p {
-        position: relative;
-        z-index: 1;
+    .why-card:hover { border-top-color: var(--gasgo-orange); transform: translateY(-4px); }
+    .why-card i { font-size: 2rem; margin-bottom: 14px; }
+
+    [data-reveal="slide-up"] {
+        animation: revealUp .65s ease both;
     }
 
-    /* ===== SECTION TITLES ===== */
-    .section-title {
-        font-size: 2.2rem;
-        font-weight: 800;
-        color: var(--gasgo-blue);
-        position: relative;
-        display: inline-block;
+    @keyframes floatCard {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
     }
-    .section-subtitle {
-        color: #666;
-        font-size: 1.05rem;
-        margin-top: 10px;
+    @keyframes driftY {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-18px); }
+    }
+    @keyframes badgeShine {
+        0%, 60%, 100% { left: -140%; }
+        25% { left: 145%; }
+    }
+    @keyframes revealUp {
+        from {
+            opacity: 0;
+            transform: translateY(14px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
-    /* ===== RESPONSIVE ===== */
     @media (max-width: 768px) {
         .hero-title { font-size: 2rem; }
         .hero-section { padding: 60px 0 60px; }
-        .section-title { font-size: 1.8rem; }
-        .product-card:hover { transform: translateY(-8px); }
-        .step-icon { width: 70px; height: 70px; font-size: 1.5rem; }
+        .hero-glow { opacity: .2; }
     }
 
-    /* ===== ACCESSIBILITY ===== */
-    @media (prefers-reduced-motion: reduce) {
-        * {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
-        }
-    }
 </style>
 @endsection
 
 @section('content')
+@php
+    $resolveProductImage = function (?string $path): ?string {
+        if (! $path) {
+            return null;
+        }
+
+        $normalized = ltrim($path, '/');
+        if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
+            return $path;
+        }
+
+        if (str_starts_with($normalized, 'storage/')) {
+            return asset($normalized);
+        }
+
+        return asset('storage/' . $normalized);
+    };
+
+    $featuredProducts = collect($products ?? [])->take(4);
+    $heroProductImage = $homepageSettings->home_hero_image_url ?: $featuredProducts
+        ->map(fn ($product) => $resolveProductImage($product->image ?? null))
+        ->first(fn ($image) => filled($image));
+
+    $promoBannerImage = $homepageSettings->promo_banner_image_url ?? null;
+@endphp
+
 <!-- Hero -->
 <section class="hero-section">
+    <span class="hero-glow one"></span>
+    <span class="hero-glow two"></span>
+    <span class="hero-glow three"></span>
     <div class="container">
         <div class="row align-items-center">
-            <div class="col-lg-6" data-aos="fade-right">
-                <h1 class="hero-title">Track Your <span>LPG Delivery</span> in Real-Time!</h1>
-                <p class="hero-subtitle">Fast, reliable LPG delivery right to your door. Earn loyalty rewards with every order.</p>
+            <div class="col-lg-6 hero-content" data-aos="fade-right" data-reveal="slide-up">
+                <h1 class="hero-title">{{ $homepageSettings->hero_title_prefix ?? 'Fast, Reliable' }} <span>{{ $homepageSettings->hero_title_highlight ?? 'LPG Delivery' }}</span> {{ $homepageSettings->hero_title_suffix ?? 'to Your Door' }}</h1>
+                <p class="hero-subtitle">{{ $homepageSettings->hero_subtitle ?? 'Fast, reliable LPG delivery right to your door. Earn loyalty rewards with every order.' }}</p>
                 <a href="{{ url('/customer/product') }}" class="btn btn-gasgo btn-lg">
-                    <i class="fas fa-fire me-2"></i>Browse Products
+                    <i class="fas fa-fire me-2"></i>{{ $homepageSettings->hero_primary_button_label ?? 'Browse Products' }}
                 </a>
                 <div class="hero-badges">
                     <span class="hero-badge"><i class="fas fa-star"></i> Loyalty Rewards</span>
                     <span class="hero-badge"><i class="fas fa-bolt"></i> Fast Delivery</span>
-                    <span class="hero-badge"><i class="fas fa-map-marker-alt"></i> Live Tracking</span>
+                    <span class="hero-badge"><i class="fas fa-receipt"></i> Order Updates</span>
                 </div>
             </div>
-            <div class="col-lg-6 text-center" data-aos="fade-left">
-                <img src="{{ asset('images/gasgo_logo-removebg-preview.png') }}" alt="GasGo Logo" style="max-height:380px;border-radius:20px;">
-            </div>
+            @if($heroProductImage)
+                <div class="col-lg-6 text-center" data-aos="fade-left">
+                    <img src="{{ $heroProductImage }}" alt="Featured Product" style="max-height:380px;border-radius:20px;">
+                </div>
+            @endif
         </div>
     </div>
 </section>
 
+<!-- Promo Banner -->
 @guest
 <section class="container" style="position:relative;z-index:2;" data-aos="fade-up">
-    <div class="promo-banner">
+    <div class="promo-banner" @if($promoBannerImage) style="background-image: linear-gradient(rgba(247,148,29,.82), rgba(255,107,53,.82)), url('{{ $promoBannerImage }}'); background-size: cover; background-position: center;" @endif>
         <div class="row align-items-center">
             <div class="col-md-8">
-                <h3><i class="fas fa-gift me-2"></i>New User? Get FREE Delivery on Your First Order!</h3>
-                <p class="mb-0" style="opacity:.9;">Register now and start earning loyalty points with every purchase.</p>
+                <h3><i class="fas fa-gift me-2"></i>{{ $homepageSettings->promo_title ?? 'New User? Get FREE Delivery on Your First Order!' }}</h3>
+                <p class="mb-0" style="opacity:.9;">{{ $homepageSettings->promo_subtitle ?? 'Register now and start earning loyalty points with every purchase.' }}</p>
             </div>
             <div class="col-md-4 text-md-end mt-3 mt-md-0">
                 <a href="{{ url('/customer/loginRegistration?tab=register') }}" class="btn btn-light btn-lg" style="border-radius:25px;font-weight:600;color:var(--gasgo-orange);">
-                    Register Now <i class="fas fa-arrow-right ms-2"></i>
+                    {{ $homepageSettings->promo_button_label ?? 'Register Now' }} <i class="fas fa-arrow-right ms-2"></i>
                 </a>
             </div>
         </div>
@@ -366,65 +274,48 @@
 <section class="section-padding">
     <div class="container">
         <div class="text-center mb-5" data-aos="fade-up">
-            <h2 class="section-title">Our Products</h2>
-            <p class="section-subtitle">Choose from our range of LPG tanks and accessories</p>
+            <h2 class="section-title">{{ $homepageSettings->products_section_title ?? 'Our Products' }}</h2>
+            <p class="section-subtitle">{{ $homepageSettings->products_section_subtitle ?? 'Choose from our range of LPG tanks and accessories' }}</p>
         </div>
         <div class="row g-4">
-            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="100">
-                <div class="product-card">
-                    <div class="product-img">
-                        <img src="{{ asset('images/11kg.jpg') }}" alt="11kg LPG">
-                    </div>
-                    <div class="product-body">
-                        <h5>LPG Tank 11kg</h5>
-                        <p class="product-stock"><i class="fas fa-check-circle me-1"></i>In Stock</p>
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <span class="product-price">&#8369;850.00</span>
-                            <button class="btn btn-gasgo btn-sm add-to-cart-btn" data-id="1" data-name="LPG Tank 11kg" data-price="850" data-image="{{ asset('images/11kg.jpg') }}">
-                                <i class="fas fa-cart-plus me-1"></i>Add to Cart
-                            </button>
+            @forelse($featuredProducts as $index => $product)
+                @php
+                    $img = $resolveProductImage($product->image);
+                    $inStock = (int) ($product->quantity_on_hand ?? 0) > 0;
+                @endphp
+                <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="{{ ($index + 1) * 100 }}">
+                    <div class="product-card">
+                        <div class="product-img">
+                            @if($img)
+                                <img src="{{ $img }}" alt="{{ $product->name }}" class="img-fluid">
+                            @else
+                                <span class="text-muted small">No image available</span>
+                            @endif
+                        </div>
+                        <div class="product-body">
+                            <h5>{{ $product->name }}</h5>
+                            @if($product->description)
+                                <p class="product-variant mb-2" style="font-size:.85rem; color:#555; margin-bottom:8px; font-weight:500;">{{ $product->description }}</p>
+                            @endif
+                            <p class="product-stock {{ $inStock ? '' : 'out' }}">
+                                <i class="fas {{ $inStock ? 'fa-check-circle' : 'fa-times-circle' }} me-1"></i>{{ $inStock ? 'In Stock' : 'Out of Stock' }}
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <span class="product-price">₱{{ number_format($product->price, 2) }}</span>
+                                <a href="{{ route('customer.product.show', $product->id) }}" class="btn btn-gasgo btn-sm" style="text-decoration:none;">
+                                    <i class="fas fa-eye me-1"></i>View
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="200">
-                <div class="product-card">
-                    <div class="product-img">
-                        <img src="{{ asset('images/22kg.jpg') }}" alt="22kg LPG">
-                    </div>
-                    <div class="product-body">
-                        <h5>LPG Tank 22kg</h5>
-                        <p class="product-stock"><i class="fas fa-check-circle me-1"></i>In Stock</p>
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <span class="product-price">&#8369;1,600.00</span>
-                            <button class="btn btn-gasgo btn-sm add-to-cart-btn" data-id="2" data-name="LPG Tank 22kg" data-price="1600" data-image="{{ asset('images/22kg.jpg') }}">
-                                <i class="fas fa-cart-plus me-1"></i>Add to Cart
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="300">
-                <div class="product-card">
-                    <div class="product-img">
-                        <img src="{{ asset('images/2kg.jpg') }}" alt="2kg LPG">
-                    </div>
-                    <div class="product-body">
-                        <h5>LPG Tank 2kg</h5>
-                        <p class="product-stock"><i class="fas fa-check-circle me-1"></i>In Stock</p>
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <span class="product-price">&#8369;350.00</span>
-                            <button class="btn btn-gasgo btn-sm add-to-cart-btn" data-id="3" data-name="LPG Tank 2kg" data-price="350" data-image="{{ asset('images/2kg.jpg') }}">
-                                <i class="fas fa-cart-plus me-1"></i>Add to Cart
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            @empty
+                <div class="col-12 text-center text-muted py-4">No products available right now.</div>
+            @endforelse
         </div>
         <div class="text-center mt-5" data-aos="fade-up">
             <a href="{{ url('/customer/product') }}" class="btn btn-gasgo-outline btn-lg">
-                View All Products <i class="fas fa-arrow-right ms-2"></i>
+                {{ $homepageSettings->products_view_all_label ?? 'View All Products' }} <i class="fas fa-arrow-right ms-2"></i>
             </a>
         </div>
     </div>
@@ -502,18 +393,53 @@
             <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="400">
                 <div class="why-card text-center">
                     <i class="fas fa-shield-alt" style="color:#8e44ad;"></i>
-                    <h5 class="fw-bold mt-2">Safe &amp; Secure</h5>
+                    <h5 class="fw-bold mt-2">Safe & Secure</h5>
                     <p class="text-muted small">Certified LPG products with guaranteed quality</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
-
 @endsection
 
 @section('scripts')
 <script>
+const cartStoreUrl = '{{ route("customer.cart.store") }}';
+const csrfToken = '{{ csrf_token() }}';
+
+// Give cards a light 3D tilt for a more interactive home screen.
+function applyTiltEffect() {
+    document.querySelectorAll('.product-card, .why-card').forEach(card => {
+        card.addEventListener('mousemove', function(e) {
+            if (window.innerWidth < 992) return;
+            const rect = this.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const rotateY = ((x / rect.width) - 0.5) * 8;
+            const rotateX = (0.5 - (y / rect.height)) * 8;
+            this.style.transform = `perspective(900px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-5px)`;
+        });
+
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+        });
+    });
+}
+
+function applyStaggerReveal() {
+    const revealItems = document.querySelectorAll('[data-reveal="slide-up"] .hero-badge');
+    revealItems.forEach((item, idx) => {
+        item.style.animationDelay = (idx * 120) + 'ms';
+        item.style.opacity = '0';
+        item.style.transform = 'translateY(10px)';
+        setTimeout(() => {
+            item.style.transition = 'opacity .45s ease, transform .45s ease';
+            item.style.opacity = '1';
+            item.style.transform = 'translateY(0)';
+        }, 250 + (idx * 120));
+    });
+}
+
 function addToCart(id, name, price, image) {
     addToCartAjax(id, 1).catch(error => {
         console.error('Add to cart error:', error);
@@ -530,6 +456,11 @@ document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
             this.dataset.image
         );
     });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    applyTiltEffect();
+    applyStaggerReveal();
 });
 </script>
 @endsection

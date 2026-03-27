@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\GoogleAuthController;
+use App\Http\Controllers\Admin\HomepageSettingController;
+use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CartController;
@@ -11,8 +13,27 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\RiderController;
 use App\Http\Controllers\LoyaltyController;
+use App\Http\Controllers\Customer\LocationController;
+use App\Http\Controllers\GeocodingController;
+
+Route::get('/geocode/search', [GeocodingController::class, 'search'])->name('geocode.search');
+Route::get('/geocode/reverse', [GeocodingController::class, 'reverse'])->name('geocode.reverse');
 
 Route::get('/', function () {
+    if (\Illuminate\Support\Facades\Auth::check()) {
+        $role = \Illuminate\Support\Facades\Auth::user()->role;
+
+        if ($role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
+        if ($role === 'rider') {
+            return redirect()->route('rider.dashboard');
+        }
+
+        return redirect()->route('customer.dashboard');
+    }
+
     $totalOrders = \App\Models\Order::count();
     $revenue = \App\Models\Order::whereHas('delivery', function ($query) {
         $query->where('status', 'delivered');
@@ -20,7 +41,12 @@ Route::get('/', function () {
     $pendingOrders = \App\Models\Order::where('status', 'pending')->count();
     $totalCustomers = \App\Models\User::where('role', 'customer')->count();
     $activeRiders = \App\Models\Rider::whereIn('availability', ['available', 'busy'])->count();
-    $products = \App\Models\Product::all();
+    $products = \App\Models\Product::query()
+        ->with('inventory')
+        ->where('is_active', true)
+        ->where('price', '>', 0)
+        ->orderBy('created_at', 'desc')
+        ->get();
 
     $user = \Illuminate\Support\Facades\Auth::user();
     $role = $user?->role ?? null;
@@ -89,11 +115,14 @@ Route::prefix('customer')->group(function () {
     Route::delete('/cart', [CartController::class, 'clear'])->name('customer.cart.clear');
 
     // Orders
-    Route::get('/checkout', [OrderController::class, 'checkout'])->name('customer.checkout');
+    Route::match(['get', 'post'], '/checkout', [OrderController::class, 'checkout'])->name('customer.checkout');
     Route::post('/order', [OrderController::class, 'store'])->name('customer.order.store');
+    Route::patch('/order/{order}/cancel', [OrderController::class, 'cancelByCustomer'])->name('customer.order.cancel');
     Route::get('/orderHistory', [OrderController::class, 'index'])->name('customer.orders');
     Route::get('/tracking/{order}', [OrderController::class, 'track'])->name('customer.tracking');
     Route::get('/tracking/{order}/status', [OrderController::class, 'trackingStatus'])->name('customer.tracking.status');
+    Route::get('/location/search', [LocationController::class, 'search'])->name('customer.location.search');
+    Route::get('/location/reverse', [LocationController::class, 'reverse'])->name('customer.location.reverse');
 
     // Account
     Route::get('/profile', [CustomerController::class, 'profile'])->name('customer.profile');
@@ -108,6 +137,8 @@ Route::prefix('customer')->group(function () {
 Route::prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/notifications', [DashboardController::class, 'notifications'])->name('admin.notifications');
+    Route::get('/profile', [DashboardController::class, 'profile'])->name('admin.profile');
+    Route::put('/profile', [DashboardController::class, 'updateProfile'])->name('admin.profile.update');
 
     // Orders
     Route::get('/orders', [OrderController::class, 'adminIndex'])->name('admin.orders');
@@ -119,6 +150,20 @@ Route::prefix('admin')->group(function () {
     Route::post('/products', [ProductController::class, 'store'])->name('admin.products.store');
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('admin.products.update');
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('admin.products.destroy');
+    Route::post('/freebies', [ProductController::class, 'storeFreebie'])->name('admin.freebies.store');
+    Route::put('/freebies/{freebie}', [ProductController::class, 'updateFreebie'])->name('admin.freebies.update');
+    Route::delete('/freebies/{freebie}', [ProductController::class, 'destroyFreebie'])->name('admin.freebies.destroy');
+
+    // Inventory Management
+    Route::prefix('inventory')->group(function () {
+        Route::get('/', [InventoryController::class, 'index'])->name('admin.inventory.index');
+        Route::get('/reports/reorder', [InventoryController::class, 'reorderReport'])->name('admin.inventory.reorder-report');
+        Route::get('/reports/expiry', [InventoryController::class, 'expiryReport'])->name('admin.inventory.expiry-report');
+        Route::get('/{inventory}', [InventoryController::class, 'show'])->name('admin.inventory.show');
+        Route::get('/{inventory}/edit', [InventoryController::class, 'edit'])->name('admin.inventory.edit');
+        Route::put('/{inventory}', [InventoryController::class, 'update'])->name('admin.inventory.update');
+        Route::post('/{inventory}/adjust', [InventoryController::class, 'adjust'])->name('admin.inventory.adjust');
+    });
 
     // Riders
     Route::get('/riders', [RiderController::class, 'adminIndex'])->name('admin.riders');
@@ -134,6 +179,9 @@ Route::prefix('admin')->group(function () {
 
     // Loyalty / Rewards
     Route::get('/rewards', [LoyaltyController::class, 'adminIndex'])->name('admin.rewards');
+    Route::post('/rewards', [LoyaltyController::class, 'storeReward'])->name('admin.rewards.store');
+    Route::put('/rewards/{reward}', [LoyaltyController::class, 'updateReward'])->name('admin.rewards.update');
+    Route::delete('/rewards/{reward}', [LoyaltyController::class, 'destroyReward'])->name('admin.rewards.destroy');
 
     // Reports & Customers (static views for now)
     Route::get('/reports', [DashboardController::class, 'reports'])->name('admin.reports');
@@ -141,6 +189,9 @@ Route::prefix('admin')->group(function () {
 
     // Settings / Maintenance
     Route::get('/settings', [DashboardController::class, 'settings'])->name('admin.settings');
+    Route::get('/settings/homepage', [HomepageSettingController::class, 'edit'])->name('admin.settings.homepage');
+    Route::post('/settings/homepage', [HomepageSettingController::class, 'update'])->name('admin.settings.homepage.update');
+    Route::post('/settings/admin-users', [DashboardController::class, 'storeAdminUser'])->name('admin.settings.admin-users.store');
     Route::post('/settings/clear-cache', function () {
         Artisan::call('cache:clear');
         Artisan::call('view:clear');
@@ -168,6 +219,7 @@ Route::prefix('rider')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/route', [RiderController::class, 'route'])->name('rider.route');
     Route::get('/route/live-map', [RiderController::class, 'liveRouteMap'])->name('rider.route.map');
     Route::get('/route/waypoints', [RiderController::class, 'routeWaypoints'])->name('rider.route.waypoints');
+    Route::put('/location/live', [DeliveryController::class, 'updateRiderLiveLocation'])->name('rider.location.live');
     Route::post('/orders/{order}/accept', [RiderController::class, 'acceptOrder'])->name('rider.order.accept');
 
     // Active delivery

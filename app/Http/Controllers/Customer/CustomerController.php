@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
-use App\Models\Order;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,18 +17,14 @@ class CustomerController extends Controller
 
     public function dashboard()
     {
-        $activeOrders = [];
+        $products = Product::query()
+            ->with('inventory')
+            ->where('is_active', true)
+            ->where('price', '>', 0)
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-        if (Auth::check()) {
-            // Get active orders for the authenticated user
-            $activeOrders = \App\Models\Order::with(['delivery.rider', 'orderItems.product'])
-                ->where('user_id', Auth::id())
-                ->whereIn('status', ['assigned', 'out_for_delivery'])
-                ->orderBy('created_at', 'desc')
-                ->get();
-        }
-
-        return view('customer.dashboard', compact('activeOrders'));
+        return view('customer.dashboard', compact('products'));
     }
 
     public function products()
@@ -166,7 +162,8 @@ class CustomerController extends Controller
 
     public function logout(Request $request)
     {
-        $role = Auth::user()->role ?? 'customer';
+        $user = Auth::user();
+        $role = $user?->role ?? 'customer';
 
         Auth::logout();
         $request->session()->invalidate();

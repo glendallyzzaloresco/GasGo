@@ -84,7 +84,7 @@
 
     /* Order Items */
     .order-item-mini { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f8f8f8; }
-    .order-item-mini img { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; background: var(--gasgo-blue-light); }
+    .order-item-mini img { width: 42px; height: 42px; border-radius: 8px; object-fit: contain; background: #fff; }
     .order-item-mini .name { font-weight: 600; font-size: .82rem; color: #333; }
     .order-item-mini .qty { font-size: .76rem; color: #888; }
 
@@ -125,6 +125,20 @@
 </section>
 
 <section class="container section-padding" style="position:relative;z-index:2;">
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert" data-aos="fade-up">
+            <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert" data-aos="fade-up">
+            <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     <div class="row g-4">
         <!-- Left Column: Map + Rider + Items -->
         <div class="col-lg-8">
@@ -211,8 +225,15 @@
                     <i class="fas fa-box me-2" style="color:var(--gasgo-orange);"></i>Order Items
                 </h5>
                 @foreach($order->orderItems as $item)
+                @php
+                    $itemImage = $item->product?->resolved_image ?: null;
+                @endphp
                 <div class="order-item-mini">
-                    <img src="{{ $item->product && $item->product->image ? asset($item->product->image) : asset('images/11kg.jpg') }}" alt="{{ $item->product_name }}">
+                    @if($itemImage)
+                        <img src="{{ $itemImage }}" alt="{{ $item->product_name }}">
+                    @else
+                        <span class="text-muted small">No image available</span>
+                    @endif
                     <div class="flex-grow-1">
                         <div class="name">{{ $item->product_name }}</div>
                         <div class="qty">Qty: {{ $item->quantity }} &times; ₱{{ number_format($item->price, 2) }}</div>
@@ -314,6 +335,16 @@
                     </div>
                     @endif
                 </div>
+
+                @if($order->status === 'pending')
+                <form method="POST" action="{{ route('customer.order.cancel', $order) }}" class="mt-2">
+                    @csrf
+                    @method('PATCH')
+                    <button type="submit" class="btn btn-outline-danger w-100" style="padding:12px;" onclick="return confirm('Cancel this order?');">
+                        <i class="fas fa-ban me-2"></i>Cancel Order
+                    </button>
+                </form>
+                @endif
 
                 <a href="{{ route('customer.orders') }}" class="btn btn-gasgo-outline w-100 mt-2" style="padding:12px;">
                     <i class="fas fa-receipt me-2"></i>Back to Orders

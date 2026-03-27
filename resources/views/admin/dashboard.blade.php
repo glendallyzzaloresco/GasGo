@@ -7,10 +7,47 @@
 
 @section('admin-styles')
 <style>
+    .dashboard-section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+    .dashboard-section-title {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #1f2d3d;
+        letter-spacing: 0.2px;
+    }
+    .dashboard-section-subtitle {
+        margin: 2px 0 0;
+        font-size: 0.86rem;
+        color: #6b7785;
+    }
     .stat-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 14px;
+        min-height: 102px;
         cursor: pointer;
         transition: all 0.3s ease;
         border: 2px solid transparent;
+        box-shadow: 0 8px 24px rgba(16, 24, 40, 0.06);
+    }
+    .stat-card p {
+        margin-bottom: 4px;
+        font-size: 0.84rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6b7280;
+        font-weight: 700;
+    }
+    .stat-card h3 {
+        margin: 0;
+        font-weight: 800;
+        color: #1f2937;
     }
     .stat-card:hover {
         transform: translateY(-4px);
@@ -98,13 +135,52 @@
         color: #888;
         margin-top: 4px;
     }
+    .gasgo-table {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 8px 24px rgba(16, 24, 40, 0.06);
+        overflow: hidden;
+    }
+    .gasgo-table .table {
+        margin-bottom: 0;
+    }
+    .gasgo-table .table thead th {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.45px;
+        color: #6b7280;
+        background: #f8fafc;
+        border-bottom: 1px solid #e5e7eb;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+    .gasgo-table .table tbody td {
+        vertical-align: middle;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+    .gasgo-table .table tbody tr:nth-child(odd) {
+        background: #fcfdff;
+    }
+    .inventory-list-scroll {
+        max-height: 280px;
+        overflow-y: auto;
+        padding-right: 2px;
+    }
 </style>
 @endsection
 
 @section('content')
+<div class="dashboard-section-head">
+    <div>
+        <h5 class="dashboard-section-title">Performance Snapshot</h5>
+        <p class="dashboard-section-subtitle">Key platform metrics at a glance</p>
+    </div>
+</div>
+
 <!-- Stats Row -->
-<div class="row g-4 mb-4">
-    <div class="col-lg-3 col-md-6">
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-5 g-3 mb-3">
+    <div class="col">
         <div class="stat-card" onclick="showModal('totalOrdersModal')">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
@@ -116,7 +192,7 @@
             <small class="text-muted">All time orders</small>
         </div>
     </div>
-    <div class="col-lg-3 col-md-6">
+    <div class="col">
         <div class="stat-card" onclick="showModal('revenueModal')">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
@@ -129,7 +205,7 @@
         </div>
     </div>
     
-    <div class="col-lg-3 col-md-6">
+    <div class="col">
         <div class="stat-card" onclick="showModal('activeRidersModal')">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
@@ -141,7 +217,7 @@
             <small class="text-muted">{{ $riders->where('availability', 'available')->count() }} available now</small>
         </div>
     </div>
-    <div class="col-lg-3 col-md-6">
+    <div class="col">
         <div class="stat-card" onclick="showModal('pendingOrdersModal')">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
@@ -157,7 +233,7 @@
             @endif
         </div>
     </div>
-    <div class="col-lg-3 col-md-6">
+    <div class="col">
         <div class="stat-card" onclick="showModal('customersModal')">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
@@ -172,7 +248,13 @@
 </div>
 
 <!-- Customers Count + Low Stock Alerts + Recent Orders -->
-<div class="row g-4 mb-4">
+<div class="dashboard-section-head">
+    <div>
+        <h5 class="dashboard-section-title">Operations Overview</h5>
+        <p class="dashboard-section-subtitle">Inventory and recent order activity</p>
+    </div>
+</div>
+<div class="row g-3 mb-3">
     <!-- Low Stock Alerts -->
     <div class="col-lg-4">
         <div class="stat-card" onclick="showModal('inventoryModal')" style="cursor:pointer;">
@@ -183,20 +265,43 @@
             
             @php
                 $productsCount = $products->count();
-                $freebiesCount = $freebies->count();
+                $freebiesCount = $productFreebies->count() + $freebies->count();
                 $lowStockCount = $allItems->where('stock', '<=', 5)->count();
+
+                $resolveInventoryImage = function ($item): ?string {
+                    if ($item->item_type === 'product') {
+                        return $item->resolved_image ?? null;
+                    }
+
+                    $path = $item->image ?? null;
+                    if (! $path) {
+                        return null;
+                    }
+
+                    $normalized = ltrim($path, '/');
+
+                    if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
+                        return $path;
+                    }
+
+                    if (str_starts_with($normalized, 'storage/') || str_starts_with($normalized, 'images/')) {
+                        return asset($normalized);
+                    }
+
+                    return asset('storage/' . $normalized);
+                };
             @endphp
             
             <!-- Summary Stats -->
             <div class="row g-2 mb-3">
                 <div class="col-6">
-                    <div style="background:#e3f2fd;padding:12px;border-radius:10px;text-align:center;">
+                    <div style="background:#e3f2fd;padding:10px;border-radius:10px;text-align:center;">
                         <div style="font-size:1.3rem;font-weight:700;color:var(--gasgo-blue);">{{ $productsCount }}</div>
                         <div style="font-size:.75rem;color:#666;">Products</div>
                     </div>
                 </div>
                 <div class="col-6">
-                    <div style="background:#fffbf0;padding:12px;border-radius:10px;text-align:center;">
+                    <div style="background:#fffbf0;padding:10px;border-radius:10px;text-align:center;">
                         <div style="font-size:1.3rem;font-weight:700;color:#ffc107;">{{ $freebiesCount }}</div>
                         <div style="font-size:.75rem;color:#666;">Freebies</div>
                     </div>
@@ -205,13 +310,13 @@
             
             <!-- Low Stock Alert -->
             @if($lowStockCount > 0)
-                <div style="background:#fff5e6;border-left:3px solid var(--gasgo-orange);padding:12px;border-radius:8px;margin-bottom:12px;">
+                <div style="background:#fff5e6;border-left:3px solid var(--gasgo-orange);padding:10px;border-radius:8px;margin-bottom:10px;">
                     <div style="font-weight:600;color:var(--gasgo-orange);font-size:.85rem;"><i class="fas fa-warning me-1"></i>{{ $lowStockCount }} item{{ $lowStockCount > 1 ? 's' : '' }} low in stock</div>
                 </div>
             @endif
             
             <!-- Items List -->
-            <div style="max-height:280px;overflow-y:auto;">
+            <div class="inventory-list-scroll">
                 @forelse($allItems as $item)
                     @php
                         $isLow = $item->stock <= 5;
@@ -221,10 +326,11 @@
                         $iconClass = $isFreebie ? 'fa-gift' : 'fa-box';
                         $iconColor = $isFreebie ? '#ffc107' : 'var(--gasgo-blue)';
                     @endphp
-                    <div class="d-flex align-items-center p-2 mb-2" style="background:<?php echo $bgColor; ?>;border-left:3px solid <?php echo $borderColor; ?>;border-radius:8px;">
+                    <div class="d-flex align-items-center p-2 mb-1" style="background:<?php echo $bgColor; ?>;border-left:3px solid <?php echo $borderColor; ?>;border-radius:8px;">
                         <div style="width:32px;height:32px;border-radius:8px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;margin-right:10px;flex-shrink:0;">
-                            @if($item->image)
-                                <img src="{{ asset('images/' . $item->image) }}" alt="{{ $item->name }}" style="width:100%;height:100%;border-radius:6px;object-fit:cover;">
+                            @php $inventoryImage = $resolveInventoryImage($item); @endphp
+                            @if($inventoryImage)
+                                <img src="{{ $inventoryImage }}" alt="{{ $item->name }}" style="width:100%;height:100%;border-radius:6px;object-fit:cover;">
                             @else
                                 <i class="fas <?php echo $iconClass; ?>" style="font-size:.75rem;color:<?php echo $iconColor; ?>;"></i>
                             @endif
@@ -246,8 +352,10 @@
                 @endforelse
             </div>
             
-            <div style="text-align:center;margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0;">
-                <small style="color:var(--gasgo-blue);cursor:pointer;"><i class="fas fa-external-link-alt me-1"></i>View full inventory</small>
+            <div style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid #e0e0e0;">
+                <a href="{{ route('admin.products') }}" class="btn btn-sm btn-outline-primary" style="border-radius:20px;font-weight:600;">
+                    <i class="fas fa-external-link-alt me-1"></i>View full inventory
+                </a>
             </div>
         </div>
     </div>
@@ -255,7 +363,7 @@
     <!-- Recent Orders -->
     <div class="col-lg-8">
         <div class="gasgo-table">
-            <div class="d-flex justify-content-between align-items-center px-3 pt-3 pb-2">
+            <div class="d-flex justify-content-between align-items-center px-3 pt-2 pb-2">
                 <h6 class="fw-bold mb-0" style="color:var(--gasgo-blue);"><i class="fas fa-clock me-2" style="color:var(--gasgo-orange);"></i>Recent Orders</h6>
                 <a href="{{ url('/admin/orders') }}" class="btn btn-sm" style="color:var(--gasgo-orange);font-weight:600;">View All <i class="fas fa-arrow-right ms-1"></i></a>
             </div>
@@ -290,10 +398,16 @@
 </div>
 
 <!-- Rider Status -->
+<div class="dashboard-section-head mt-1">
+    <div>
+        <h5 class="dashboard-section-title">Delivery Team</h5>
+        <p class="dashboard-section-subtitle">Current rider availability and workload</p>
+    </div>
+</div>
 <div class="row g-4">
     <div class="col-12">
         <div class="gasgo-table">
-            <div class="d-flex justify-content-between align-items-center px-3 pt-3 pb-2">
+            <div class="d-flex justify-content-between align-items-center px-3 pt-2 pb-2">
                 <h6 class="fw-bold mb-0" style="color:var(--gasgo-blue);"><i class="fas fa-motorcycle me-2" style="color:var(--gasgo-orange);"></i>Rider Status Overview</h6>
                 <a href="{{ url('/admin/riders') }}" class="btn btn-sm" style="color:var(--gasgo-orange);font-weight:600;">Manage Riders <i class="fas fa-arrow-right ms-1"></i></a>
             </div>

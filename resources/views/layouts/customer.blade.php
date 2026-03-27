@@ -830,8 +830,8 @@
     <nav class="navbar navbar-expand-lg navbar-gasgo">
         <div class="container">
             <a class="navbar-brand" href="{{ url('/customer/customerDashboard') }}">
-                <img src="{{ asset('images/logo-gasgo.png') }}" alt="GasGo Icon">
-                <span class="brand-text">Gas<span class="go">Go</span></span>
+                <img src="{{ $homepageSettings->navbar_logo_url }}" alt="{{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }} Icon">
+                <span class="brand-text">{{ $homepageSettings->brand_name_primary ?? 'Gas' }}<span class="go">{{ $homepageSettings->brand_name_accent ?? 'Go' }}</span></span>
             </a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -908,9 +908,9 @@
         <div class="container">
             <div class="row g-4">
                 <div class="col-lg-4 col-md-3">
-                    <img src="{{ asset('images/logo-gasgo.png') }}" alt="GasGo" class="footer-logo">
+                    <img src="{{ $homepageSettings->footer_logo_url }}" alt="{{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }}" class="footer-logo">
                     <p class="footer-desc">
-                        Your trusted partner for fast, reliable LPG delivery. Track your orders in real-time and earn rewards with every purchase.
+                        {{ $homepageSettings->footer_description ?? 'Your trusted partner for fast, reliable LPG delivery. Track your orders in real-time and earn rewards with every purchase.' }}
                     </p>
                     <div class="social-links">
                         <a href="#"><i class="fab fa-facebook-f"></i></a>
@@ -933,10 +933,10 @@
                 <div class="col-lg-3 col-md-3">
                     <h5 class="footer-title">Contact Us</h5>
                     <ul class="footer-links">
-                        <li><a href="#"><i class="fas fa-map-marker-alt"></i>123 Gas Street, Metro City</a></li>
-                        <li><a href="tel:+639123456789"><i class="fas fa-phone"></i>+63 912 345 6789</a></li>
-                        <li><a href="mailto:info@gasgo.com"><i class="fas fa-envelope"></i>info@gasgo.com</a></li>
-                        <li><a href="#"><i class="fas fa-clock"></i>Mon-Sun: 6AM - 10PM</a></li>
+                        <li><a href="#"><i class="fas fa-map-marker-alt"></i>{{ $homepageSettings->contact_address ?? 'PNR Site Estacion San Miguel Calasiao Pangasinan' }}</a></li>
+                        <li><a href="tel:{{ preg_replace('/\s+/', '', $homepageSettings->contact_phone ?? '+63 912 345 6789') }}"><i class="fas fa-phone"></i>{{ $homepageSettings->contact_phone ?? '+63 912 345 6789' }}</a></li>
+                        <li><a href="mailto:{{ $homepageSettings->contact_email ?? 'info@gasgo.com' }}"><i class="fas fa-envelope"></i>{{ $homepageSettings->contact_email ?? 'info@gasgo.com' }}</a></li>
+                        <li><a href="#"><i class="fas fa-clock"></i>{{ $homepageSettings->contact_hours ?? 'Mon-Sun: 6AM - 10PM' }}</a></li>
                     </ul>
                 </div>
             </div>
@@ -1008,6 +1008,7 @@
     <!-- AJAX Utilities -->
     <script src="{{ asset('js/ajax-utils.js') }}"></script>
     
+    @stack('scripts')
     @yield('scripts')
 </body>
 </html>

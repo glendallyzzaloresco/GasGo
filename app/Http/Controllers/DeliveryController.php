@@ -6,6 +6,7 @@ use App\Models\Delivery;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class DeliveryController extends Controller
 {
@@ -23,31 +24,75 @@ class DeliveryController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'order_id' => 'required|exists:orders,id',
+            'order_id' => 'nullable|exists:orders,id',
+            'order_ids' => 'nullable|array|min:1',
+            'order_ids.*' => 'integer|exists:orders,id',
             'rider_id' => 'required|exists:users,id',
         ]);
 
-        $delivery = Delivery::create([
-            'order_id'    => $validated['order_id'],
-            'rider_id'    => $validated['rider_id'],
-            'status'      => 'assigned',
-            'assigned_at' => now(),
-        ]);
+        $requestedOrderIds = collect();
+        if (!empty($validated['order_id'])) {
+            $requestedOrderIds->push((int) $validated['order_id']);
+        }
+        if (!empty($validated['order_ids'])) {
+            $requestedOrderIds = $requestedOrderIds->merge($validated['order_ids']);
+        }
+        $requestedOrderIds = $requestedOrderIds->map(fn ($id) => (int) $id)->unique()->values();
 
-        Order::where('id', $validated['order_id'])->update(['status' => 'assigned']);
+        if ($requestedOrderIds->isEmpty()) {
+            return response()->json([
+                'message' => 'No orders selected for assignment.',
+            ], 422);
+        }
+
+        $orders = Order::query()
+            ->whereIn('id', $requestedOrderIds)
+            ->whereIn('status', ['pending', 'approved'])
+            ->whereDoesntHave('delivery')
+            ->get();
+
+        if ($orders->isEmpty()) {
+            return response()->json([
+                'message' => 'Selected order(s) can no longer be assigned.',
+            ], 422);
+        }
+
+        $assignedOrderIds = [];
+
+        DB::transaction(function () use ($orders, $validated, &$assignedOrderIds) {
+            foreach ($orders as $order) {
+                Delivery::create([
+                    'order_id'    => $order->id,
+                    'rider_id'    => $validated['rider_id'],
+                    'status'      => 'out_for_delivery',
+                    'assigned_at' => now(),
+                ]);
+
+                $order->update(['status' => 'out_for_delivery']);
+                $assignedOrderIds[] = (int) $order->id;
+            }
+        });
+
+        $firstDelivery = Delivery::query()
+            ->where('order_id', $assignedOrderIds[0])
+            ->with('rider')
+            ->first();
 
         if ($request->expectsJson() || $request->ajax()) {
-            $delivery->load(['rider', 'order']);
-
             return response()->json([
-                'message' => 'Rider assigned to order.',
-                'order_id' => (int) $validated['order_id'],
-                'status' => 'assigned',
-                'rider_name' => $delivery->rider->name ?? 'Rider',
+                'message' => count($assignedOrderIds) > 1
+                    ? 'Rider assigned to selected orders.'
+                    : 'Rider assigned to order.',
+                'order_id' => (int) $assignedOrderIds[0],
+                'order_ids' => $assignedOrderIds,
+                'status' => 'out_for_delivery',
+                'rider_name' => $firstDelivery?->rider?->name ?? 'Rider',
             ]);
         }
 
-        return redirect()->back()->with('success', 'Rider assigned to order.');
+        return redirect()->back()->with('success', count($assignedOrderIds) > 1
+            ? 'Rider assigned to selected orders.'
+            : 'Rider assigned to order.');
     }
 
     // Rider: view assigned delivery details
@@ -127,6 +172,28 @@ class DeliveryController extends Controller
         ]);
 
         return response()->json(['message' => 'Location updated.']);
+    }
+
+    // Rider: broadcast current GPS location to all active deliveries
+    public function updateRiderLiveLocation(Request $request)
+    {
+        $validated = $request->validate([
+            'latitude'  => 'required|numeric',
+            'longitude' => 'required|numeric',
+        ]);
+
+        $updated = Delivery::query()
+            ->where('rider_id', Auth::id())
+            ->whereNotIn('status', ['delivered', 'failed'])
+            ->update([
+                'latitude' => $validated['latitude'],
+                'longitude' => $validated['longitude'],
+            ]);
+
+        return response()->json([
+            'message' => 'Live location updated.',
+            'updated_deliveries' => $updated,
+        ]);
     }
 
     // Rider: get current delivery location (for map updates)

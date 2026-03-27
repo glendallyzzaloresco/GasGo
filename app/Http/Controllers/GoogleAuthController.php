@@ -31,7 +31,15 @@ class GoogleAuthController extends Controller
             if ($findUser) {
                 // User exists with Google ID, log them in
                 Auth::login($findUser);
-                return redirect()->route('customer.dashboard')->with('success', 'Welcome back! Logged in with Google.');
+                
+                // Redirect based on user role
+                if ($findUser->role === 'admin') {
+                    return redirect()->route('admin.dashboard')->with('success', 'Welcome back! Logged in with Google.');
+                } elseif ($findUser->role === 'rider') {
+                    return redirect()->route('rider.dashboard')->with('success', 'Welcome back! Logged in with Google.');
+                } else {
+                    return redirect()->route('customer.dashboard')->with('success', 'Welcome back! Logged in with Google.');
+                }
             } else {
                 // Check if email already exists (from previous registration)
                 $existingEmail = User::where('email', $user->email)->first();
@@ -41,7 +49,7 @@ class GoogleAuthController extends Controller
                     return redirect()->route('customer.login')->with('error', 'This email is already registered. Please login with your password or use a different Google account.');
                 }
                 
-                // New user, create account
+                // New user, create account (always as customer)
                 $newUser = User::create([
                     'name' => $user->name,
                     'email' => $user->email,

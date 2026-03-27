@@ -242,15 +242,23 @@ async function addToCartAjax(productId, quantity = 1) {
 }
 
 // Update Cart Item AJAX
-async function updateCartItemAjax(productId, quantity) {
+async function updateCartItemAjax(productId, quantity, options = {}) {
+    const { suppressToast = false, skipDomUpdate = false } = options;
+
     try {
         const response = await ajaxRequest(window.gasgoRoutes.cartItemUpdate || '/customer/cart/item/update', 'POST', {
             product_id: productId,
             quantity: quantity
         });
         
-        showToast(response.message || 'Cart updated', 'success');
-        updateCartItemDisplay(productId, quantity);
+        if (!suppressToast) {
+            showToast(response.message || 'Cart updated', 'success');
+        }
+
+        if (!skipDomUpdate) {
+            updateCartItemDisplay(productId, quantity);
+        }
+
         if (response.cartCount !== undefined) {
             updateCartCountDisplay(response.cartCount);
             // Update cart items header
@@ -263,7 +271,9 @@ async function updateCartItemAjax(productId, quantity) {
         updateCartTotals();
         return response;
     } catch (error) {
-        showToast(error.message || 'Failed to update cart', 'error');
+        if (!suppressToast) {
+            showToast(error.message || 'Failed to update cart', 'error');
+        }
         throw error;
     }
 }
@@ -396,9 +406,16 @@ function updateCartCountDisplay(count) {
 function updateCartItemDisplay(productId, quantity) {
     const cartItem = document.querySelector(`[data-product-id="${productId}"]`);
     if (cartItem) {
+        cartItem.dataset.quantity = String(quantity);
+
         const quantityElement = cartItem.querySelector('.item-quantity');
         if (quantityElement) {
             quantityElement.textContent = quantity;
+        }
+
+        const minusButton = cartItem.querySelector('.qty-btn-minus');
+        if (minusButton) {
+            minusButton.disabled = quantity <= 1;
         }
         
         const priceElement = cartItem.querySelector('.item-price');

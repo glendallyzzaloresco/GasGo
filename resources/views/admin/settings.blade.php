@@ -183,6 +183,69 @@
                             </div>
                         </div>
 
+                        {{-- Homepage Maintenance --}}
+                        <div class="col-md-6">
+                            <div class="border rounded-3 p-4">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div style="width:48px;height:48px;background:#fff5e6;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i class="fas fa-image" style="color:#e07d0a;font-size:1.3rem;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold mb-1">Homepage Maintenance</h6>
+                                        <p class="text-muted small mb-3">Modify what customer and guest users see on the homepage: logo, brand name, hero image, and promo image.</p>
+                                        <a href="{{ route('admin.settings.homepage') }}" class="btn btn-sm" style="background:var(--gasgo-orange);color:#fff;">
+                                            <i class="fas fa-sliders me-1"></i>Open Homepage Controls
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Add Admin Account --}}
+                        <div class="col-md-6">
+                            <div class="border rounded-3 p-4">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div style="width:48px;height:48px;background:#e7f1ff;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i class="fas fa-user-shield" style="color:#1a6db0;font-size:1.3rem;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold mb-1">Add Admin Account</h6>
+                                        <p class="text-muted small mb-3">Create a new administrator account with full admin access.</p>
+
+                                        <form action="{{ route('admin.settings.admin-users.store') }}" method="POST" class="row g-2">
+                                            @csrf
+                                            <div class="col-12">
+                                                <input type="text" name="name" class="form-control form-control-sm @error('name') is-invalid @enderror" placeholder="Full name" value="{{ old('name') }}" required>
+                                                @error('name')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                            <div class="col-12">
+                                                <input type="email" name="email" class="form-control form-control-sm @error('email') is-invalid @enderror" placeholder="Email address" value="{{ old('email') }}" required>
+                                                @error('email')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                            <div class="col-md-6">
+                                                <input type="password" name="password" class="form-control form-control-sm @error('password') is-invalid @enderror" placeholder="Password" required>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <input type="password" name="password_confirmation" class="form-control form-control-sm" placeholder="Confirm password" required>
+                                                @error('password')
+                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                            <div class="col-12">
+                                                <button type="submit" class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-user-plus me-1"></i>Create Admin
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>

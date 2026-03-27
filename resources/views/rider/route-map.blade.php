@@ -515,8 +515,7 @@
                      id="task-{{ $delivery->id }}"
                      data-lat="{{ $delivery->order->latitude ?? 0 }}"
                      data-lng="{{ $delivery->order->longitude ?? 0 }}"
-                     data-delivery-id="{{ $delivery->id }}"
-                     onclick="focusOnTask({{ $delivery->id }}, {{ $delivery->order->latitude ?? 0 }}, {{ $delivery->order->longitude ?? 0 }})">
+                     data-delivery-id="{{ $delivery->id }}">
                     <div class="task-header">
                         <div class="task-order">
                             <span class="order-dot"></span>
@@ -540,22 +539,22 @@
                         <div class="task-amount">₱{{ number_format($delivery->order->total_amount, 2) }}</div>
                     </div>
                     <div class="task-actions">
-                        <button class="btn-locate" onclick="event.stopPropagation(); locateOnMap({{ $delivery->order->latitude ?? 0 }}, {{ $delivery->order->longitude ?? 0 }})">
+                        <button type="button" class="btn-locate" data-action="locate">
                             <i class="fas fa-crosshairs"></i> LOCATE
                         </button>
-                        <button class="btn-navigate" onclick="event.stopPropagation(); navigateTo({{ $delivery->order->latitude ?? 0 }}, {{ $delivery->order->longitude ?? 0 }})">
+                        <button type="button" class="btn-navigate" data-action="navigate">
                             <i class="fas fa-directions"></i>
                         </button>
-                        <a href="tel:{{ $delivery->order->contact_number }}" class="btn-call" onclick="event.stopPropagation();">
+                        <a href="tel:{{ $delivery->order->contact_number }}" class="btn-call" data-action="call">
                             <i class="fas fa-phone"></i>
                         </a>
                     </div>
                     <!-- Delivery Action Buttons -->
                     <div class="task-actions-row">
-                        <button class="btn-delivered" onclick="event.stopPropagation(); markAsDelivered({{ $delivery->id }})" id="deliverBtn-{{ $delivery->id }}">
+                        <button type="button" class="btn-delivered" data-action="deliver" id="deliverBtn-{{ $delivery->id }}">
                             <i class="fas fa-check-circle"></i> MARK DELIVERED
                         </button>
-                        <a href="{{ route('rider.delivery', $delivery->id) }}" class="btn-view-details" onclick="event.stopPropagation();">
+                        <a href="{{ route('rider.delivery', $delivery->id) }}" class="btn-view-details" data-action="details">
                             <i class="fas fa-eye"></i> DETAILS
                         </a>
                     </div>
@@ -622,7 +621,63 @@
     // Initialize map on page load
     document.addEventListener('DOMContentLoaded', function() {
         initRouteMap();
+        bindTaskActions();
+        publishCurrentLocationOnce();
     });
+
+    function bindTaskActions() {
+        document.querySelectorAll('.task-card').forEach(function (task) {
+            task.addEventListener('click', function () {
+                const deliveryId = this.dataset.deliveryId;
+                const lat = parseFloat(this.dataset.lat);
+                const lng = parseFloat(this.dataset.lng);
+                focusOnTask(deliveryId, lat, lng);
+            });
+
+            const locateBtn = task.querySelector('[data-action="locate"]');
+            if (locateBtn) {
+                locateBtn.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    const lat = parseFloat(task.dataset.lat);
+                    const lng = parseFloat(task.dataset.lng);
+                    locateOnMap(lat, lng);
+                });
+            }
+
+            const navigateBtn = task.querySelector('[data-action="navigate"]');
+            if (navigateBtn) {
+                navigateBtn.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    const lat = parseFloat(task.dataset.lat);
+                    const lng = parseFloat(task.dataset.lng);
+                    navigateTo(lat, lng);
+                });
+            }
+
+            const callBtn = task.querySelector('[data-action="call"]');
+            if (callBtn) {
+                callBtn.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                });
+            }
+
+            const deliverBtn = task.querySelector('[data-action="deliver"]');
+            if (deliverBtn) {
+                deliverBtn.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    const deliveryId = task.dataset.deliveryId;
+                    markAsDelivered(deliveryId);
+                });
+            }
+
+            const detailsBtn = task.querySelector('[data-action="details"]');
+            if (detailsBtn) {
+                detailsBtn.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                });
+            }
+        });
+    }
 
     function initRouteMap() {
         // Get all task coordinates
@@ -688,20 +743,25 @@
             btn.innerHTML = '<i class="fas fa-play"></i><span>START TRACKING</span>';
         } else {
             // Start tracking
-            startTracking();
-            btn.classList.remove('start');
-            btn.classList.add('stop');
-            btn.innerHTML = '<i class="fas fa-stop"></i><span>STOP TRACKING</span>';
+            const started = startTracking();
+            if (started) {
+                btn.classList.remove('start');
+                btn.classList.add('stop');
+                btn.innerHTML = '<i class="fas fa-stop"></i><span>STOP TRACKING</span>';
+            }
         }
     }
 
     function startTracking() {
         if (!navigator.geolocation) {
             alert('Geolocation is not supported by your browser');
-            return;
+            return false;
         }
 
         isTracking = true;
+
+        // Immediately push one precise location before continuous tracking
+        publishCurrentLocationOnce();
 
         watchId = navigator.geolocation.watchPosition(
             function(position) {
@@ -721,6 +781,8 @@
                 maximumAge: 0
             }
         );
+
+        return true;
     }
 
     function stopTracking() {
@@ -752,15 +814,35 @@
         }
     }
 
-    function sendLocationToServer(lat, lng) {
-        // Get active delivery ID (first one)
-        const activeTask = document.querySelector('.task-card.active');
-        if (!activeTask) return;
+    function publishCurrentLocationOnce() {
+        if (!navigator.geolocation) {
+            return;
+        }
 
-        const deliveryId = activeTask.dataset.deliveryId;
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                riderPosition = { lat, lng };
+
+                updateRiderMarker(lat, lng);
+                sendLocationToServer(lat, lng);
+            },
+            function(error) {
+                console.warn('Initial geolocation unavailable:', error);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    }
+
+    function sendLocationToServer(lat, lng) {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
-        fetch(`/rider/delivery/${deliveryId}/location`, {
+        fetch('/rider/location/live', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -768,7 +850,7 @@
                 'Accept': 'application/json'
             },
             body: JSON.stringify({ latitude: lat, longitude: lng })
-        }).catch(err => console.error('Location update failed:', err));
+        }).catch(err => console.error('Live location update failed:', err));
     }
 
     function refreshData() {

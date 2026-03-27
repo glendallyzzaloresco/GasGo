@@ -38,6 +38,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Session Expiration Behavior (Multiple Tabs)
+    |--------------------------------------------------------------------------
+    |
+    | IMPORTANT: When SESSION_EXPIRE_ON_CLOSE=true, the session only expires
+    | when ALL browser tabs/windows are closed. If the user has multiple tabs
+    | open and closes one tab, the session remains active in other tabs.
+    |
+    | Example:
+    | - User opens Tab 1 (Admin Dashboard) - session created
+    | - User opens Tab 2 but closes it with X - session still active in Tab 1
+    | - User opens different browser window - session still active
+    | - User must close Tab 1 to expire session
+    |
+    | Recommendation: Encourage users to click Logout button before closing
+    | the browser for immediate session termination.
+    |
+    */
+
+    /*
+    |--------------------------------------------------------------------------
     | Session Encryption
     |--------------------------------------------------------------------------
     |

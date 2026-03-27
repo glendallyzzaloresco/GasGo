@@ -62,6 +62,94 @@
     /* Empty */
     .empty-cart { text-align: center; padding: 60px 20px; }
     .empty-cart i { font-size: 4rem; color: #ddd; margin-bottom: 16px; }
+
+    /* Notification Toast */
+    .notification-toast {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        color: white;
+        padding: 18px 24px;
+        border-radius: 12px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        min-width: 300px;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: slideInUp 0.4s ease-out;
+    }
+
+    .notification-toast.success {
+        background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+    }
+
+    .notification-toast.warning {
+        background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    }
+
+    .notification-toast.info {
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    }
+
+    .notification-toast i {
+        font-size: 1.3rem;
+        flex-shrink: 0;
+    }
+
+    .notification-toast-content {
+        flex: 1;
+    }
+
+    .notification-toast-title {
+        font-weight: 700;
+        margin-bottom: 4px;
+        font-size: 0.95rem;
+    }
+
+    .notification-toast-message {
+        font-size: 0.85rem;
+        opacity: 0.95;
+    }
+
+    .notification-toast-close {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 0;
+        margin-left: 12px;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+    }
+
+    .notification-toast-close:hover {
+        opacity: 1;
+    }
+
+    @keyframes slideInUp {
+        from {
+            transform: translateY(100px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOutDown {
+        from {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateY(100px);
+            opacity: 0;
+        }
+    }
 </style>
 @endsection
 
@@ -98,9 +186,13 @@
                     </div>
 
                     @foreach($cartItems as $item)
-                        <div class="cart-item" data-product-id="{{ $item->product_id ?? $item->product->id }}">
-                            <input type="checkbox" class="item-checkbox" value="{{ $item->product_id ?? $item->product->id }}" checked>
-                            <img src="{{ $item->product->image ? asset($item->product->image) : '' }}" alt="{{ $item->product->name }}">
+                        <div class="cart-item" data-product-id="{{ $item->product_id ?? $item->product->id }}" data-quantity="{{ $item->quantity }}" data-unit-price="{{ $item->product->price }}">
+                            <input type="checkbox" class="item-checkbox" value="{{ $item->product_id ?? $item->product->id }}">
+                            @if($item->product->resolved_image)
+                                <img src="{{ $item->product->resolved_image }}" alt="{{ $item->product->name }}">
+                            @else
+                                <span class="text-muted small">No image available</span>
+                            @endif
                             <div class="item-details">
                                 <div class="item-name">{{ $item->product->name }}</div>
                                 <div class="item-price" data-unit-price="{{ $item->product->price }}">₱{{ number_format($item->product->price, 2) }}</div>
@@ -129,9 +221,15 @@
             <div class="col-lg-4">
                 <div class="cart-summary">
                     <h5><i class="fas fa-receipt me-2"></i>Order Summary</h5>
-                    <div class="summary-row"><span>Subtotal</span><span>₱{{ number_format($total, 2) }}</span></div>
-                    <div class="summary-row"><span>Delivery Fee</span><span>₱50.00</span></div>
-                    <div class="summary-row total"><span>Total</span><span class="value">₱{{ number_format($total + 50, 2) }}</span></div>
+                    
+                    <div id="selected-items-list" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px;">
+                        <!-- Selected items will be inserted here by JavaScript -->
+                    </div>
+                    
+                    <div class="summary-row total" style="border-top: none; margin-top: 0; padding-top: 0;">
+                        <span>Total</span>
+                        <span class="value" id="summary-total">₱0.00</span>
+                    </div>
 
                     <a href="{{ route('customer.checkout') }}" class="btn btn-gasgo w-100 mt-3" onclick="proceedCheckout(event)">
                         <i class="fas fa-lock me-2"></i>Proceed to Checkout
@@ -148,20 +246,134 @@
 
 @section('scripts')
 <script>
+const quantityState = new Map();
+
+// Show notification toast at bottom right
+function showNotification(title, message, type = 'error') {
+    const toast = document.createElement('div');
+    toast.className = `notification-toast ${type}`;
+    
+    let icon = 'fas fa-exclamation-circle';
+    if (type === 'success') icon = 'fas fa-check-circle';
+    if (type === 'warning') icon = 'fas fa-exclamation-triangle';
+    if (type === 'info') icon = 'fas fa-info-circle';
+    
+    toast.innerHTML = `
+        <i class="${icon}"></i>
+        <div class="notification-toast-content">
+            <div class="notification-toast-title">${title}</div>
+            <div class="notification-toast-message">${message}</div>
+        </div>
+        <button class="notification-toast-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        toast.style.animation = 'slideOutDown 0.4s ease-out';
+        setTimeout(() => toast.remove(), 400);
+    }, 5000);
+}
+
+function initQuantityState() {
+    document.querySelectorAll('.cart-item').forEach(item => {
+        const productId = item.dataset.productId;
+        const quantity = parseInt(item.dataset.quantity || item.querySelector('.item-quantity')?.textContent || '1', 10);
+        const safeQty = Number.isNaN(quantity) ? 1 : Math.max(1, quantity);
+
+        quantityState.set(String(productId), {
+            desired: safeQty,
+            confirmed: safeQty,
+            inFlight: false,
+        });
+
+        syncQuantityUi(productId, safeQty);
+    });
+}
+
+function syncQuantityUi(productId, quantity) {
+    const cartItem = document.querySelector(`.cart-item[data-product-id="${productId}"]`);
+    if (!cartItem) {
+        return;
+    }
+
+    const safeQty = Math.max(1, quantity);
+    cartItem.dataset.quantity = String(safeQty);
+
+    const quantityElement = cartItem.querySelector('.item-quantity');
+    if (quantityElement) {
+        quantityElement.textContent = String(safeQty);
+    }
+
+    const minusBtn = cartItem.querySelector('.qty-btn-minus');
+    if (minusBtn) {
+        minusBtn.disabled = safeQty <= 1;
+    }
+
+    const priceElement = cartItem.querySelector('.item-price');
+    const subtotalElement = cartItem.querySelector('.item-subtotal');
+    if (priceElement && subtotalElement) {
+        const unitPrice = parseFloat(priceElement.dataset.unitPrice || '0');
+        const itemTotal = unitPrice * safeQty;
+        subtotalElement.textContent = '₱' + new Intl.NumberFormat('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(itemTotal);
+    }
+
+    updateCartTotal();
+}
+
+function queueQuantityDelta(productId, delta) {
+    const key = String(productId);
+    const current = quantityState.get(key);
+    if (!current) {
+        return;
+    }
+
+    current.desired = Math.max(1, current.desired + delta);
+    syncQuantityUi(productId, current.desired);
+
+    processQuantityQueue(productId);
+}
+
+async function processQuantityQueue(productId) {
+    const key = String(productId);
+    const state = quantityState.get(key);
+    if (!state || state.inFlight || state.desired === state.confirmed) {
+        return;
+    }
+
+    state.inFlight = true;
+    const targetQuantity = state.desired;
+
+    try {
+        await updateCartItemAjax(productId, targetQuantity, { suppressToast: true, skipDomUpdate: true });
+        state.confirmed = targetQuantity;
+    } catch (error) {
+        state.desired = state.confirmed;
+        syncQuantityUi(productId, state.confirmed);
+        showNotification('Update Failed', 'Could not update item quantity. Please try again.', 'error');
+    } finally {
+        state.inFlight = false;
+        if (state.desired !== state.confirmed) {
+            processQuantityQueue(productId);
+        }
+    }
+}
+
 // Handle quantity button clicks
 document.addEventListener('click', function(e) {
     if (e.target.closest('.qty-btn-minus')) {
         const btn = e.target.closest('.qty-btn-minus');
         const productId = btn.dataset.productId;
-        const quantity = parseInt(btn.dataset.quantity);
-        updateQuantity(productId, quantity);
+        queueQuantityDelta(productId, -1);
     }
     
     if (e.target.closest('.qty-btn-plus')) {
         const btn = e.target.closest('.qty-btn-plus');
         const productId = btn.dataset.productId;
-        const quantity = parseInt(btn.dataset.quantity);
-        updateQuantity(productId, quantity);
+        queueQuantityDelta(productId, 1);
     }
     
     if (e.target.closest('.remove-btn')) {
@@ -179,9 +391,14 @@ function updateQuantity(productId, quantity) {
 
 function removeItem(productId) {
     if (confirm('Are you sure you want to remove this item?')) {
-        removeCartItemAjax(productId).catch(error => {
-            // Error already shown in toast
-        });
+        removeCartItemAjax(productId)
+            .then(() => {
+                quantityState.delete(String(productId));
+                updateCartTotal();
+            })
+            .catch(error => {
+                // Error already shown in toast
+            });
     }
 }
 
@@ -193,7 +410,7 @@ function getSelectedItems() {
 function clearSelectedAjax() {
     const selectedIds = getSelectedItems();
     if (selectedIds.length === 0) {
-        showToast('No items selected', 'warning');
+        showNotification('No Items Selected', 'Please select at least one item to remove', 'warning');
         return;
     }
     
@@ -210,11 +427,36 @@ function clearSelectedAjax() {
 }
 
 function proceedCheckout(event) {
+    event.preventDefault();
     const selectedIds = getSelectedItems();
     if (selectedIds.length === 0) {
-        event.preventDefault();
-        showToast('Please select at least one item to checkout', 'warning');
+        showNotification('No Items Selected', 'Please select a product to checkout', 'error');
+        return;
     }
+    
+    // Create a hidden form to POST selected items
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route("customer.checkout") }}';
+    
+    // Add CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_token';
+    csrfInput.value = document.querySelector('meta[name="csrf-token"]').content;
+    form.appendChild(csrfInput);
+    
+    // Add selected product IDs
+    selectedIds.forEach(id => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'selected_items[]';
+        input.value = id;
+        form.appendChild(input);
+    });
+    
+    document.body.appendChild(form);
+    form.submit();
 }
 
 // Toggle all checkboxes
@@ -224,13 +466,63 @@ function toggleAllCheckboxes(checked) {
     });
 }
 
-// Update selected count in real-time
+// Update selected count and total in real-time
+function updateCartTotal() {
+    let subtotal = 0;
+    const selectedItemsList = document.getElementById('selected-items-list');
+    let selectedItemsHTML = '';
+
+    document.querySelectorAll('.cart-item').forEach(item => {
+        const checkbox = item.querySelector('.item-checkbox');
+        const quantity = parseInt(item.dataset.quantity);
+        const unitPrice = parseFloat(item.dataset.unitPrice);
+        const productName = item.querySelector('.item-name').textContent;
+        const itemSubtotal = quantity * unitPrice;
+        
+        if (checkbox.checked) {
+            subtotal += itemSubtotal;
+            
+            // Build selected items list with product details
+            selectedItemsHTML += `
+                <div style="padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
+                    <div style="font-weight: 600; color: var(--gasgo-blue); font-size: 0.95rem;">
+                        ${productName}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #666; margin-top: 4px;">
+                        <span>₱${unitPrice.toFixed(2)} × ${quantity}</span>
+                        <span style="font-weight: 600; color: var(--gasgo-orange);">₱${itemSubtotal.toFixed(2)}</span>
+                    </div>
+                </div>
+            `;
+        }
+    });
+
+    // If no items selected, show message
+    if (selectedItemsHTML === '') {
+        selectedItemsHTML = '<div style="text-align: center; color: #999; padding: 20px 0;">No items selected</div>';
+    }
+
+    // Update selected items list
+    selectedItemsList.innerHTML = selectedItemsHTML;
+    
+    // Update total (no delivery fee)
+    document.getElementById('summary-total').textContent = '₱' + subtotal.toFixed(2);
+}
+
+// Add change listeners to all checkboxes
 document.querySelectorAll('.item-checkbox').forEach(cb => {
     cb.addEventListener('change', function() {
+        updateCartTotal();
         const selectedCount = document.querySelectorAll('.item-checkbox:checked').length;
         const totalCount = document.querySelectorAll('.item-checkbox').length;
         console.log(`Selected: ${selectedCount}/${totalCount}`);
     });
+});
+
+// Initialize total to 0 on page load (since no items are checked by default)
+window.addEventListener('load', function() {
+    initQuantityState();
+    updateCartTotal();
 });
 </script>
 @endsection

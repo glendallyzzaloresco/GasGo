@@ -112,7 +112,7 @@
             </div>
 
             <div class="d-flex gap-2 mt-3">
-                <button onclick="acceptOrder({{ $order->id }})" class="btn flex-grow-1 btn-action accept-order-btn"
+                <button type="button" data-order-id="{{ $order->id }}" class="btn flex-grow-1 btn-action accept-order-btn"
                         style="background:#27ae60;color:#fff;">
                     <i class="fas fa-check-circle me-1"></i>Accept Order
                 </button>
@@ -130,8 +130,7 @@
 
 @section('scripts')
 <script>
-    function acceptOrder(orderId) {
-        const btn = event.target.closest('button');
+    function acceptOrder(orderId, btn) {
         const card = document.getElementById(`order-card-${orderId}`);
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
@@ -228,5 +227,16 @@
             alert('Failed to update status. Please try again.');
         });
     }
+
+    document.querySelectorAll('.accept-order-btn[data-order-id]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const orderId = this.getAttribute('data-order-id');
+            if (!orderId) {
+                return;
+            }
+
+            acceptOrder(orderId, this);
+        });
+    });
 </script>
 @endsection

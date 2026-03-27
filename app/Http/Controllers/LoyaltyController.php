@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Freebie;
 use App\Models\LoyaltyPoint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -90,7 +91,70 @@ class LoyaltyController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return view('admin.rewards', compact('transactions'));
+        $rewards = Freebie::query()
+            ->where('redemption_type', 'loyalty_points')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('admin.rewards', compact('transactions', 'rewards'));
+    }
+
+    // Admin: create reward
+    public function storeReward(Request $request)
+    {
+        $validated = $request->validate([
+            'name'                  => 'required|string|max:255',
+            'description'           => 'nullable|string',
+            'reward_points_required'=> 'required|integer|min:0',
+            'stock'                 => 'required|integer|min:0',
+            'image'                 => 'nullable|image|max:2048',
+            'is_active'             => 'nullable|boolean',
+        ]);
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('freebies', 'public');
+        }
+
+        $validated['category'] = $request->input('category', 'Rewards');
+        $validated['redemption_type'] = 'loyalty_points';
+        $validated['is_active'] = $request->boolean('is_active');
+
+        Freebie::create($validated);
+
+        return redirect()->route('admin.rewards')->with('success', 'Reward created successfully.');
+    }
+
+    // Admin: update reward
+    public function updateReward(Request $request, Freebie $reward)
+    {
+        $validated = $request->validate([
+            'name'                  => 'required|string|max:255',
+            'description'           => 'nullable|string',
+            'reward_points_required'=> 'required|integer|min:0',
+            'stock'                 => 'required|integer|min:0',
+            'image'                 => 'nullable|image|max:2048',
+            'is_active'             => 'nullable|boolean',
+        ]);
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('freebies', 'public');
+        }
+
+        $validated['category'] = $request->input('category', $reward->category ?: 'Rewards');
+        $validated['redemption_type'] = 'loyalty_points';
+        $validated['is_active'] = $request->boolean('is_active');
+
+        $reward->update($validated);
+
+        return redirect()->route('admin.rewards')->with('success', 'Reward updated successfully.');
+    }
+
+    // Admin: delete reward
+    public function destroyReward(Freebie $reward)
+    {
+        $reward->delete();
+
+        return redirect()->route('admin.rewards')->with('success', 'Reward deleted successfully.');
     }
 
     // Calculate earned, redeemed, and balance for a given user

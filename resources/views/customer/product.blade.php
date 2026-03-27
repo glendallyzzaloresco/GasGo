@@ -29,12 +29,13 @@
     .product-card {
         background: white; border-radius: 20px; overflow: hidden;
         box-shadow: 0 8px 30px rgba(0,0,0,.08); transition: transform .35s, box-shadow .35s; height: 100%;
+        cursor: pointer;
     }
     .product-card:hover {
         transform: translateY(-8px); box-shadow: 0 16px 40px rgba(0,0,0,.14);
     }
     .product-card .product-img {
-        height: 220px; background: var(--gasgo-blue-light);
+        height: 220px; background: white;
         display: flex; align-items: center; justify-content: center; position: relative;
     }
     .product-card .product-img img { max-height: 180px; object-fit: contain; }
@@ -43,6 +44,7 @@
         background: var(--gasgo-orange); color: white;
         padding: 4px 14px; border-radius: 20px; font-size: .75rem; font-weight: 600;
     }
+    .product-badge.accessory { background: var(--gasgo-blue); }
     .product-body { padding: 20px; }
     .product-body h5 { font-weight: 700; color: var(--gasgo-blue); }
     .product-price { font-size: 1.25rem; font-weight: 700; color: var(--gasgo-orange); }
@@ -77,113 +79,42 @@
 
     <!-- Products Grid -->
     <div class="row g-4" id="productGrid">
-        <!-- 11kg -->
-        <div class="col-lg-3 col-md-6 product-item" data-category="lpg" data-name="LPG Tank 11kg" data-aos="fade-up" data-aos-delay="100">
-            <div class="product-card">
-                <div class="product-img">
-                    <span class="product-badge"><i class="fas fa-bolt me-1"></i>Popular</span>
-                    <img src="{{ asset('images/11kg.jpg') }}" alt="11kg LPG">
-                </div>
-                <div class="product-body">
-                    <h5>LPG Tank 11kg</h5>
-                    <p class="product-weight"><i class="fas fa-weight-hanging me-1"></i>11 Kilograms</p>
-                    <p class="product-stock in"><i class="fas fa-check-circle me-1"></i>In Stock</p>
-                    <hr>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="product-price">₱850.00</span>
-                        <button class="btn btn-gasgo btn-sm add-to-cart-btn" data-id="1" data-name="LPG Tank 11kg" data-price="850" data-image="{{ asset('images/11kg.jpg') }}">
-                            <i class="fas fa-cart-plus me-1"></i>Add
-                        </button>
+        @forelse($products as $index => $product)
+            @php
+                $label = strtolower($product->name ?? '');
+                $category = (str_contains($label, 'lpg') || str_contains($label, 'kg')) ? 'lpg' : 'accessories';
+                $inStock = (int) ($product->quantity_on_hand ?? 0) > 0;
+                $img = $product->resolved_image;
+            @endphp
+            <div class="col-lg-3 col-md-6 product-item" data-category="{{ $category }}" data-name="{{ $product->name }}" data-aos="fade-up" data-aos-delay="{{ (($index % 6) + 1) * 100 }}">
+                <a href="{{ route('customer.product.show', $product->id) }}" style="text-decoration: none; color: inherit;">
+                    <div class="product-card">
+                        <div class="product-img">
+                            <span class="product-badge {{ $category === 'lpg' ? '' : 'accessory' }}">{{ $category === 'lpg' ? 'LPG' : 'Accessory' }}</span>
+                            @if($img)
+                                <img src="{{ $img }}" alt="{{ $product->name }}" class="img-fluid">
+                            @else
+                                <span class="text-muted small">No image available</span>
+                            @endif
+                        </div>
+                        <div class="product-body">
+                            <h5>{{ $product->name }}</h5>
+                            <p class="product-weight"><i class="fas fa-weight-hanging me-1"></i>{{ $product->weight ?: ucfirst($category) }}</p>
+                            <p class="product-stock {{ $inStock ? 'in' : 'out' }}"><i class="fas {{ $inStock ? 'fa-check-circle' : 'fa-times-circle' }} me-1"></i>{{ $inStock ? 'In Stock' : 'Out of Stock' }}</p>
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="product-price">₱{{ number_format($product->price, 2) }}</span>
+                                <button class="btn btn-gasgo btn-sm add-to-cart-btn" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" data-image="{{ $img }}" {{ $inStock ? '' : 'disabled' }} onclick="event.stopPropagation();">
+                                    <i class="fas fa-cart-plus me-1"></i>Add
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
-        </div>
-
-        <!-- 22kg -->
-        <div class="col-lg-3 col-md-6 product-item" data-category="lpg" data-name="LPG Tank 22kg" data-aos="fade-up" data-aos-delay="200">
-            <div class="product-card">
-                <div class="product-img">
-                    <img src="{{ asset('images/22kg.jpg') }}" alt="22kg LPG">
-                </div>
-                <div class="product-body">
-                    <h5>LPG Tank 22kg</h5>
-                    <p class="product-weight"><i class="fas fa-weight-hanging me-1"></i>22 Kilograms</p>
-                    <p class="product-stock in"><i class="fas fa-check-circle me-1"></i>In Stock</p>
-                    <hr>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="product-price">₱1,600.00</span>
-                        <button class="btn btn-gasgo btn-sm add-to-cart-btn" data-id="2" data-name="LPG Tank 22kg" data-price="1600" data-image="{{ asset('images/22kg.jpg') }}">
-                            <i class="fas fa-cart-plus me-1"></i>Add
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 2kg -->
-        <div class="col-lg-3 col-md-6 product-item" data-category="lpg" data-name="LPG Tank 2kg" data-aos="fade-up" data-aos-delay="300">
-            <div class="product-card">
-                <div class="product-img">
-                    <img src="{{ asset('images/2kg.jpg') }}" alt="2kg LPG">
-                </div>
-                <div class="product-body">
-                    <h5>LPG Tank 2kg</h5>
-                    <p class="product-weight"><i class="fas fa-weight-hanging me-1"></i>2 Kilograms</p>
-                    <p class="product-stock in"><i class="fas fa-check-circle me-1"></i>In Stock</p>
-                    <hr>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="product-price">₱350.00</span>
-                        <button class="btn btn-gasgo btn-sm add-to-cart-btn" data-id="3" data-name="LPG Tank 2kg" data-price="350" data-image="{{ asset('images/2kg.jpg') }}">
-                            <i class="fas fa-cart-plus me-1"></i>Add
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Regulator Accessory -->
-        <div class="col-lg-3 col-md-6 product-item" data-category="accessories" data-name="LPG Regulator" data-aos="fade-up" data-aos-delay="400">
-            <div class="product-card">
-                <div class="product-img">
-                    <span class="product-badge" style="background:var(--gasgo-blue);">Accessory</span>
-                    <i class="fas fa-cogs" style="font-size:4rem;color:var(--gasgo-blue);"></i>
-                </div>
-                <div class="product-body">
-                    <h5>LPG Regulator</h5>
-                    <p class="product-weight"><i class="fas fa-tag me-1"></i>Accessory</p>
-                    <p class="product-stock in"><i class="fas fa-check-circle me-1"></i>In Stock</p>
-                    <hr>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="product-price">₱250.00</span>
-                        <button class="btn btn-gasgo btn-sm add-to-cart-btn" data-id="4" data-name="LPG Regulator" data-price="250" data-image="">
-                            <i class="fas fa-cart-plus me-1"></i>Add
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Hose Accessory -->
-        <div class="col-lg-3 col-md-6 product-item" data-category="accessories" data-name="LPG Hose" data-aos="fade-up" data-aos-delay="500">
-            <div class="product-card">
-                <div class="product-img">
-                    <span class="product-badge" style="background:var(--gasgo-blue);">Accessory</span>
-                    <i class="fas fa-link" style="font-size:4rem;color:var(--gasgo-blue);"></i>
-                </div>
-                <div class="product-body">
-                    <h5>LPG Hose</h5>
-                    <p class="product-weight"><i class="fas fa-tag me-1"></i>Accessory</p>
-                    <p class="product-stock in"><i class="fas fa-check-circle me-1"></i>In Stock</p>
-                    <hr>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="product-price">₱150.00</span>
-                        <button class="btn btn-gasgo btn-sm add-to-cart-btn" data-id="5" data-name="LPG Hose" data-price="150" data-image="">
-                            <i class="fas fa-cart-plus me-1"></i>Add
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        @empty
+            <div class="col-12 text-center text-muted py-5">No products available yet.</div>
+        @endforelse
     </div>
 </section>
 @endsection

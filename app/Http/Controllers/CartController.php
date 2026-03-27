@@ -14,6 +14,15 @@ class CartController extends Controller
     // Display the user's cart
     public function index(Request $request)
     {
+        // Redirect non-customer users
+        if (Auth::check() && Auth::user()->role !== 'customer') {
+            if (Auth::user()->role === 'admin') {
+                return redirect()->route('admin.dashboard');
+            } elseif (Auth::user()->role === 'rider') {
+                return redirect()->route('rider.dashboard');
+            }
+        }
+
         if (Auth::check()) {
             $cartItems = Cart::with('product')
                 ->where('user_id', Auth::id())

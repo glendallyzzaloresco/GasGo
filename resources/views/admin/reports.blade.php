@@ -352,10 +352,7 @@
                 <span class="label">Avg. Delivery Time</span>
                 <span class="value" id="metricAvgDeliveryTime">{{ $avgDeliveryTime ? round($avgDeliveryTime) : 0 }} mins</span>
             </div>
-            <div class="summary-row">
-                <span class="label">Avg. Customer Rating</span>
-                <span class="value" id="metricAvgRating"><i class="fas fa-star text-warning me-1"></i>{{ round($avgRating, 1) }}</span>
-            </div>
+            
         </div>
     </div>
 </div>

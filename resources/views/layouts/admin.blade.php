@@ -474,6 +474,7 @@
             <li><a href="{{ url('/admin/dashboard') }}" class="@yield('nav-dashboard')"><i class="fas fa-tachometer-alt"></i>Dashboard</a></li>
             <li><a href="{{ url('/admin/orders') }}" class="@yield('nav-orders')"><i class="fas fa-shopping-bag"></i>Orders</a></li>
             <li><a href="{{ url('/admin/products') }}" class="@yield('nav-products')"><i class="fas fa-fire"></i>Products</a></li>
+            <li><a href="{{ route('admin.inventory.index') }}" class="@yield('nav-inventory')"><i class="fas fa-warehouse"></i>Inventory</a></li>
         </ul>
         <div class="sidebar-section">Delivery</div>
         <ul class="sidebar-menu">
@@ -482,7 +483,6 @@
         </ul>
         <div class="sidebar-section">Marketing</div>
         <ul class="sidebar-menu">
-            <li><a href="{{ url('/admin/promotions') }}" class="@yield('nav-promotions')"><i class="fas fa-tags"></i>Promotions</a></li>
             <li><a href="{{ url('/admin/rewards') }}" class="@yield('nav-rewards')"><i class="fas fa-gift"></i>Rewards</a></li>
         </ul>
         <div class="sidebar-section">Reports</div>
@@ -532,8 +532,8 @@
                     {{ strtoupper(substr(Auth::user()->name ?? 'A', 0, 1)) }}
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminDropdown" style="border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.1);">
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-user-circle me-2"></i>{{ Auth::user()->name ?? 'Admin' }}</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                    <li><a class="dropdown-item" href="{{ route('admin.profile') }}"><i class="fas fa-user-circle me-2"></i>{{ Auth::user()->name ?? 'Admin' }}</a></li>
+                    <li><a class="dropdown-item" href="{{ route('admin.settings') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form-topbar').submit();">

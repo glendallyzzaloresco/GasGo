@@ -19,24 +19,26 @@
     }
     .delivery-search input:focus { border-color:var(--gasgo-blue); outline:none; box-shadow:none; }
     .delivery-search i { position:absolute; left:16px; top:50%; transform:translateY(-50%); color:#aaa; }
-    .map-placeholder {
-        width:100%; height:350px; border-radius:16px; overflow:hidden;
-        background:linear-gradient(135deg,var(--gasgo-blue-light),#d5e8f7);
-        display:flex; align-items:center; justify-content:center; position:relative;
-        box-shadow:0 4px 15px rgba(0,0,0,.06);
-    }
-    .map-placeholder .map-text {
-        text-align:center; color:var(--gasgo-blue); z-index:2;
-    }
-    .map-placeholder .map-text i { font-size:3rem; margin-bottom:10px; display:block; }
+    
+    /* Delivery Cards and Status Colors */
     .delivery-item {
         background:#fff; border-radius:14px; padding:18px;
-        box-shadow:0 2px 10px rgba(0,0,0,.05); transition:transform .2s; cursor:pointer;
-        border-left:4px solid transparent;
+        box-shadow:0 2px 10px rgba(0,0,0,.05); transition:transform .2s;
     }
     .delivery-item:hover { transform:translateX(4px); }
-    .delivery-item.active-delivery { border-left-color:var(--gasgo-orange); background:var(--gasgo-orange-light); }
-    .delivery-item.completed-delivery { border-left-color:#27ae60; }
+    .delivery-item.active-delivery { background:var(--gasgo-orange-light); }
+    .delivery-item.completed-delivery { background:#f0f9f5; }
+    .delivery-item.returning-delivery { background:#fef3e6; }
+    
+    /* Status Badges - Specific Colors for Each Status */
+    .badge-assigned { background:#3498db; color:#fff; padding:4px 10px; border-radius:12px; font-size:.75rem; font-weight:600; }
+    .badge-picked_up { background:#2196F3; color:#fff; padding:4px 10px; border-radius:12px; font-size:.75rem; font-weight:600; }
+    .badge-out_for_delivery { background:var(--gasgo-orange); color:#fff; padding:4px 10px; border-radius:12px; font-size:.75rem; font-weight:600; }
+    .badge-returning { background:#9C27B0; color:#fff; padding:4px 10px; border-radius:12px; font-size:.75rem; font-weight:600; }
+    .badge-delivered { background:#27ae60; color:#fff; padding:4px 10px; border-radius:12px; font-size:.75rem; font-weight:600; }
+    .badge-standby { background:#5DADE2; color:#fff; padding:4px 10px; border-radius:12px; font-size:.75rem; font-weight:600; }
+    .badge-failed { background:#e74c3c; color:#fff; padding:4px 10px; border-radius:12px; font-size:.75rem; font-weight:600; }
+    
     .delivery-actions { margin-top:10px; display:flex; justify-content:flex-end; }
     .btn-delivery-progress {
         border:none; border-radius:10px; padding:7px 12px; font-size:.78rem; font-weight:600;
@@ -44,31 +46,48 @@
     }
     .btn-delivery-progress:hover { background:#145a8f; }
     .delivery-card.is-updating { opacity:.65; }
-    .timeline-mini { display:flex; gap:4px; margin-top:8px; }
+    
+    /* Timeline Progress Bar - 4 Steps with Labels */
+    .timeline-mini { display:flex; gap:4px; margin-top:8px; flex-direction:column; }
+    .timeline-steps { display:flex; gap:4px; }
     .timeline-mini .step {
-        flex:1; height:4px; border-radius:2px; background:#e0e0e0;
+        flex:1; height:5px; border-radius:3px; background:#e0e0e0; position:relative;
     }
-    .timeline-mini .step.done { background:var(--gasgo-orange); }
-    .timeline-mini .step.current { background:var(--gasgo-blue); animation:pulse 1.5s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.5;} }
+    .timeline-mini .step.step-1.done { background:var(--gasgo-orange); }
+    .timeline-mini .step.step-1.current { background:var(--gasgo-orange); animation:pulse 1.5s infinite; }
+    .timeline-mini .step.step-2.done { background:#27ae60; }
+    .timeline-mini .step.step-2.current { background:#27ae60; animation:pulse 1.5s infinite; }
+    .timeline-mini .step.step-3.done { background:#9C27B0; }
+    .timeline-mini .step.step-3.current { background:#9C27B0; animation:pulse 1.5s infinite; }
+    .timeline-mini .step.step-4.done { background:#5DADE2; }
+    .timeline-mini .step.step-4.current { background:#5DADE2; animation:pulse 1.5s infinite; }
+    .timeline-labels { display:flex; gap:4px; margin-top:6px; font-size:.7rem; font-weight:500; color:#666; }
+    .timeline-labels .label { flex:1; text-align:center; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.6;} }
+    
+    /* Status Legend */
+    .status-legend { margin-top:20px; padding:15px; background:#f5f5f5; border-radius:10px; font-size:.85rem; }
+    .legend-item { display:inline-flex; align-items:center; gap:8px; margin-right:20px; }
+    .legend-color { width:16px; height:16px; border-radius:3px; }
 </style>
 @endsection
 
 @php
-    $statusOrder = ['assigned', 'picked_up', 'out_for_delivery', 'delivered'];
+    /* Delivery Status Workflow - 4 Step Process */
+    $statusOrder = ['out_for_delivery', 'delivered', 'returning', 'standby'];
     $statusLabels = [
-        'assigned' => 'Assigned',
-        'picked_up' => 'Picked Up',
         'out_for_delivery' => 'Out for Delivery',
-        'delivered' => 'Delivered',
+        'delivered' => 'Order Delivered',
+        'returning' => 'Returning to Store',
+        'standby' => 'Rider Stand By',
         'failed' => 'Failed'
     ];
     $statusBadgeClasses = [
-        'assigned' => 'badge-assigned',
-        'picked_up' => 'badge-assigned',
         'out_for_delivery' => 'badge-out_for_delivery',
         'delivered' => 'badge-delivered',
-        'failed' => 'badge-cancelled'
+        'returning' => 'badge-returning',
+        'standby' => 'badge-standby',
+        'failed' => 'badge-failed'
     ];
     
     // Split deliveries into active and completed
@@ -93,137 +112,199 @@
     <button class="filter-tab" onclick="setDeliveryFilter(this, 'completed')">Completed</button>
 </div>
 
-<!-- Map Section -->
-<div class="map-placeholder mb-4">
-    <div class="map-text">
-        <i class="fas fa-map-marked-alt"></i>
-        <h5 class="fw-bold">Live Delivery Map</h5>
-        <p style="font-size:.88rem;">Integrate with Google Maps or Leaflet.js for real-time tracking</p>
-    </div>
-</div>
-
-<div class="row g-4">
-    <!-- Active Deliveries -->
-    <div class="col-lg-6">
-        <h6 class="fw-bold mb-3" style="color:var(--gasgo-blue);"><i class="fas fa-shipping-fast me-2" style="color:var(--gasgo-orange);"></i>Active Deliveries <span class="badge bg-warning text-dark ms-1" id="activeDeliveriesCount">{{ $activeDeliveries->count() }}</span></h6>
-        <div class="d-flex flex-column gap-3" id="activeDeliveriesList">
-            @forelse($activeDeliveries as $delivery)
-                @php
-                    $order = $delivery->order;
-                    $statusIndex = array_search($delivery->status, $statusOrder);
-                    $isActive = !in_array($delivery->status, ['delivered', 'failed']);
-                    $nextStatus = null;
-                    if ($delivery->status === 'assigned') $nextStatus = 'picked_up';
-                    elseif ($delivery->status === 'picked_up') $nextStatus = 'out_for_delivery';
-                    elseif ($delivery->status === 'out_for_delivery') $nextStatus = 'delivered';
-                @endphp
-                <div class="delivery-item {{ $isActive ? 'active-delivery' : '' }} delivery-card" data-delivery-id="{{ $delivery->id }}" data-group="active" data-search="{{ strtolower(($order->order_number ?? '') . ' ' . ($order->user->name ?? '') . ' ' . ($delivery->rider->name ?? '') . ' ' . ($order->delivery_address ?? '')) }}">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <div class="fw-bold" style="color:var(--gasgo-blue);">#{{ $order->order_number ?? 'N/A' }}</div>
-                            <div style="font-size:.85rem;">{{ $order->user->name ?? 'Unknown' }} &bullet; 
-                                @if($order->orderItems)
-                                    @foreach($order->orderItems as $item)
-                                        {{ $item->product_name ?? 'Product' }} ×{{ $item->quantity }}{{ !$loop->last ? ', ' : '' }}
-                                    @endforeach
-                                @endif
-                            </div>
-                            <div style="font-size:.8rem;color:#888;"><i class="fas fa-map-marker-alt me-1"></i>{{ $order->delivery_address ?? 'Address not provided' }}</div>
+<!-- Active Deliveries List -->
+<div id="deliveriesContainer-active" class="deliveries-section">
+    <h5 class="mb-3" style="color:#333; font-weight:600;">Active Deliveries</h5>
+    <div id="activeDeliveriesList">
+        @forelse($activeDeliveries as $delivery)
+            <div class="delivery-item active-delivery delivery-card" id="delivery-{{ $delivery->id }}" data-id="{{ $delivery->id }}" data-status="{{ $delivery->status }}" data-group="active" data-search="order #{{ $delivery->order_id }} {{ strtolower($delivery->order->user->name ?? '') }} {{ strtolower($delivery->rider->name ?? '') }} {{ strtolower($delivery->order->address_full ?? '') }}">
+                <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <div style="flex:1;">
+                        <div style="margin-bottom:4px;">
+                            <strong style="color:#333;">Order #{{ $delivery->order_id }}</strong>
+                            <span class="badge {{ $statusBadgeClasses[$delivery->status] ?? 'badge-assigned' }}" style="margin-left:8px;">{{ $statusLabels[$delivery->status] ?? 'N/A' }}</span>
                         </div>
-                        <div class="text-end">
-                            <span class="badge-status delivery-status-badge {{ $statusBadgeClasses[$delivery->status] ?? 'badge-assigned' }}">{{ $statusLabels[$delivery->status] ?? $delivery->status }}</span>
-                            <div style="font-size:.78rem;color:#888;margin-top:4px;"><i class="fas fa-motorcycle me-1"></i>{{ $delivery->rider->name ?? 'Unassigned' }}</div>
+                        <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
+                            <strong>Customer:</strong> {{ $delivery->order->user->name ?? 'N/A' }}
+                        </div>
+                        <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
+                            <strong>Rider:</strong> {{ $delivery->rider->name ?? 'Unassigned' }}
+                        </div>
+                        <div style="font-size:.82rem; color:#666;">
+                            <strong>Address:</strong> {{ $delivery->order->address_full ?? 'N/A' }}
                         </div>
                     </div>
-                    <div class="timeline-mini" data-delivery-id="{{ $delivery->id }}">
-                        @foreach($statusOrder as $idx => $status)
-                            <div class="step {{ $idx < ($statusIndex + 1) ? 'done' : '' }} {{ $idx == $statusIndex ? 'current' : '' }}"></div>
+                </div>
+                <div class="timeline-mini">
+                    <div class="timeline-steps">
+                        @foreach($statusOrder as $i => $status)
+                            @php
+                                $currentIndex = array_search($delivery->status, $statusOrder);
+                                $isDone = $i <= $currentIndex;
+                                $isCurrent = $i === $currentIndex;
+                                $stepNumber = $i + 1;
+                            @endphp
+                            <div class="step step-{{ $stepNumber }} {{ $isDone ? 'done' : '' }} {{ $isCurrent ? 'current' : '' }}"></div>
                         @endforeach
                     </div>
-                    @if($nextStatus)
-                        <div class="delivery-actions">
-                            <button
-                                type="button"
-                                class="btn-delivery-progress"
-                                data-delivery-id="{{ $delivery->id }}"
-                                data-next-status="{{ $nextStatus }}">
-                                Move to {{ $statusLabels[$nextStatus] ?? ucfirst($nextStatus) }}
-                            </button>
-                        </div>
-                    @endif
-                </div>
-            @empty
-                <div class="text-center py-4 text-muted">
-                    <i class="fas fa-inbox fa-2x mb-2" style="color:#ddd;"></i>
-                    <p>No active deliveries at the moment.</p>
-                </div>
-            @endforelse
-        </div>
-    </div>
-
-    <!-- Recent Completed -->
-    <div class="col-lg-6">
-        <h6 class="fw-bold mb-3" style="color:var(--gasgo-blue);"><i class="fas fa-check-circle me-2 text-success"></i>Recently Completed <span class="badge bg-success ms-1" id="completedDeliveriesCount">{{ $completedDeliveries->count() }}</span></h6>
-        <div class="d-flex flex-column gap-3" id="completedDeliveriesList">
-            @forelse($completedDeliveries->take(5) as $delivery)
-                @php
-                    $order = $delivery->order;
-                    $deliveryTime = $delivery->delivered_at ? $delivery->delivered_at->diffForHumans() : 'N/A';
-                @endphp
-                <div class="delivery-item completed-delivery delivery-card" data-delivery-id="{{ $delivery->id }}" data-group="completed" data-search="{{ strtolower(($order->order_number ?? '') . ' ' . ($order->user->name ?? '') . ' ' . ($delivery->rider->name ?? '') . ' ' . ($order->delivery_address ?? '')) }}">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <div class="fw-bold" style="color:var(--gasgo-blue);">#{{ $order->order_number ?? 'N/A' }}</div>
-                            <div style="font-size:.85rem;">{{ $order->user->name ?? 'Unknown' }} &bullet; 
-                                @if($order->orderItems)
-                                    @foreach($order->orderItems as $item)
-                                        {{ $item->product_name ?? 'Product' }} ×{{ $item->quantity }}{{ !$loop->last ? ', ' : '' }}
-                                    @endforeach
-                                @endif
-                            </div>
-                            <div class="delivery-meta-time" style="font-size:.8rem;color:#888;"><i class="fas fa-motorcycle me-1"></i>{{ $delivery->rider->name ?? 'Unknown' }} &bullet; {{ $deliveryTime }}</div>
-                        </div>
-                        <div class="text-end">
-                            <span class="badge-status delivery-status-badge badge-{{ $delivery->status }}">{{ $statusLabels[$delivery->status] ?? ucfirst($delivery->status) }}</span>
-                            <div class="delivery-date-time" style="font-size:.78rem;color:#888;margin-top:4px;">{{ $delivery->delivered_at ? $delivery->delivered_at->format('M d g:i A') : 'N/A' }}</div>
-                        </div>
-                    </div>
-                    <div class="timeline-mini">
-                        <div class="step done"></div>
-                        <div class="step done"></div>
-                        <div class="step done"></div>
-                        <div class="step done"></div>
-                        <div class="step done"></div>
+                    <div class="timeline-labels">
+                        <div class="label">Out for Delivery</div>
+                        <div class="label">Delivered</div>
+                        <div class="label">Returned</div>
+                        <div class="label">Stand By</div>
                     </div>
                 </div>
-            @empty
-                <div class="text-center py-4 text-muted">
-                    <i class="fas fa-inbox fa-2x mb-2" style="color:#ddd;"></i>
-                    <p>No completed deliveries yet.</p>
-                </div>
-            @endforelse
-        </div>
+            </div>
+        @empty
+            <div style="padding:20px; text-align:center; color:#aaa;">
+                <i class="fas fa-box" style="font-size:2rem; display:block; margin-bottom:8px;"></i>
+                No active deliveries
+            </div>
+        @endforelse
     </div>
 </div>
+
+<!-- Completed Deliveries List -->
+<div id="deliveriesContainer-completed" class="deliveries-section" style="display:none;">
+    <h5 class="mb-3" style="color:#333; font-weight:600;">Completed Deliveries</h5>
+    <div id="completedDeliveriesList">
+        @forelse($completedDeliveries as $delivery)
+            <div class="delivery-item completed-delivery delivery-card" id="delivery-{{ $delivery->id }}" data-id="{{ $delivery->id }}" data-status="{{ $delivery->status }}" data-group="completed" data-search="order #{{ $delivery->order_id }} {{ strtolower($delivery->order->user->name ?? '') }} {{ strtolower($delivery->rider->name ?? '') }} {{ strtolower($delivery->order->address_full ?? '') }}">
+                <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <div style="flex:1;">
+                        <div style="margin-bottom:4px;">
+                            <strong style="color:#333;">Order #{{ $delivery->order_id }}</strong>
+                            <span class="badge {{ $statusBadgeClasses[$delivery->status] ?? 'badge-delivered' }}" style="margin-left:8px;">{{ $statusLabels[$delivery->status] ?? 'N/A' }}</span>
+                        </div>
+                        <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
+                            <strong>Customer:</strong> {{ $delivery->order->user->name ?? 'N/A' }}
+                        </div>
+                        <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
+                            <strong>Rider:</strong> {{ $delivery->rider->name ?? 'System' }}
+                        </div>
+                        <div style="font-size:.82rem; color:#666;">
+                            <strong>Address:</strong> {{ $delivery->order->address_full ?? 'N/A' }}
+                        </div>
+                    </div>
+                </div>
+                <div class="timeline-mini">
+                    <div class="timeline-steps">
+                        @foreach($statusOrder as $i => $status)
+                            @php
+                                $stepNumber = $i + 1;
+                            @endphp
+                            <div class="step step-{{ $stepNumber }} done"></div>
+                        @endforeach
+                    </div>
+                    <div class="timeline-labels">
+                        <div class="label">Out for Delivery</div>
+                        <div class="label">Delivered</div>
+                        <div class="label">Returned</div>
+                        <div class="label">Stand By</div>
+                    </div>
+                </div>
+            </div>
+        @empty
+            <div style="padding:20px; text-align:center; color:#aaa;">
+                <i class="fas fa-check-circle" style="font-size:2rem; display:block; margin-bottom:8px;"></i>
+                No completed deliveries
+            </div>
+        @endforelse
+    </div>
+</div>
+
+<!-- All Deliveries List (Active + Completed combined) -->
+<div id="deliveriesContainer-all" class="deliveries-section">
+    <h5 class="mb-3" style="color:#333; font-weight:600;">All Deliveries</h5>
+    <div id="allDeliveriesList">
+        @forelse($deliveries as $delivery)
+            <div class="delivery-item delivery-card" id="delivery-{{ $delivery->id }}" data-id="{{ $delivery->id }}" data-status="{{ $delivery->status }}" data-group="all" data-search="order #{{ $delivery->order_id }} {{ strtolower($delivery->order->user->name ?? '') }} {{ strtolower($delivery->rider->name ?? '') }} {{ strtolower($delivery->order->address_full ?? '') }}">
+                <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <div style="flex:1;">
+                        <div style="margin-bottom:4px;">
+                            <strong style="color:#333;">Order #{{ $delivery->order_id }}</strong>
+                            <span class="badge {{ $statusBadgeClasses[$delivery->status] ?? 'badge-assigned' }}" style="margin-left:8px;">{{ $statusLabels[$delivery->status] ?? 'N/A' }}</span>
+                        </div>
+                        <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
+                            <strong>Customer:</strong> {{ $delivery->order->user->name ?? 'N/A' }}
+                        </div>
+                        <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
+                            <strong>Rider:</strong> {{ $delivery->rider->name ?? 'Unassigned' }}
+                        </div>
+                        <div style="font-size:.82rem; color:#666;">
+                            <strong>Address:</strong> {{ $delivery->order->address_full ?? 'N/A' }}
+                        </div>
+                    </div>
+                </div>
+                <div class="timeline-mini">
+                    <div class="timeline-steps">
+                        @foreach($statusOrder as $i => $status)
+                            @php
+                                $currentIndex = array_search($delivery->status, $statusOrder);
+                                $isDone = $i <= $currentIndex;
+                                $isCurrent = $i === $currentIndex;
+                                $stepNumber = $i + 1;
+                            @endphp
+                            <div class="step step-{{ $stepNumber }} {{ $isDone ? 'done' : '' }} {{ $isCurrent ? 'current' : '' }}"></div>
+                        @endforeach
+                    </div>
+                    <div class="timeline-labels">
+                        <div class="label">Out for Delivery</div>
+                        <div class="label">Delivered</div>
+                        <div class="label">Returned</div>
+                        <div class="label">Stand By</div>
+                    </div>
+                </div>
+            </div>
+        @empty
+            <div style="padding:20px; text-align:center; color:#aaa;">
+                <i class="fas fa-inbox" style="font-size:2rem; display:block; margin-bottom:8px;"></i>
+                No deliveries
+            </div>
+        @endforelse
+    </div>
+</div>
+
+<!-- Status Legend -->
+<div class="status-legend">
+    <strong style="display:block; margin-bottom:10px; color:#333;">Delivery Status Guide:</strong>
+    <div class="legend-item">
+        <div class="legend-color" style="background:var(--gasgo-orange);"></div>
+        <span><strong>Out for Delivery (Step 1):</strong> Rider is delivering orders to customers</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color" style="background:#27ae60;"></div>
+        <span><strong>Order Delivered (Step 2):</strong> Order successfully delivered to customer</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color" style="background:#9C27B0;"></div>
+        <span><strong>Returning to Store (Step 3):</strong> Rider returning to store after all deliveries</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color" style="background:#5DADE2;"></div>
+        <span><strong>Rider Stand By (Step 4):</strong> Rider waiting for new orders to deliver</span>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
 <script>
     let currentDeliveryFilter = 'all';
-    const deliveryStatusOrder = ['assigned', 'picked_up', 'out_for_delivery', 'delivered'];
+    const deliveryStatusOrder = ['out_for_delivery', 'delivered', 'returning', 'standby'];
     const deliveryStatusLabels = {
-        assigned: 'Assigned',
-        picked_up: 'Picked Up',
         out_for_delivery: 'Out for Delivery',
-        delivered: 'Delivered',
+        delivered: 'Order Delivered',
+        returning: 'Returning to Store',
+        standby: 'Rider Stand By',
         failed: 'Failed',
     };
     const deliveryStatusBadgeClass = {
-        assigned: 'badge-assigned',
-        picked_up: 'badge-assigned',
         out_for_delivery: 'badge-out_for_delivery',
         delivered: 'badge-delivered',
-        failed: 'badge-cancelled',
+        returning: 'badge-returning',
+        standby: 'badge-standby',
+        failed: 'badge-failed',
     };
 
     function showDeliveryToast(message, isError = false) {
@@ -374,6 +455,21 @@
         document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
         btn.classList.add('active');
         currentDeliveryFilter = status;
+        
+        // Hide all containers first
+        document.getElementById('deliveriesContainer-all').style.display = 'none';
+        document.getElementById('deliveriesContainer-active').style.display = 'none';
+        document.getElementById('deliveriesContainer-completed').style.display = 'none';
+        
+        // Show the appropriate container
+        if (status === 'all') {
+            document.getElementById('deliveriesContainer-all').style.display = '';
+        } else if (status === 'active') {
+            document.getElementById('deliveriesContainer-active').style.display = '';
+        } else if (status === 'completed') {
+            document.getElementById('deliveriesContainer-completed').style.display = '';
+        }
+        
         filterDeliveries();
     }
 

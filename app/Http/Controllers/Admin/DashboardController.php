@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Delivery;
 use App\Models\Freebie;
+use App\Models\Inventory;
 use App\Models\LoyaltyPoint;
 use App\Models\Order;
 use App\Models\Product;
@@ -13,6 +14,9 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
@@ -53,10 +57,26 @@ class DashboardController extends Controller
             ->get();
 
         // Low stock products and freebies combined
-        $products = Product::where('is_active', true)
+        $products = Product::with('inventory')
+            ->where('is_active', true)
             ->where('price', '>', 0)
-            ->orderBy('stock')
-            ->get();
+            ->get()
+            ->map(function ($item) {
+                $item->stock = (int) ($item->quantity_on_hand ?? 0);
+                return $item;
+            })
+            ->sortBy('stock')
+            ->values();
+        
+        // Get product-category freebies
+        $productFreebies = Product::with('inventory')
+            ->where('is_active', true)
+            ->where('category', 'freebie')
+            ->get()
+            ->map(function ($item) {
+                $item->stock = (int) ($item->quantity_on_hand ?? 0);
+                return $item;
+            });
         
         $freebies = Freebie::where('is_active', true)
             ->orderBy('stock')
@@ -67,6 +87,11 @@ class DashboardController extends Controller
             $item->item_type = 'product';
             return $item;
         })->concat(
+            $productFreebies->map(function ($item) {
+                $item->item_type = 'product';
+                return $item;
+            })
+        )->concat(
             $freebies->map(function ($item) {
                 $item->item_type = 'freebie';
                 return $item;
@@ -85,6 +110,7 @@ class DashboardController extends Controller
             'activeRiders',
             'recentOrders',
             'products',
+            'productFreebies',
             'freebies',
             'allItems',
             'lowStockCount',
@@ -512,20 +538,27 @@ class DashboardController extends Controller
             ];
         }
 
-        $lowStockThreshold = 20;
-        $lowStockCount = Product::where('is_active', true)
-            ->where('stock', '<=', $lowStockThreshold)
+        $lowStockCount = Inventory::query()
+            ->whereHas('product', function ($query) {
+                $query->where('is_active', true)
+                    ->where('price', '>', 0);
+            })
+            ->whereRaw('quantity_on_hand <= reorder_level')
             ->count();
-        $lowStockAt = Product::where('is_active', true)
-            ->where('stock', '<=', $lowStockThreshold)
+        $lowStockAt = Inventory::query()
+            ->whereHas('product', function ($query) {
+                $query->where('is_active', true)
+                    ->where('price', '>', 0);
+            })
+            ->whereRaw('quantity_on_hand <= reorder_level')
             ->max('updated_at');
         if ($lowStockCount > 0) {
             $items[] = [
                 'level' => 'warning',
                 'icon' => 'fa-box-open',
                 'title' => 'Low Stock Alert',
-                'message' => $lowStockCount . ' product(s) are at or below ' . $lowStockThreshold . ' stock.',
-                'url' => url('/admin/products'),
+                'message' => $lowStockCount . ' product(s) are at or below reorder level.',
+                'url' => url('/admin/inventory'),
                 'timestamp' => $lowStockAt,
             ];
         }
@@ -608,4 +641,62 @@ class DashboardController extends Controller
             'phpVersion', 'laravelVersion'
         ));
     }
-}
+
+    public function storeAdminUser(Request $request)
+    {
+        if (! Auth::check()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $actingUser = User::query()->findOrFail(Auth::id());
+        if ($actingUser->role !== 'admin') {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')],
+            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
+        ]);
+
+        User::create([
+            'name' => $validated['name'],
+            'email' => strtolower($validated['email']),
+            'password' => $validated['password'],
+            'role' => 'admin',
+        ]);
+
+        return back()->with('success', 'New admin account created successfully.');
+    }
+
+    public function profile()
+    {
+        return view('admin.profile');
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = User::query()->findOrFail(Auth::id());
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'password' => ['nullable', 'confirmed', Password::min(8)->letters()->numbers()],
+        ]);
+
+        $user->name = $validated['name'];
+        $user->email = strtolower($validated['email']);
+
+        if (! empty($validated['password'])) {
+            $user->password = $validated['password'];
+        }
+
+        $user->save();
+
+        $message = 'Your profile has been updated successfully.';
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => $message], 200);
+        }
+        return back()->with('success', $message);
+    }
+    }
