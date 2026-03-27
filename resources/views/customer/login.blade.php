@@ -254,17 +254,17 @@
                     <div id="loginForm" class="auth-pane" @if ($activeTab !== 'login') style="display:none;" @endif>
                         <h3>Welcome Back!</h3>
                         <p class="sub">Login to your GasGo account</p>
-                        <form action="{{ route('customer.authenticate') }}" method="POST">
+                        <form action="{{ route('customer.authenticate') }}" method="POST" autocomplete="off">
                             @csrf
                             <input type="hidden" name="auth_tab" value="login">
                             <div class="form-floating-gasgo">
                                 <label>Email Address</label>
-                                <input type="email" name="email" placeholder="you@email.com" required>
+                                <input type="email" name="email" placeholder="you@email.com" autocomplete="off" required>
                             </div>
                             <div class="form-floating-gasgo">
                                 <label>Password</label>
                                 <div class="password-field-wrapper">
-                                    <input type="password" name="password" placeholder="Enter password" class="password-input" required>
+                                    <input type="password" name="password" placeholder="Enter password" class="password-input" autocomplete="off" required>
                                     <button type="button" class="password-toggle-btn" onclick="togglePassword(this)">
                                         <i class="fas fa-eye"></i>
                                     </button>

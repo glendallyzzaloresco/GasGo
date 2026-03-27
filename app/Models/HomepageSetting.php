@@ -32,6 +32,8 @@ class HomepageSetting extends Model
         'contact_phone',
         'contact_email',
         'contact_hours',
+        'gcash_account_number',
+        'gcash_account_name',
     ];
 
     public static function singleton(): self

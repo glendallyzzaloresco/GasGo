@@ -205,7 +205,7 @@
 
 <!-- Products Grid -->
 <div class="row g-4" id="productsGrid">
-    @forelse($saleProductsInStock as $product)
+    @forelse($saleProducts as $product)
     <div class="col-lg-3 col-md-4 col-sm-6 product-item">
         <div class="product-card">
             @php $productImageUrl = $resolveImageUrl($product->image); @endphp
@@ -261,7 +261,7 @@
     </div>
     @empty
     <div class="col-12">
-        <p class="text-muted text-center py-5">No in-stock products found. <a href="#" onclick="openAddProduct()" class="text-decoration-none">Add your first product</a></p>
+        <p class="text-muted text-center py-5">No products found. <a href="#" onclick="openAddProduct()" class="text-decoration-none">Add your first product</a></p>
     </div>
     @endforelse
 </div>
@@ -282,7 +282,7 @@
 
     <!-- Freebies Grid -->
     <div class="row g-4" id="freebiesGrid">
-        @forelse($freebiesInStock as $row)
+        @forelse($freebieCatalog as $row)
         @php
             $freebie = $row['item'];
             $isProductFreebie = $row['source'] === 'product';
@@ -367,7 +367,7 @@
         </div>
         @empty
         <div class="col-12">
-            <p class="text-muted text-center py-5">No in-stock freebies found. <a href="#" onclick="openAddFreebie()" class="text-decoration-none">Add your first freebie</a></p>
+            <p class="text-muted text-center py-5">No freebies found. <a href="#" onclick="openAddFreebie()" class="text-decoration-none">Add your first freebie</a></p>
         </div>
         @endforelse
     </div>
@@ -654,21 +654,21 @@
     }
 
     async function refreshAdminProductSections() {
-        const response = await fetch(window.location.pathname + '?tab=freebies', {
+        const response = await fetch(window.location.pathname, {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
             },
         });
 
         if (!response.ok) {
-            throw new Error('Unable to refresh freebies list.');
+            throw new Error('Unable to refresh product sections.');
         }
 
         const html = await response.text();
         const parser = new DOMParser();
         const nextDoc = parser.parseFromString(html, 'text/html');
 
-        ['freebiesSection', 'outOfStockSection'].forEach((sectionId) => {
+        ['productsSection', 'freebiesSection', 'outOfStockSection'].forEach((sectionId) => {
             const currentSection = document.getElementById(sectionId);
             const nextSection = nextDoc.getElementById(sectionId);
             if (currentSection && nextSection) {
@@ -817,6 +817,74 @@
         }
     }
 
+    async function submitProductFormAjax(event) {
+        event.preventDefault();
+
+        const form = event.target;
+        const submitButton = document.querySelector('button[form="productForm"]');
+        const methodField = document.getElementById('productFormMethod');
+        const activeSectionBeforeSubmit = getActiveSection();
+        const isUpdate = (methodField?.value || 'POST').toUpperCase() === 'PUT';
+
+        const formData = new FormData(form);
+
+        if (isUpdate) {
+            formData.set('_method', 'PUT');
+        } else {
+            formData.delete('_method');
+        }
+
+        try {
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = isUpdate ? 'Saving...' : 'Creating...';
+            }
+
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            });
+
+            const payload = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                if (response.status === 422 && payload.errors) {
+                    const validationMessage = Object.values(payload.errors).flat().join('<br>');
+                    showProductsAlert('danger', validationMessage || 'Please check the form fields.');
+                } else {
+                    showProductsAlert('danger', payload.message || 'Failed to save product.');
+                }
+                return;
+            }
+
+            await refreshAdminProductSections();
+
+            const modalElement = document.getElementById('productModal');
+            const modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+
+            showProductsAlert('success', payload.message || (isUpdate ? 'Product updated successfully.' : 'Product created successfully.'));
+
+            const sectionToShow = activeSectionBeforeSubmit === 'outOfStock' ? 'outOfStock' : 'products';
+            switchSection(sectionToShow);
+        } catch (error) {
+            showProductsAlert('danger', 'Network error while saving product. Please try again.');
+        } finally {
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Save Product';
+            }
+        }
+    }
+
+    document.getElementById('productForm').addEventListener('submit', submitProductFormAjax);
     document.getElementById('freebieForm').addEventListener('submit', submitFreebieFormAjax);
 
     document.addEventListener('DOMContentLoaded', () => {

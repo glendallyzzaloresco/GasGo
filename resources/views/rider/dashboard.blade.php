@@ -5,6 +5,33 @@
 @section('nav-dashboard', 'active')
 
 @section('content')
+<!-- Order Notification Alert -->
+@if($availableOrders && count($availableOrders) > 0)
+<div class="alert alert-warning alert-dismissible fade show mb-4" role="alert" style="border-radius: 14px; border: none; background: linear-gradient(135deg, #fff8e1 0%, #ffe082 100%); padding: 16px 20px; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.25);">
+    <div style="display: flex; gap: 12px; align-items: start;">
+        <i class="fas fa-bell" style="color: #f57f17; font-size: 1.3rem; margin-top: 2px;"></i>
+        <div>
+            <h6 class="mb-1" style="color: #f57f17; font-weight: 700;"><i class="fas fa-shopping-bag me-2"></i>You have {{ count($availableOrders) }} new order{{ count($availableOrders) > 1 ? 's' : '' }} waiting!</h6>
+            <small style="color: #666;">Accept these orders to add them to your deliveries and start earning.</small>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+@endif
+
+@if(count($activeDeliveries) > 0)
+<div class="alert alert-info alert-dismissible fade show mb-4" role="alert" style="border-radius: 14px; border: none; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 16px 20px; box-shadow: 0 4px 12px rgba(33, 150, 243, 0.25);">
+    <div style="display: flex; gap: 12px; align-items: start;">
+        <i class="fas fa-truck" style="color: #1565c0; font-size: 1.3rem; margin-top: 2px;"></i>
+        <div>
+            <h6 class="mb-1" style="color: #1565c0; font-weight: 700;"><i class="fas fa-map-marker-alt me-2"></i>You have {{ count($activeDeliveries) }} active delivery{{ count($activeDeliveries) > 1 ? 'ies' : '' }} right now</h6>
+            <small style="color: #666;">Track and update delivery status on the live route map.</small>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+@endif
+
 <!-- Status Toggle -->
 <div class="rider-card text-center mb-4">
     <p class="text-muted mb-3" style="font-size:.85rem;">Your availability status</p>

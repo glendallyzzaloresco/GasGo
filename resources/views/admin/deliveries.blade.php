@@ -112,6 +112,27 @@
     <button class="filter-tab" onclick="setDeliveryFilter(this, 'completed')">Completed</button>
 </div>
 
+<!-- Status Legend - Moved to Top -->
+<div class="status-legend" style="margin-bottom: 24px;">
+    <strong style="display:block; margin-bottom:10px; color:#333;">Delivery Status Guide:</strong>
+    <div class="legend-item">
+        <div class="legend-color" style="background:var(--gasgo-orange);"></div>
+        <span><strong>Out for Delivery (Step 1):</strong> Rider is delivering orders to customers</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color" style="background:#27ae60;"></div>
+        <span><strong>Order Delivered (Step 2):</strong> Order successfully delivered to customer</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color" style="background:#9C27B0;"></div>
+        <span><strong>Returning to Store (Step 3):</strong> Rider returning to store after all deliveries</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color" style="background:#5DADE2;"></div>
+        <span><strong>Rider Stand By (Step 4):</strong> Rider waiting for new orders to deliver</span>
+    </div>
+</div>
+
 <!-- Active Deliveries List -->
 <div id="deliveriesContainer-active" class="deliveries-section">
     <h5 class="mb-3" style="color:#333; font-weight:600;">Active Deliveries</h5>
@@ -262,27 +283,6 @@
                 No deliveries
             </div>
         @endforelse
-    </div>
-</div>
-
-<!-- Status Legend -->
-<div class="status-legend">
-    <strong style="display:block; margin-bottom:10px; color:#333;">Delivery Status Guide:</strong>
-    <div class="legend-item">
-        <div class="legend-color" style="background:var(--gasgo-orange);"></div>
-        <span><strong>Out for Delivery (Step 1):</strong> Rider is delivering orders to customers</span>
-    </div>
-    <div class="legend-item">
-        <div class="legend-color" style="background:#27ae60;"></div>
-        <span><strong>Order Delivered (Step 2):</strong> Order successfully delivered to customer</span>
-    </div>
-    <div class="legend-item">
-        <div class="legend-color" style="background:#9C27B0;"></div>
-        <span><strong>Returning to Store (Step 3):</strong> Rider returning to store after all deliveries</span>
-    </div>
-    <div class="legend-item">
-        <div class="legend-color" style="background:#5DADE2;"></div>
-        <span><strong>Rider Stand By (Step 4):</strong> Rider waiting for new orders to deliver</span>
     </div>
 </div>
 

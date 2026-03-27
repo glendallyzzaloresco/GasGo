@@ -126,7 +126,10 @@ class CustomerController extends Controller
             $redirectPath = route('customer.dashboard');
             $message = 'Welcome back!';
 
-            if ($user->role === 'admin') {
+            // Check if redirect parameter is set (e.g., redirect=checkout)
+            if ($request->query('redirect') === 'checkout') {
+                $redirectPath = route('customer.checkout');
+            } elseif ($user->role === 'admin') {
                 $redirectPath = route('admin.dashboard');
                 $message = 'Welcome back, Admin!';
             } elseif ($user->role === 'rider') {
@@ -142,8 +145,7 @@ class CustomerController extends Controller
                 ], 200);
             }
 
-            return redirect()
-                ->intended($redirectPath)
+            return redirect($redirectPath)
                 ->with('success', $message);
         }
 
@@ -211,6 +213,11 @@ class CustomerController extends Controller
 
         $message = 'Your customer account has been created successfully.';
         $redirectPath = route('customer.dashboard');
+        
+        // Check if redirect parameter is set (e.g., redirect=checkout)
+        if ($request->query('redirect') === 'checkout') {
+            $redirectPath = route('customer.checkout');
+        }
 
         if ($request->expectsJson()) {
             return response()->json([

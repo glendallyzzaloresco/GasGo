@@ -16,6 +16,7 @@ class Payment extends Model
         'status',
         'transaction_reference',
         'paid_at',
+        'proof_of_payment',
     ];
 
     protected function casts(): array

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\Inventory;
 use App\Models\Product;
+use App\Models\Freebie;
 use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -19,13 +20,8 @@ class InventoryController extends Controller
     {
         $query = Inventory::with('product');
 
-        $categories = Product::query()
-            ->whereNotNull('category')
-            ->where('category', '!=', '')
-            ->select('category')
-            ->distinct()
-            ->orderBy('category')
-            ->pluck('category');
+        // Use hardcoded categories
+        $categories = collect(['Tank', 'Freebie']);
 
         // Filter by stock status (In Stock / Out of Stock)
         if ($request->filled('status')) {
@@ -113,7 +109,9 @@ class InventoryController extends Controller
             ]
         );
 
-        return view('admin.inventory.index', compact('inventories', 'categories'));
+        $freebies = Freebie::where('is_active', true)->get();
+
+        return view('admin.inventory.index', compact('inventories', 'categories', 'freebies'));
     }
 
     /**

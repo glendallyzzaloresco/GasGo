@@ -113,7 +113,13 @@ class ProductController extends Controller
             );
         });
 
-        return redirect()->route('admin.products')->with('success', 'Product created successfully.');
+        $message = 'Product created successfully.';
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => $message], 200);
+        }
+
+        return redirect()->route('admin.products')->with('success', $message);
     }
 
     // Admin: update an existing product
@@ -157,7 +163,13 @@ class ProductController extends Controller
             }
         });
 
-        return redirect()->route('admin.products')->with('success', 'Product updated successfully.');
+        $message = 'Product updated successfully.';
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => $message], 200);
+        }
+
+        return redirect()->route('admin.products')->with('success', $message);
     }
 
     // Admin: delete a product

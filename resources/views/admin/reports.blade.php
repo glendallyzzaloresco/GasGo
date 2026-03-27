@@ -29,14 +29,14 @@
     .summary-row .value { font-weight:700; font-size:.95rem; }
     .analytics-grid {
         display:grid;
-        grid-template-columns:repeat(4, minmax(0, 1fr));
-        gap:16px;
+        grid-template-columns:repeat(5, minmax(0, 1fr));
+        gap:12px;
     }
     .analytics-card {
         background:linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
         border:1px solid #edf2f7;
         border-radius:16px;
-        padding:20px;
+        padding:16px;
         box-shadow:0 8px 24px rgba(15,23,42,.04);
     }
     .analytics-card .label {
@@ -148,7 +148,7 @@
 </div>
 
 <!-- Summary Cards -->
-<div class="row g-4 mb-4">
+<div class="row g-3 mb-3">
     <div class="col-lg-3 col-md-6">
         <div class="stat-card report-loading-target" data-report-loading>
             <p>Total Revenue</p>
@@ -179,7 +179,7 @@
     </div>
 </div>
 
-<div class="report-card mb-4 report-loading-target" data-report-loading>
+<div class="report-card mb-2 report-loading-target" data-report-loading>
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <div>
             <h6 class="fw-bold mb-1" style="color:var(--gasgo-blue);"><i class="fas fa-bullhorn me-2" style="color:var(--gasgo-orange);"></i>Marketing Analytics</h6>
@@ -215,7 +215,7 @@
     </div>
 </div>
 
-<div class="row g-4 mb-4">
+<div class="row g-3 mb-2">
     <!-- Revenue Chart -->
     <div class="col-lg-8">
         <div class="report-card report-loading-target" data-report-loading>
@@ -263,7 +263,7 @@
 </div>
 
 <!-- Top Products & Payment Methods -->
-<div class="row g-4">
+<div class="row g-3 mb-2">
     <div class="col-lg-6">
         <div class="report-card report-loading-target" data-report-loading>
             <h6 class="fw-bold mb-3" style="color:var(--gasgo-blue);"><i class="fas fa-trophy me-2" style="color:var(--gasgo-orange);"></i>Top Products</h6>
@@ -306,7 +306,7 @@
     </div>
 </div>
 
-<div class="row g-4 mt-1">
+<div class="row g-3 mt-0">
     <div class="col-lg-6">
         <div class="report-card report-loading-target" data-report-loading>
             <h6 class="fw-bold mb-3" style="color:var(--gasgo-blue);"><i class="fas fa-credit-card me-2" style="color:var(--gasgo-orange);"></i>Payment Summary</h6>

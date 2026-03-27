@@ -500,7 +500,7 @@
         .footer-desc {
             color: rgba(255,255,255,0.7);
             margin-bottom: 25px;
-            text-align: justify;
+            text-align: left;
         }
         
         .footer-title {
@@ -829,7 +829,7 @@
     @if (Route::currentRouteName() !== 'customer.login')
     <nav class="navbar navbar-expand-lg navbar-gasgo">
         <div class="container">
-            <a class="navbar-brand" href="{{ url('/customer/customerDashboard') }}">
+            <a class="navbar-brand" href="{{ url('/') }}">
                 <img src="{{ $homepageSettings->navbar_logo_url }}" alt="{{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }} Icon">
                 <span class="brand-text">{{ $homepageSettings->brand_name_primary ?? 'Gas' }}<span class="go">{{ $homepageSettings->brand_name_accent ?? 'Go' }}</span></span>
             </a>
@@ -841,7 +841,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav mx-auto">
                     <li class="nav-item">
-                        <a class="nav-link nav-link-gasgo @yield('nav-home')" href="{{ url('/customer/customerDashboard') }}">
+                        <a class="nav-link nav-link-gasgo @yield('nav-home')" href="{{ url('/') }}">
                             <i class="fas fa-home"></i>Home
                         </a>
                     </li>
@@ -856,9 +856,15 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link nav-link-gasgo @yield('nav-orders')" href="{{ url('/customer/orderHistory') }}">
-                            <i class="fas fa-receipt"></i>My Orders
-                        </a>
+                        @auth
+                            <a class="nav-link nav-link-gasgo @yield('nav-orders')" href="{{ url('/customer/orderHistory') }}">
+                                <i class="fas fa-receipt"></i>My Orders
+                            </a>
+                        @else
+                            <a class="nav-link nav-link-gasgo" href="{{ url('/customer/loginRegistration') }}" title="Login required" style="opacity: 0.6; cursor: help;">
+                                <i class="fas fa-lock me-1"></i>My Orders
+                            </a>
+                        @endauth
                     </li>
                 </ul>
                 
@@ -923,10 +929,14 @@
                 <div class="col-lg-2 col-md-3">
                     <h5 class="footer-title">Quick Links</h5>
                     <ul class="footer-links">
-                        <li><a href="{{ url('/customer/customerDashboard') }}"><i class="fas fa-chevron-right"></i>Home</a></li>
+                        <li><a href="{{ url('/') }}"><i class="fas fa-chevron-right"></i>Home</a></li>
                         <li><a href="{{ url('/customer/product') }}"><i class="fas fa-chevron-right"></i>Products</a></li>
                         <li><a href="{{ url('/customer/loyaltyRewards') }}"><i class="fas fa-chevron-right"></i>Rewards</a></li>
-                        <li><a href="{{ url('/customer/orderHistory') }}"><i class="fas fa-chevron-right"></i>My Orders</a></li>
+                        @auth
+                            <li><a href="{{ url('/customer/orderHistory') }}"><i class="fas fa-chevron-right"></i>My Orders</a></li>
+                        @else
+                            <li><a href="{{ url('/customer/loginRegistration') }}" style="opacity: 0.7;" title="Login required"><i class="fas fa-lock"></i> My Orders</a></li>
+                        @endauth
                     </ul>
                 </div>
                 

@@ -52,6 +52,185 @@
     .product-stock { font-size: .8rem; font-weight: 500; }
     .product-stock.in { color: #27ae60; }
     .product-stock.out { color: #e74c3c; }
+    
+    /* Notification Toast Styles */
+    .notification-toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        background: white;
+        padding: 16px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        border-left: 4px solid #28a745;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 350px;
+        animation: slideInNotification 0.3s ease-out;
+    }
+    
+    .notification-toast.success {
+        background: #d4edda;
+        color: #155724;
+        border-left-color: #28a745;
+    }
+    
+    .notification-toast.error {
+        background: #f8d7da;
+        color: #721c24;
+        border-left-color: #dc3545;
+    }
+    
+    .notification-toast i {
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+    
+    .notification-toast-content {
+        flex: 1;
+    }
+    
+    .notification-toast-message {
+        font-weight: 500;
+        margin-bottom: 6px;
+    }
+    
+    .notification-toast-action {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .notification-toast-btn {
+        background: rgba(0,0,0,0.1);
+        border: none;
+        color: inherit;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .notification-toast-btn:hover {
+        background: rgba(0,0,0,0.2);
+    }
+    
+    .notification-toast-close {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        opacity: 0.7;
+        padding: 0;
+        flex-shrink: 0;
+        color: inherit;
+    }
+    
+    .notification-toast-close:hover {
+        opacity: 1;
+    }
+    
+    @keyframes slideInNotification {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .btn-outline-gasgo {
+        border: 2px solid var(--gasgo-blue);
+        color: var(--gasgo-blue);
+        background: transparent;
+        padding: 6px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-outline-gasgo:hover:not(:disabled) {
+        background: var(--gasgo-blue);
+        color: white;
+    }
+
+    .btn-outline-gasgo:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Product Action Buttons */
+    .product-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+    .product-actions .btn-add {
+        flex: 1;
+        background: var(--gasgo-orange);
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .product-actions .btn-add:hover:not(:disabled) {
+        background: #f07708;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(247, 148, 29, 0.3);
+    }
+
+    .product-actions .btn-add:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .product-actions .btn-buy {
+        flex: 1;
+        background: transparent;
+        color: var(--gasgo-blue);
+        border: 2px solid var(--gasgo-blue);
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .product-actions .btn-buy:hover:not(:disabled) {
+        background: var(--gasgo-blue);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(26, 109, 176, 0.3);
+    }
+
+    .product-actions .btn-buy:disabled {
+        border-color: #ccc;
+        color: #ccc;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
 </style>
 @endsection
 
@@ -102,10 +281,15 @@
                             <p class="product-weight"><i class="fas fa-weight-hanging me-1"></i>{{ $product->weight ?: ucfirst($category) }}</p>
                             <p class="product-stock {{ $inStock ? 'in' : 'out' }}"><i class="fas {{ $inStock ? 'fa-check-circle' : 'fa-times-circle' }} me-1"></i>{{ $inStock ? 'In Stock' : 'Out of Stock' }}</p>
                             <hr>
-                            <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex justify-content-between align-items-center gap-2" style="margin-bottom: 12px;">
                                 <span class="product-price">₱{{ number_format($product->price, 2) }}</span>
-                                <button class="btn btn-gasgo btn-sm add-to-cart-btn" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" data-image="{{ $img }}" {{ $inStock ? '' : 'disabled' }} onclick="event.stopPropagation();">
-                                    <i class="fas fa-cart-plus me-1"></i>Add
+                            </div>
+                            <div class="product-actions" style="flex-direction: column;">
+                                <button class="btn-buy buy-now-btn" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" {{ $inStock ? '' : 'disabled' }} onclick="event.stopPropagation(); buyNow({{ $product->id }});" title="Buy Now">
+                                    <i class="fas fa-bolt"></i>Buy Now
+                                </button>
+                                <button class="btn-add add-to-cart-btn" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" data-image="{{ $img }}" {{ $inStock ? '' : 'disabled' }} onclick="event.stopPropagation();" title="Add to Cart">
+                                    <i class="fas fa-shopping-cart"></i>Add to Cart
                                 </button>
                             </div>
                         </div>
@@ -121,10 +305,55 @@
 
 @section('scripts')
 <script>
-function addToCart(id, name, price, image) {
-    addToCartAjax(id, 1).catch(error => {
-        console.error('Add to cart error:', error);
+// Notification system with View Cart button
+function showNotificationWithAction(message, type = 'success', duration = 3000) {
+    const toast = document.createElement('div');
+    toast.className = `notification-toast ${type}`;
+    
+    const icons = {
+        success: '<i class="fas fa-check-circle"></i>',
+        error: '<i class="fas fa-exclamation-circle"></i>'
+    };
+    
+    const cartUrl = "{{ route('customer.cart') }}";
+    
+    toast.innerHTML = `
+        ${icons[type] || ''}
+        <div class="notification-toast-content">
+            <div class="notification-toast-message">${message}</div>
+            <div class="notification-toast-action">
+                <button type="button" class="notification-toast-btn" onclick="window.location.href='${cartUrl}'">View Cart</button>
+            </div>
+        </div>
+        <button type="button" class="notification-toast-close">×</button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    const closeBtn = toast.querySelector('.notification-toast-close');
+    closeBtn.addEventListener('click', () => {
+        toast.remove();
     });
+    
+    if (duration) {
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, duration);
+    }
+}
+
+function addToCart(id, name, price, image) {
+    addToCartAjax(id, 1)
+        .then(() => {
+            // Show success notification with View Cart button
+            showNotificationWithAction(`✓ ${name} added to cart!`, 'success', 5000);
+        })
+        .catch(error => {
+            console.error('Add to cart error:', error);
+            showNotificationWithAction('Failed to add item to cart', 'error', 3000);
+        });
 }
 
 document.querySelectorAll('.add-to-cart-btn').forEach(function(btn) {
@@ -133,6 +362,39 @@ document.querySelectorAll('.add-to-cart-btn').forEach(function(btn) {
         addToCart(parseInt(this.dataset.id), this.dataset.name, parseFloat(this.dataset.price), this.dataset.image);
     });
 });
+
+// Buy Now function - adds product and redirects to checkout
+function buyNow(productId) {
+    const button = event.target.closest('.buy-now-btn');
+    if (!button) return;
+    
+    // Check if user is authenticated
+    const isAuthenticated = @json(Auth::check());
+    
+    if (!isAuthenticated) {
+        // Redirect to login/register first
+        window.location.href = "{{ url('/customer/loginRegistration?tab=register&redirect=checkout') }}";
+        return;
+    }
+    
+    // Disable button during loading
+    const originalContent = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
+    
+    // Add product to cart then redirect to checkout
+    addToCartAjax(productId, 1)
+        .then(() => {
+            // Redirect to checkout
+            window.location.href = "{{ route('customer.checkout') }}";
+        })
+        .catch(error => {
+            console.error('Buy now error:', error);
+            button.disabled = false;
+            button.innerHTML = originalContent;
+            showNotificationWithAction('Failed to process order. Please try again.', 'error', 3000);
+        });
+}
 
 // filter buttons
 document.querySelectorAll('.filter-btn').forEach(btn => {

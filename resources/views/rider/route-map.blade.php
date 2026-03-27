@@ -623,6 +623,8 @@
         initRouteMap();
         bindTaskActions();
         publishCurrentLocationOnce();
+        // Auto-start tracking when page loads
+        startTracking();
     });
 
     function bindTaskActions() {
@@ -760,9 +762,26 @@
 
         isTracking = true;
 
-        // Immediately push one precise location before continuous tracking
-        publishCurrentLocationOnce();
+        // Immediately get one precise location
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                riderPosition = { lat, lng };
+                updateRiderMarker(lat, lng);
+                sendLocationToServer(lat, lng);
+            },
+            function(error) {
+                console.error('Initial location error:', error);
+            },
+            {
+                enableHighAccuracy: false,
+                timeout: 10000,
+                maximumAge: 30000
+            }
+        );
 
+        // Then watch for continuous updates
         watchId = navigator.geolocation.watchPosition(
             function(position) {
                 const lat = position.coords.latitude;
@@ -773,12 +792,12 @@
                 sendLocationToServer(lat, lng);
             },
             function(error) {
-                console.error('Geolocation error:', error);
+                console.error('Geolocation watch error:', error);
             },
             {
-                enableHighAccuracy: true,
+                enableHighAccuracy: false,
                 timeout: 10000,
-                maximumAge: 0
+                maximumAge: 30000
             }
         );
 
@@ -877,15 +896,155 @@
     }
 
     function locateOnMap(lat, lng) {
-        if (routeMap && lat && lng) {
-            routeMap.setView([lat, lng], 16, { animate: true });
-
-            // Flash effect on marker
-            const marker = markers.find(m => m.lat === lat && m.lng === lng);
-            if (marker) {
-                marker.marker.openPopup();
+        // First check if we have rider location from tracking
+        if (!riderPosition) {
+            // Try to get current location immediately
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        riderPosition = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        drawRoute(riderPosition.lat, riderPosition.lng, lat, lng);
+                    },
+                    function(error) {
+                        console.error('Geolocation error:', error.code, error.message);
+                        
+                        // Show which permission issue
+                        let errorMsg = 'Enable location to view route';
+                        if (error.code === 1) {
+                            errorMsg = 'Location permission denied - check browser settings';
+                        } else if (error.code === 2) {
+                            errorMsg = 'Location unavailable - try again';
+                        } else if (error.code === 3) {
+                            errorMsg = 'Location timeout - try again';
+                        }
+                        
+                        showAlert('error', errorMsg);
+                        
+                        // Fallback: just show destination
+                        if (routeMap && lat && lng) {
+                            routeMap.setView([lat, lng], 16, { animate: true });
+                        }
+                    },
+                    {
+                        enableHighAccuracy: false,  // Don't require high accuracy which times out
+                        timeout: 10000,
+                        maximumAge: 30000  // Accept cached location up to 30 seconds old
+                    }
+                );
+            } else {
+                showAlert('error', 'Location services not available');
             }
+        } else {
+            // We already have rider position from tracking - draw route immediately
+            drawRoute(riderPosition.lat, riderPosition.lng, lat, lng);
         }
+    }
+
+    // Global variable to store current route line
+    let currentRouteLine = null;
+
+    function drawRoute(fromLat, fromLng, toLat, toLng) {
+        console.log('drawRoute called:', fromLat, fromLng, 'to', toLat, toLng);
+        
+        // Clear previous route line if exists
+        if (currentRouteLine) {
+            routeMap.removeLayer(currentRouteLine);
+            currentRouteLine = null;
+        }
+
+        // Clear markers except initial ones
+        markers.forEach(m => {
+            if (m.marker && m.marker._isRouteMarker) {
+                routeMap.removeLayer(m.marker);
+            }
+        });
+
+        // Remove rider route marker if exists
+        if (riderMarker && riderMarker._isRouteMarker) {
+            routeMap.removeLayer(riderMarker);
+        }
+
+        // Request route from OSRM (Open Source Routing Machine)
+        const osmUrl = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
+        console.log('OSRM URL:', osmUrl);
+
+        fetch(osmUrl, { method: 'GET' })
+            .then(response => {
+                console.log('OSRM response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('OSRM data:', data);
+                
+                if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                    const route = data.routes[0];
+                    console.log('Route found, distance:', route.distance, 'duration:', route.duration);
+                    
+                    const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                    console.log('Polyline coordinates count:', coordinates.length);
+
+                    // Draw route polyline with better styling
+                    currentRouteLine = L.polyline(coordinates, {
+                        color: '#2196f3',
+                        weight: 6,
+                        opacity: 0.9,
+                        lineCap: 'round',
+                        lineJoin: 'round',
+                        dashArray: '0,0'
+                    }).addTo(routeMap);
+
+                    // Add rider position marker (temporary for this route)
+                    const riderRouteMarker = L.circleMarker([fromLat, fromLng], {
+                        radius: 10,
+                        fillColor: '#27ae60',
+                        color: '#ffffff',
+                        weight: 3,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    }).addTo(routeMap);
+                    riderRouteMarker._isRouteMarker = true;
+                    riderRouteMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Your Location</b></div>');
+
+                    // Add destination marker (temporary for this route)
+                    const destMarker = L.circleMarker([toLat, toLng], {
+                        radius: 10,
+                        fillColor: '#e74c3c',
+                        color: '#ffffff',
+                        weight: 3,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    }).addTo(routeMap);
+                    destMarker._isRouteMarker = true;
+                    destMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Delivery Location</b></div>');
+
+                    // Fit bounds to show entire route
+                    const bounds = L.latLngBounds([[fromLat, fromLng], [toLat, toLng]]);
+                    routeMap.fitBounds(bounds, { padding: [100, 100], maxZoom: 16 });
+
+                    // Show success message with distance and duration
+                    const distance = (route.distance / 1000).toFixed(1);
+                    const duration = Math.round(route.duration / 60);
+                    showAlert('success', `Route: ${distance}km, ~${duration} mins`);
+                } else {
+                    console.error('No route found in OSRM response');
+                    showAlert('error', 'Route unavailable, showing destination only');
+                    // Fallback: just center on destination
+                    if (routeMap && toLat && toLng) {
+                        routeMap.setView([toLat, toLng], 16, { animate: true });
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Route request failed:', error);
+                showAlert('error', 'Route service error, showing destination');
+                // Fallback: just center on destination
+                if (routeMap && toLat && toLng) {
+                    routeMap.setView([toLat, toLng], 16, { animate: true });
+                }
+            });
     }
 
     function navigateTo(lat, lng) {

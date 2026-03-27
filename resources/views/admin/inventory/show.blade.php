@@ -247,11 +247,38 @@
 
 @section('content')
 <div class="container-fluid p-4">
+    @php
+        $resolveImageUrl = function (?string $path): ?string {
+            if (! $path) {
+                return null;
+            }
+            $normalized = ltrim($path, '/');
+            if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
+                return $path;
+            }
+            if (str_starts_with($normalized, 'storage/') || str_starts_with($normalized, 'images/')) {
+                return asset($normalized);
+            }
+            return asset('storage/' . $normalized);
+        };
+        $productImageUrl = $resolveImageUrl($inventory->product->image);
+    @endphp
+    
     <div class="inv-page-header">
+        @if($productImageUrl)
+        <div style="display:flex;align-items:center;gap:16px;flex:1;">
+            <img src="{{ $productImageUrl }}" alt="{{ $inventory->product->name }}" style="height:70px;width:70px;object-fit:contain;background:#fff;padding:8px;border-radius:8px;">
+            <div>
+                <h1 class="mb-2">{{ $inventory->product->name }}</h1>
+                <p class="mb-0">Inventory details and stock movements</p>
+            </div>
+        </div>
+        @else
         <div>
             <h1 class="mb-2">{{ $inventory->product->name }}</h1>
             <p class="mb-0">Inventory details and stock movements</p>
         </div>
+        @endif
         <div>
             <a href="{{ route('admin.inventory.edit', $inventory) }}" class="btn btn-light me-2">
                 <i class="fas fa-edit me-2"></i>Edit Inventory

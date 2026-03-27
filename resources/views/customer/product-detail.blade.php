@@ -131,6 +131,98 @@
     .btn-add-cart:disabled {
         border-color: #ccc; color: #ccc; cursor: not-allowed;
     }
+
+    /* Notification Toast Styles */
+    .notification-toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        background: white;
+        padding: 16px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        border-left: 4px solid #28a745;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 350px;
+        animation: slideInNotification 0.3s ease-out;
+    }
+    
+    .notification-toast.success {
+        background: #d4edda;
+        color: #155724;
+        border-left-color: #28a745;
+    }
+    
+    .notification-toast.error {
+        background: #f8d7da;
+        color: #721c24;
+        border-left-color: #dc3545;
+    }
+    
+    .notification-toast i {
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+    
+    .notification-toast-content {
+        flex: 1;
+    }
+    
+    .notification-toast-message {
+        font-weight: 500;
+        margin-bottom: 6px;
+    }
+    
+    .notification-toast-action {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .notification-toast-btn {
+        background: rgba(0,0,0,0.1);
+        border: none;
+        color: inherit;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .notification-toast-btn:hover {
+        background: rgba(0,0,0,0.2);
+    }
+    
+    .notification-toast-close {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        opacity: 0.7;
+        padding: 0;
+        flex-shrink: 0;
+        color: inherit;
+    }
+    
+    .notification-toast-close:hover {
+        opacity: 1;
+    }
+    
+    @keyframes slideInNotification {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
 </style>
 @endsection
 
@@ -222,6 +314,45 @@
 
 @section('scripts')
 <script>
+// Notification system with View Cart button
+function showNotificationWithAction(message, type = 'success', duration = 3000) {
+    const toast = document.createElement('div');
+    toast.className = `notification-toast ${type}`;
+    
+    const icons = {
+        success: '<i class="fas fa-check-circle"></i>',
+        error: '<i class="fas fa-exclamation-circle"></i>'
+    };
+    
+    const cartUrl = "{{ route('customer.cart') }}";
+    
+    toast.innerHTML = `
+        ${icons[type] || ''}
+        <div class="notification-toast-content">
+            <div class="notification-toast-message">${message}</div>
+            <div class="notification-toast-action">
+                <button type="button" class="notification-toast-btn" onclick="window.location.href='${cartUrl}'">View Cart</button>
+            </div>
+        </div>
+        <button type="button" class="notification-toast-close">×</button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    const closeBtn = toast.querySelector('.notification-toast-close');
+    closeBtn.addEventListener('click', () => {
+        toast.remove();
+    });
+    
+    if (duration) {
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, duration);
+    }
+}
+
 document.querySelector('.add-to-cart-btn').addEventListener('click', function(e) {
     e.preventDefault();
     const id = parseInt(this.dataset.id);
@@ -229,9 +360,14 @@ document.querySelector('.add-to-cart-btn').addEventListener('click', function(e)
     const price = parseFloat(this.dataset.price);
     const image = this.dataset.image;
     
-    addToCartAjax(id, 1).catch(error => {
-        console.error('Add to cart error:', error);
-    });
+    addToCartAjax(id, 1)
+        .then(() => {
+            showNotificationWithAction(`✓ ${name} added to cart!`, 'success', 5000);
+        })
+        .catch(error => {
+            console.error('Add to cart error:', error);
+            showNotificationWithAction('Failed to add item to cart', 'error', 3000);
+        });
 });
 
 document.querySelector('.checkout-btn').addEventListener('click', function(e) {
@@ -240,15 +376,17 @@ document.querySelector('.checkout-btn').addEventListener('click', function(e) {
     const name = this.dataset.name;
     const price = parseFloat(this.dataset.price);
     const image = this.dataset.image;
-    const checkoutUrl = "{{ route('customer.checkout') }}";
+    const baseCheckoutUrl = "{{ route('customer.checkout') }}";
     
-    // Add product to cart first, then redirect to checkout
+    // Add product to cart first, then redirect to checkout with only this product selected
     addToCartAjax(id, 1).then(() => {
-        // Redirect to checkout after adding to cart
+        // Redirect to checkout with selected_items parameter for only this product
+        const checkoutUrl = baseCheckoutUrl + '?selected_items=' + id;
         window.location.href = checkoutUrl;
     }).catch(error => {
         console.error('Add to cart error:', error);
         // Still redirect to checkout even if there's an error
+        const checkoutUrl = baseCheckoutUrl + '?selected_items=' + id;
         window.location.href = checkoutUrl;
     });
 });

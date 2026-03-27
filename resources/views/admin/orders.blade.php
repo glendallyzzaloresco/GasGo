@@ -138,8 +138,11 @@
                         <br><small class="text-muted">{{ $order->created_at->format('h:i A') }}</small>
                     </td>
                     <td>
-                        @if($order->status === 'pending')
-                            <div class="d-flex gap-1">
+                        <div class="d-flex gap-1 flex-wrap">
+                            <a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-info" title="View Details">
+                                <i class="fas fa-eye me-1"></i>Details
+                            </a>
+                            @if($order->status === 'pending')
                                 <button class="btn btn-sm btn-action assign-btn" style="background:var(--gasgo-orange);color:#fff;" title="Assign Rider"
                                     data-order-id="{{ $order->id }}" data-order-number="{{ $order->order_number }}">
                                     <i class="fas fa-motorcycle me-1"></i>Assign
@@ -149,38 +152,38 @@
                                     <input type="hidden" name="status" value="cancelled">
                                     <button class="btn btn-sm btn-action" style="background:#dc3545;color:#fff;" title="Cancel"><i class="fas fa-times"></i></button>
                                 </form>
-                            </div>
-                        @elseif($order->status === 'approved')
-                            <button class="btn btn-sm btn-action assign-btn" style="background:var(--gasgo-orange);color:#fff;" title="Assign Rider"
-                                data-order-id="{{ $order->id }}" data-order-number="{{ $order->order_number }}">
-                                <i class="fas fa-motorcycle me-1"></i>Assign
-                            </button>
-                        @elseif(in_array($order->status, ['assigned', 'out_for_delivery']))
-                            <span class="text-muted" style="font-size:.82rem;">
-                                <i class="fas fa-motorcycle text-info me-1"></i>
-                                {{ $order->delivery->rider->name ?? 'Rider' }}
-                            </span>
-                        @elseif($order->status === 'delivered')
-                            <div class="d-flex gap-1 align-items-center flex-wrap">
-                                @if($order->delivery && !$order->delivery->tankReturn)
-                                    <button class="btn btn-sm btn-success btn-create-return" 
-                                        data-delivery-id="{{ $order->delivery->id }}" 
-                                        data-item-count="{{ $order->orderItems()->count() }}"
-                                        title="Create Tank Return">
-                                        <i class="fas fa-undo me-1"></i>Return
-                                    </button>
-                                @elseif($order->delivery && $order->delivery->tankReturn)
-                                    <a href="{{ route('admin.returns.show', $order->delivery->tankReturn->id) }}" 
-                                        class="btn btn-sm btn-info" title="View Tank Return">
-                                        <i class="fas fa-eye me-1"></i>Return
-                                    </a>
-                                @else
-                                    <span class="text-muted" style="font-size:.82rem;"><i class="fas fa-check-circle text-success me-1"></i>Done</span>
-                                @endif
-                            </div>
-                        @elseif($order->status === 'cancelled')
-                            <span class="text-muted" style="font-size:.82rem;">Cancelled</span>
-                        @endif
+                            @elseif($order->status === 'approved')
+                                <button class="btn btn-sm btn-action assign-btn" style="background:var(--gasgo-orange);color:#fff;" title="Assign Rider"
+                                    data-order-id="{{ $order->id }}" data-order-number="{{ $order->order_number }}">
+                                    <i class="fas fa-motorcycle me-1"></i>Assign
+                                </button>
+                            @elseif(in_array($order->status, ['assigned', 'out_for_delivery']))
+                                <span class="text-muted" style="font-size:.82rem;">
+                                    <i class="fas fa-motorcycle text-info me-1"></i>
+                                    {{ $order->delivery->rider->name ?? 'Rider' }}
+                                </span>
+                            @elseif($order->status === 'delivered')
+                                <div class="d-flex gap-1 align-items-center flex-wrap">
+                                    @if($order->delivery && !$order->delivery->tankReturn)
+                                        <button class="btn btn-sm btn-success btn-create-return" 
+                                            data-delivery-id="{{ $order->delivery->id }}" 
+                                            data-item-count="{{ $order->orderItems()->count() }}"
+                                            title="Create Tank Return">
+                                            <i class="fas fa-undo me-1"></i>Return
+                                        </button>
+                                    @elseif($order->delivery && $order->delivery->tankReturn)
+                                        <a href="{{ route('admin.returns.show', $order->delivery->tankReturn->id) }}" 
+                                            class="btn btn-sm btn-info" title="View Tank Return">
+                                            <i class="fas fa-eye me-1"></i>Return
+                                        </a>
+                                    @else
+                                        <span class="text-muted" style="font-size:.82rem;"><i class="fas fa-check-circle text-success me-1"></i>Done</span>
+                                    @endif
+                                </div>
+                            @elseif($order->status === 'cancelled')
+                                <span class="text-muted" style="font-size:.82rem;">Cancelled</span>
+                            @endif
+                        </div>
                     </td>
                 </tr>
             @empty
@@ -478,7 +481,18 @@
             }
 
             const payload = await response.json();
-            updateOrderRowStatus(orderId, payload.status || 'assigned', payload.rider_name || riderName);
+            
+            // Hide the row with animation
+            if (row) {
+                row.style.transition = 'opacity 0.3s ease-out';
+                row.style.opacity = '0';
+                setTimeout(() => {
+                    row.style.display = 'none';
+                    updateTabCounts();
+                    filterOrders();
+                }, 300);
+            }
+            
             const modalEl = document.getElementById('assignRiderModal');
             bootstrap.Modal.getInstance(modalEl)?.hide();
             showOrderToast(payload.message || 'Rider assigned successfully.');
@@ -517,7 +531,18 @@
             }
 
             const payload = await response.json();
-            updateOrderRowStatus(orderId, payload.status || 'cancelled');
+            
+            // Hide the row with animation
+            if (row) {
+                row.style.transition = 'opacity 0.3s ease-out';
+                row.style.opacity = '0';
+                setTimeout(() => {
+                    row.style.display = 'none';
+                    updateTabCounts();
+                    filterOrders();
+                }, 300);
+            }
+            
             showOrderToast(payload.message || 'Order cancelled.');
         } catch (error) {
             showOrderToast('Unable to cancel order. Try again.', true);
@@ -631,15 +656,28 @@
                 ? payload.order_ids.map(id => String(id))
                 : orderIds;
 
-            // Update each order row status
+            // Remove assigned rows from the table with animation
             assignedIds.forEach(orderId => {
-                updateOrderRowStatus(orderId, payload.status || 'assigned', riderName);
+                const row = document.querySelector(`.order-row[data-order-id="${orderId}"]`);
+                if (row) {
+                    row.style.transition = 'opacity 0.3s ease-out';
+                    row.style.opacity = '0';
+                    setTimeout(() => {
+                        row.style.display = 'none';
+                    }, 300);
+                }
             });
             
             // Close modal and clear selection
             const modalEl = document.getElementById('bulkAssignRiderModal');
             bootstrap.Modal.getInstance(modalEl)?.hide();
             clearAllSelections();
+            
+            // Update counts and filters
+            setTimeout(() => {
+                updateTabCounts();
+                filterOrders();
+            }, 350);
             
             showOrderToast(payload.message || `Successfully assigned ${assignedIds.length} order(s) to this rider.`);
         } catch (error) {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Delivery;
 use App\Models\Freebie;
+use App\Models\HomepageSetting;
 use App\Models\Inventory;
 use App\Models\LoyaltyPoint;
 use App\Models\Order;
@@ -626,6 +627,7 @@ class DashboardController extends Controller
 
     public function settings()
     {
+        $homepageSettings = HomepageSetting::singleton();
         $appName = config('app.name');
         $appEnv = config('app.env');
         $appDebug = config('app.debug');
@@ -636,6 +638,7 @@ class DashboardController extends Controller
         $laravelVersion = app()->version();
 
         return view('admin.settings', compact(
+            'homepageSettings',
             'appName', 'appEnv', 'appDebug',
             'dbConnection', 'cacheDriver', 'queueDriver',
             'phpVersion', 'laravelVersion'
@@ -667,6 +670,19 @@ class DashboardController extends Controller
         ]);
 
         return back()->with('success', 'New admin account created successfully.');
+    }
+
+    public function updateGCash(Request $request)
+    {
+        $validated = $request->validate([
+            'gcash_account_number' => 'nullable|string|max:255',
+            'gcash_account_name' => 'nullable|string|max:255',
+        ]);
+
+        $homepageSettings = HomepageSetting::singleton();
+        $homepageSettings->update($validated);
+
+        return back()->with('success', 'GCash account details updated successfully.');
     }
 
     public function profile()

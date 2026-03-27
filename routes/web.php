@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
+use App\Models\HomepageSetting;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\Admin\HomepageSettingController;
@@ -77,10 +79,21 @@ Route::get('/', function () {
             ->get();
     }
 
+    // Homepage settings
+    $homepageSettings = null;
+    try {
+        if (Schema::hasTable('homepage_settings')) {
+            $homepageSettings = HomepageSetting::singleton();
+        }
+    } catch (\Throwable $e) {
+        // Fallback handled by view composer
+    }
+
     return view('welcome', compact(
         'totalOrders', 'revenue', 'pendingOrders', 'totalCustomers', 
         'activeRiders', 'products', 'user', 'role', 
-        'ordersAwaitingAssignment', 'availableRiders', 'riderAssignedOrders'
+        'ordersAwaitingAssignment', 'availableRiders', 'riderAssignedOrders',
+        'homepageSettings'
     ));
 });
 
@@ -96,17 +109,19 @@ Route::post('/logout', [CustomerController::class, 'logout'])->name('logout');
 Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->name('auth.google');
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
 
+// ===== PUBLIC CUSTOMER ROUTES (Accessible to Guests) =====
+Route::get('/customer/product', [ProductController::class, 'index'])->name('customer.products');
+Route::get('/customer/product/{product}', [ProductController::class, 'show'])->name('customer.product.show');
+Route::get('/customer/loyaltyRewards', [LoyaltyController::class, 'index'])->name('customer.loyalty');
+Route::get('/customer/productCart', [CartController::class, 'index'])->name('customer.cart');
+Route::post('/customer/cart', [CartController::class, 'store'])->name('customer.cart.store');
+Route::match(['get', 'post'], '/customer/checkout', [OrderController::class, 'checkout'])->name('customer.checkout');
+
 // ===== CUSTOMER ROUTES =====
-Route::prefix('customer')->group(function () {
+Route::middleware(['auth', 'verified'])->prefix('customer')->group(function () {
     Route::get('/customerDashboard', [CustomerController::class, 'dashboard'])->name('customer.dashboard');
 
-    // Products
-    Route::get('/product', [ProductController::class, 'index'])->name('customer.products');
-    Route::get('/product/{product}', [ProductController::class, 'show'])->name('customer.product.show');
-
-    // Cart
-    Route::get('/productCart', [CartController::class, 'index'])->name('customer.cart');
-    Route::post('/cart', [CartController::class, 'store'])->name('customer.cart.store');
+    // Cart (Additional operations for authenticated users)
     Route::post('/cart/sync', [CartController::class, 'sync'])->name('customer.cart.sync');
     Route::post('/cart/item/update', [CartController::class, 'updateItem'])->name('customer.cart.item.update');
     Route::post('/cart/item/remove', [CartController::class, 'destroyItem'])->name('customer.cart.item.destroy');
@@ -115,7 +130,6 @@ Route::prefix('customer')->group(function () {
     Route::delete('/cart', [CartController::class, 'clear'])->name('customer.cart.clear');
 
     // Orders
-    Route::match(['get', 'post'], '/checkout', [OrderController::class, 'checkout'])->name('customer.checkout');
     Route::post('/order', [OrderController::class, 'store'])->name('customer.order.store');
     Route::patch('/order/{order}/cancel', [OrderController::class, 'cancelByCustomer'])->name('customer.order.cancel');
     Route::get('/orderHistory', [OrderController::class, 'index'])->name('customer.orders');
@@ -129,12 +143,11 @@ Route::prefix('customer')->group(function () {
     Route::put('/profile', [CustomerController::class, 'updateProfile'])->name('customer.profile.update');
 
     // Loyalty
-    Route::get('/loyaltyRewards', [LoyaltyController::class, 'index'])->name('customer.loyalty');
     Route::post('/loyalty/redeem', [LoyaltyController::class, 'redeem'])->name('customer.loyalty.redeem');
 });
 
 // ===== ADMIN ROUTES =====
-Route::prefix('admin')->group(function () {
+Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/notifications', [DashboardController::class, 'notifications'])->name('admin.notifications');
     Route::get('/profile', [DashboardController::class, 'profile'])->name('admin.profile');
@@ -192,6 +205,7 @@ Route::prefix('admin')->group(function () {
     Route::get('/settings/homepage', [HomepageSettingController::class, 'edit'])->name('admin.settings.homepage');
     Route::post('/settings/homepage', [HomepageSettingController::class, 'update'])->name('admin.settings.homepage.update');
     Route::post('/settings/admin-users', [DashboardController::class, 'storeAdminUser'])->name('admin.settings.admin-users.store');
+    Route::post('/settings/update-gcash', [DashboardController::class, 'updateGCash'])->name('admin.settings.update-gcash');
     Route::post('/settings/clear-cache', function () {
         Artisan::call('cache:clear');
         Artisan::call('view:clear');

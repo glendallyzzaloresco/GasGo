@@ -464,9 +464,8 @@
                 <label class="form-label"><i class="fas fa-tags me-2"></i>Category</label>
                 <select id="categorySelect" name="category" class="form-select">
                     <option value="">All Categories</option>
-                    @foreach(($categories ?? collect()) as $category)
-                        <option value="{{ $category }}" {{ request('category') === $category ? 'selected' : '' }}>{{ $category }}</option>
-                    @endforeach
+                    <option value="Tank" {{ request('category') === 'Tank' ? 'selected' : '' }}>Tank</option>
+                    <option value="Freebie" {{ request('category') === 'Freebie' ? 'selected' : '' }}>Freebie</option>
                 </select>
             </div>
             
@@ -613,6 +612,83 @@
             <div class="d-flex justify-content-center mt-4 mb-5" id="paginationContainer">
                 {{ $inventories->render() }}
             </div>
+
+            <!-- Freebies & Rewards Section -->
+            @if($freebies && $freebies->count() > 0)
+            <div class="product-category">
+                <div class="category-header freebies">
+                    <i class="fas fa-gift"></i>Freebies & Rewards
+                </div>
+                <div class="inventory-grid">
+                    @php
+                        $resolveImageUrl = function (?string $path): ?string {
+                            if (! $path) {
+                                return null;
+                            }
+                            $normalized = ltrim($path, '/');
+                            if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
+                                return $path;
+                            }
+                            if (str_starts_with($normalized, 'storage/') || str_starts_with($normalized, 'images/')) {
+                                return asset($normalized);
+                            }
+                            return asset('storage/' . $normalized);
+                        };
+                    @endphp
+                    @foreach($freebies as $freebie)
+                        @php
+                            $stockStatus = 'in-stock';
+                            $stockLabel = 'In Stock';
+                            
+                            if ($freebie->stock == 0) {
+                                $stockStatus = 'out-of-stock';
+                                $stockLabel = 'Out of Stock';
+                            } elseif ($freebie->stock <= 5) {
+                                $stockStatus = 'low-stock';
+                                $stockLabel = 'Low Stock';
+                            }
+                            
+                            $freebieImageUrl = $resolveImageUrl($freebie->image);
+                        @endphp
+                        <div class="inventory-card" style="border-top-color: #27ae60;">
+                            <div class="inventory-card-image" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+                                @if($freebieImageUrl)
+                                    <img src="{{ $freebieImageUrl }}" alt="{{ $freebie->name }}">
+                                @else
+                                    <i class="fas fa-gift" style="color: #27ae60;"></i>
+                                @endif
+                            </div>
+                            
+                            <div class="inventory-card-content">
+                                <h3 class="inventory-card-title">{{ $freebie->name }}</h3>
+                                <div class="inventory-card-sku">Category: {{ ucfirst($freebie->category ?? 'Reward') }}</div>
+                                
+                                <div class="stock-status-badge {{ $stockStatus }}">
+                                    {{ $stockLabel }}
+                                </div>
+                                
+                                <div class="inventory-card-info">
+                                    <div class="info-item">
+                                        <span class="info-label">Stock</span>
+                                        <span class="info-value">{{ $freebie->stock }}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Points</span>
+                                        <span class="info-value">{{ $freebie->reward_points_required ?? 'N/A' }}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="inventory-card-actions">
+                                    <a href="{{ route('admin.products', ['tab' => 'freebies']) }}" class="btn btn-view" title="Manage">
+                                        <i class="fas fa-edit me-1"></i>Manage
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+            @endif
         @endif
     </div>
 

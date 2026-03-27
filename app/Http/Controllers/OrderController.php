@@ -4,13 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Cart;
 use App\Models\Freebie;
+use App\Models\HomepageSetting;
 use App\Models\Inventory;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Payment;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -123,7 +126,9 @@ class OrderController extends Controller
             }
         }
 
-        return view('customer.checkout', compact('cartItems', 'subtotal', 'rewardPreview', 'availableFreebies'));
+        $homepageSettings = HomepageSetting::singleton();
+
+        return view('customer.checkout', compact('cartItems', 'subtotal', 'rewardPreview', 'availableFreebies', 'homepageSettings'));
     }
 
     // Customer: place an order from cart
@@ -142,6 +147,8 @@ class OrderController extends Controller
             'longitude'        => 'required|numeric',
             'address_full'     => 'required|string|max:500',
             'selected_freebie_id' => 'nullable|integer',
+            'selected_cart_ids' => 'nullable|string',
+            'proof_of_payment'  => $request->input('payment_method') === 'gcash' ? 'required|image|mimes:jpeg,png,gif,jpg|max:5120' : 'nullable|image|mimes:jpeg,png,gif,jpg|max:5120',
         ]);
 
         $cartItems = Cart::with('product')
@@ -150,6 +157,18 @@ class OrderController extends Controller
 
         if ($cartItems->isEmpty()) {
             return redirect()->route('customer.cart')->with('error', 'Your cart is empty.');
+        }
+
+        // Filter cartItems to only include selected ones
+        if (!empty($validated['selected_cart_ids'])) {
+            $selectedIds = array_filter(array_map('intval', explode(',', $validated['selected_cart_ids'])));
+            $cartItems = $cartItems->filter(function ($item) use ($selectedIds) {
+                return in_array($item->id, $selectedIds);
+            });
+
+            if ($cartItems->isEmpty()) {
+                return redirect()->route('customer.checkout')->with('error', 'No items selected for checkout.');
+            }
         }
 
         $smallRewardCount = 0;
@@ -167,13 +186,13 @@ class OrderController extends Controller
             ? (int) ($selectedFreebieId - $productFreebieOffset)
             : null;
 
-        if ($smallRewardCount > 0 && ! $selectedFreebieId) {
-            throw ValidationException::withMessages([
-                'selected_freebie_id' => 'Please select a freebie for your freebie item(s).',
-            ]);
+        // Get selected cart IDs for deletion after order is placed
+        $selectedCartIds = [];
+        if (!empty($validated['selected_cart_ids'])) {
+            $selectedCartIds = array_filter(array_map('intval', explode(',', $validated['selected_cart_ids'])));
         }
 
-        $order = DB::transaction(function () use ($validated, $cartItems, $smallRewardCount, $selectedFreebieId, $isProductFreebieSelection, $selectedProductFreebieId) {
+        $order = DB::transaction(function () use ($validated, $cartItems, $smallRewardCount, $selectedFreebieId, $isProductFreebieSelection, $selectedProductFreebieId, $selectedCartIds, $request) {
             $subtotal = 0;
             $deliveryFee = 50.00;
             $orderItems = [];
@@ -182,7 +201,7 @@ class OrderController extends Controller
             $selectedFreebieProduct = null;
             $selectedFreebieInventory = null;
 
-            if ($smallRewardCount > 0) {
+            if ($smallRewardCount > 0 && $selectedFreebieId !== null) {
                 if ($isProductFreebieSelection) {
                     $selectedFreebieProduct = Product::query()
                         ->whereKey($selectedProductFreebieId)
@@ -297,7 +316,7 @@ class OrderController extends Controller
                 ];
 
                 // Small-order freebies are customer-selected.
-                if ($quantity >= 1 && $quantity <= 9) {
+                if ($quantity >= 1 && $quantity <= 9 && $selectedFreebieProduct !== null) {
                     $orderItems[] = [
                         'product_id'   => $selectedFreebieProduct->id,
                         'product_name' => $selectedFreebieProduct->name,
@@ -355,8 +374,32 @@ class OrderController extends Controller
                 ]);
             }
 
-            // Clear cart
-            Cart::where('user_id', Auth::id())->delete();
+            // Create Payment record
+            $proofOfPaymentPath = null;
+            if (isset($validated['proof_of_payment']) && $request->file('proof_of_payment')) {
+                // Store the proof of payment file
+                $file = $request->file('proof_of_payment');
+                $fileName = 'proof_' . $order->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $proofOfPaymentPath = $file->storeAs('payments/proofs', $fileName, 'public');
+            }
+
+            Payment::create([
+                'order_id'           => $order->id,
+                'payment_method'     => $validated['payment_method'],
+                'amount'             => $totalAmount,
+                'status'             => 'pending',
+                'transaction_reference' => null,
+                'proof_of_payment'   => $proofOfPaymentPath,
+                'paid_at'            => null,
+            ]);
+
+            // Clear selected cart items only
+            if (!empty($selectedCartIds)) {
+                Cart::where('user_id', Auth::id())->whereIn('id', $selectedCartIds)->delete();
+            } else {
+                // If no specific items selected, clear all cart items (backward compatibility)
+                Cart::where('user_id', Auth::id())->delete();
+            }
 
             // Send admin notification if order has rewards
             if ($hasRewardItems) {

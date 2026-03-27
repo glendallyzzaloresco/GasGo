@@ -201,6 +201,44 @@
                             </div>
                         </div>
 
+                        {{-- GCash Account Settings --}}
+                        <div class="col-md-6">
+                            <div class="border rounded-3 p-4">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div style="width:48px;height:48px;background:#e7fff0;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i class="fas fa-mobile-alt" style="color:#007dfe;font-size:1.3rem;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold mb-1">GCash Payment Account</h6>
+                                        <p class="text-muted small mb-3">Configure GCash account details for customer payments.</p>
+
+                                        <form action="{{ route('admin.settings.update-gcash') }}" method="POST" class="row g-2">
+                                            @csrf
+                                            <div class="col-12">
+                                                <label class="form-label small">GCash Account Number</label>
+                                                <input type="text" name="gcash_account_number" class="form-control form-control-sm @error('gcash_account_number') is-invalid @enderror" placeholder="09XX XXX XXXX" value="{{ old('gcash_account_number', $homepageSettings->gcash_account_number ?? '') }}">
+                                                @error('gcash_account_number')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label small">Account Name</label>
+                                                <input type="text" name="gcash_account_name" class="form-control form-control-sm @error('gcash_account_name') is-invalid @enderror" placeholder="Name on GCash account" value="{{ old('gcash_account_name', $homepageSettings->gcash_account_name ?? '') }}">
+                                                @error('gcash_account_name')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                            <div class="col-12">
+                                                <button type="submit" class="btn btn-success btn-sm">
+                                                    <i class="fas fa-save me-1"></i>Save GCash Details
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         {{-- Add Admin Account --}}
                         <div class="col-md-6">
                             <div class="border rounded-3 p-4">

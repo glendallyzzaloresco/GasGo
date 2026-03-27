@@ -300,11 +300,16 @@
                             <p class="product-stock {{ $inStock ? '' : 'out' }}">
                                 <i class="fas {{ $inStock ? 'fa-check-circle' : 'fa-times-circle' }} me-1"></i>{{ $inStock ? 'In Stock' : 'Out of Stock' }}
                             </p>
-                            <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div class="d-flex justify-content-between align-items-center mt-3" style="margin-bottom: 12px;">
                                 <span class="product-price">₱{{ number_format($product->price, 2) }}</span>
-                                <a href="{{ route('customer.product.show', $product->id) }}" class="btn btn-gasgo btn-sm" style="text-decoration:none;">
-                                    <i class="fas fa-eye me-1"></i>View
-                                </a>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button class="btn btn-gasgo" style="font-size: 0.9rem; padding: 8px 12px; width: 100%; border: none;" onclick="buyNowWelcome({{ $product->id }});" {{ $inStock ? '' : 'disabled' }}>
+                                    <i class="fas fa-bolt me-1"></i>Buy Now
+                                </button>
+                                <button class="btn btn-gasgo-outline" style="font-size: 0.9rem; padding: 8px 12px; width: 100%; border: 2px solid var(--gasgo-blue); color: var(--gasgo-blue); background: white;" onclick="addToCartWelcome({{ $product->id }}, '{{ $product->name }}', {{ $product->price }}, '{{ $img }}');" {{ $inStock ? '' : 'disabled' }}>
+                                    <i class="fas fa-shopping-cart me-1"></i>Add to Cart
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -457,6 +462,68 @@ document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
         );
     });
 });
+
+// Welcome page functions for add to cart
+function addToCartWelcome(id, name, price, image) {
+    addToCartAjax(id, 1)
+        .then(() => {
+            showNotificationWithAction(`✓ ${name} added to cart!`, 'success', 5000);
+        })
+        .catch(error => {
+            console.error('Add to cart error:', error);
+            showNotificationWithAction('Failed to add item to cart', 'error', 3000);
+        });
+}
+
+// Buy Now from welcome page
+function buyNowWelcome(productId) {
+    const isAuthenticated = @json(Auth::check());
+    
+    if (!isAuthenticated) {
+        window.location.href = "{{ url('/customer/loginRegistration?tab=register&redirect=checkout') }}";
+        return;
+    }
+    
+    addToCartAjax(productId, 1)
+        .then(() => {
+            window.location.href = "{{ route('customer.checkout') }}";
+        })
+        .catch(error => {
+            console.error('Buy now error:', error);
+            showNotificationWithAction('Failed to process order. Please try again.', 'error', 3000);
+        });
+}
+
+// Notification system
+function showNotificationWithAction(message, type = 'success', duration = 3000) {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+    toast.setAttribute('role', 'alert');
+    toast.style.position = 'fixed';
+    toast.style.top = '20px';
+    toast.style.right = '20px';
+    toast.style.zIndex = '9999';
+    toast.style.minWidth = '350px';
+    
+    const cartUrl = "{{ route('customer.cart') }}";
+    
+    toast.innerHTML = `
+        ${type === 'success' ? '<i class="fas fa-check-circle me-2"></i>' : '<i class="fas fa-exclamation-circle me-2"></i>'}
+        ${message}
+        ${type === 'success' ? `<a href="${cartUrl}" class="alert-link ms-2">View Cart</a>` : ''}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    if (duration) {
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, duration);
+    }
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     applyTiltEffect();
