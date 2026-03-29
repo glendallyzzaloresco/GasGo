@@ -5,20 +5,6 @@
 @section('nav-dashboard', 'active')
 
 @section('content')
-<!-- Order Notification Alert -->
-@if($availableOrders && count($availableOrders) > 0)
-<div class="alert alert-warning alert-dismissible fade show mb-4" role="alert" style="border-radius: 14px; border: none; background: linear-gradient(135deg, #fff8e1 0%, #ffe082 100%); padding: 16px 20px; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.25);">
-    <div style="display: flex; gap: 12px; align-items: start;">
-        <i class="fas fa-bell" style="color: #f57f17; font-size: 1.3rem; margin-top: 2px;"></i>
-        <div>
-            <h6 class="mb-1" style="color: #f57f17; font-weight: 700;"><i class="fas fa-shopping-bag me-2"></i>You have {{ count($availableOrders) }} new order{{ count($availableOrders) > 1 ? 's' : '' }} waiting!</h6>
-            <small style="color: #666;">Accept these orders to add them to your deliveries and start earning.</small>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-</div>
-@endif
-
 @if(count($activeDeliveries) > 0)
 <div class="alert alert-info alert-dismissible fade show mb-4" role="alert" style="border-radius: 14px; border: none; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 16px 20px; box-shadow: 0 4px 12px rgba(33, 150, 243, 0.25);">
     <div style="display: flex; gap: 12px; align-items: start;">
@@ -90,127 +76,10 @@
 </div>
 @endif
 
-<!-- Available Orders Section -->
-@if($availableOrders && count($availableOrders) > 0)
-<div class="mb-4">
-    <h5 class="fw-bold mb-3" style="color:var(--gasgo-blue);">
-        <i class="fas fa-shopping-bag me-2" style="color:var(--gasgo-orange);"></i>Available Orders
-        <span class="badge" style="background:var(--gasgo-orange);color:white;font-size:.75rem;padding:4px 10px;border-radius:12px;">{{ count($availableOrders) }} new</span>
-    </h5>
-    <p class="text-muted mb-3" style="font-size:.85rem;">
-        <i class="fas fa-info-circle me-1"></i>Accept orders to add them to your active deliveries
-    </p>
-
-    @foreach($availableOrders as $order)
-        <div class="rider-card mb-3 available-order-card" id="order-card-{{ $order->id }}">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-                <div>
-                    <h6 class="fw-bold mb-1" style="color:var(--gasgo-blue);">Order #{{ $order->order_number }}</h6>
-                    <small class="text-muted">Placed {{ $order->created_at->diffForHumans() }}</small>
-                </div>
-                <span class="badge-status badge-{{ $order->status }}">{{ ucfirst($order->status) }}</span>
-            </div>
-
-            <div class="mb-3">
-                <div style="font-size:.88rem;" class="mb-2">
-                    <i class="fas fa-user me-2" style="color:var(--gasgo-blue);"></i><strong>{{ $order->user->name }}</strong>
-                </div>
-                <div style="font-size:.85rem;" class="mb-2">
-                    <i class="fas fa-map-marker-alt me-2" style="color:var(--gasgo-orange);"></i>
-                    <span>{{ Str::limit($order->delivery_address, 60) }}</span>
-                </div>
-                <div style="font-size:.85rem;" class="mb-2">
-                    <i class="fas fa-box me-2" style="color:#888;"></i>
-                    @forelse($order->orderItems as $item)
-                        {{ $item->product ? $item->product->name : $item->product_name }} ×{{ $item->quantity }}@if(!$loop->last), @endif
-                    @empty
-                        No items
-                    @endforelse
-                    &middot; <strong style="color:var(--gasgo-orange);">₱{{ number_format($order->total_amount, 2) }}</strong>
-                </div>
-                <div style="font-size:.85rem;">
-                    @if($order->payment_method === 'cash')
-                        <i class="fas fa-money-bill me-2" style="color: #27ae60;"></i>
-                    @else
-                        <i class="fas fa-credit-card me-2" style="color: #2196f3;"></i>
-                    @endif
-                    {{ $order->payment_method === 'cash' ? 'Cash on Delivery' : 'Paid Online' }}
-                </div>
-            </div>
-
-            <div class="d-flex gap-2 mt-3">
-                <button type="button" data-order-id="{{ $order->id }}" class="btn flex-grow-1 btn-action accept-order-btn"
-                        style="background:#27ae60;color:#fff;">
-                    <i class="fas fa-check-circle me-1"></i>Accept Order
-                </button>
-                <a href="tel:{{ $order->contact_number }}" class="btn btn-action"
-                   style="background:var(--gasgo-blue-light);color:var(--gasgo-blue);">
-                    <i class="fas fa-phone"></i>
-                </a>
-            </div>
-        </div>
-    @endforeach
-</div>
-@endif
-
 @endsection
 
 @section('scripts')
 <script>
-    function acceptOrder(orderId, btn) {
-        const card = document.getElementById(`order-card-${orderId}`);
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-
-        if (!csrfToken) {
-            alert('Security token not found. Please refresh the page.');
-            return;
-        }
-
-        // Disable button and show loading
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Accepting...';
-
-        fetch(`/rider/orders/${orderId}/accept`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Show success message
-                card.style.background = '#d4edda';
-                card.innerHTML = `
-                    <div class="text-center py-3">
-                        <i class="fas fa-check-circle" style="font-size:2rem;color:#27ae60;"></i>
-                        <p class="mt-2 mb-0" style="color:#155724;font-weight:600;">Order Accepted!</p>
-                        <small class="text-muted">Redirecting to delivery details...</small>
-                    </div>
-                `;
-
-                // Redirect to delivery page
-                setTimeout(() => {
-                    window.location.href = `/rider/delivery/${data.delivery_id}`;
-                }, 1500);
-            } else {
-                // Show error
-                alert(data.message || 'Failed to accept order. Please try again.');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Accept Order';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred. Please try again.');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Accept Order';
-        });
-    }
-
     function setStatus(btn, status) {
         // Update button states - target all status buttons
         document.querySelectorAll('.rider-card.text-center button').forEach(b => {
@@ -254,16 +123,5 @@
             alert('Failed to update status. Please try again.');
         });
     }
-
-    document.querySelectorAll('.accept-order-btn[data-order-id]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            const orderId = this.getAttribute('data-order-id');
-            if (!orderId) {
-                return;
-            }
-
-            acceptOrder(orderId, this);
-        });
-    });
 </script>
 @endsection

@@ -77,6 +77,21 @@ class CartController extends Controller
             'quantity'   => 'required|integer|min:1',
         ]);
 
+        // Check if the product is a freebie - they cannot be ordered directly
+        $product = Product::find($validated['product_id']);
+        if ($product && $product->category === 'freebie') {
+            $message = 'Freebies can only be earned through loyalty rewards, not purchased directly.';
+            
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                ], 422);
+            }
+            
+            return back()->with('error', $message);
+        }
+
         if (! Auth::check()) {
             $cart = $this->getSessionCart($request);
             $productId = (int) $validated['product_id'];

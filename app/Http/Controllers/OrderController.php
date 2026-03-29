@@ -127,8 +127,15 @@ class OrderController extends Controller
         }
 
         $homepageSettings = HomepageSetting::singleton();
+        
+        // Get available vouchers for this user
+        $availableVouchers = \App\Models\UserVoucher::where('user_id', Auth::id())
+            ->where('is_used', false)
+            ->where('expires_at', '>', now())
+            ->with('reward')
+            ->get();
 
-        return view('customer.checkout', compact('cartItems', 'subtotal', 'rewardPreview', 'availableFreebies', 'homepageSettings'));
+        return view('customer.checkout', compact('cartItems', 'subtotal', 'rewardPreview', 'availableFreebies', 'homepageSettings', 'availableVouchers'));
     }
 
     // Customer: place an order from cart
@@ -147,6 +154,7 @@ class OrderController extends Controller
             'longitude'        => 'required|numeric',
             'address_full'     => 'required|string|max:500',
             'selected_freebie_id' => 'nullable|integer',
+            'voucher_id' => 'nullable|integer|exists:user_vouchers,id',
             'selected_cart_ids' => 'nullable|string',
             'proof_of_payment'  => $request->input('payment_method') === 'gcash' ? 'required|image|mimes:jpeg,png,gif,jpg|max:5120' : 'nullable|image|mimes:jpeg,png,gif,jpg|max:5120',
         ]);
@@ -181,6 +189,14 @@ class OrderController extends Controller
 
         $productFreebieOffset = 1000000;
         $selectedFreebieId = isset($validated['selected_freebie_id']) ? (int) $validated['selected_freebie_id'] : null;
+        $selectedVoucherId = isset($validated['voucher_id']) ? (int) $validated['voucher_id'] : null;
+        
+        // If voucher is selected, clear freebie (mutually exclusive)
+        if ($selectedVoucherId !== null) {
+            $selectedFreebieId = null;
+            $validated['selected_freebie_id'] = null;
+        }
+        
         $isProductFreebieSelection = $selectedFreebieId !== null && $selectedFreebieId >= $productFreebieOffset;
         $selectedProductFreebieId = $isProductFreebieSelection
             ? (int) ($selectedFreebieId - $productFreebieOffset)
@@ -192,7 +208,7 @@ class OrderController extends Controller
             $selectedCartIds = array_filter(array_map('intval', explode(',', $validated['selected_cart_ids'])));
         }
 
-        $order = DB::transaction(function () use ($validated, $cartItems, $smallRewardCount, $selectedFreebieId, $isProductFreebieSelection, $selectedProductFreebieId, $selectedCartIds, $request) {
+        $order = DB::transaction(function () use ($validated, $cartItems, $smallRewardCount, $selectedFreebieId, $isProductFreebieSelection, $selectedProductFreebieId, $selectedCartIds, $selectedVoucherId, $request) {
             $subtotal = 0;
             $deliveryFee = 50.00;
             $orderItems = [];
@@ -342,16 +358,31 @@ class OrderController extends Controller
                 }
             }
 
-            $totalAmount = $subtotal + $deliveryFee;
+            // Calculate voucher discount
+            $voucherDiscount = 0;
+            $selectedVoucher = null;
+            if ($selectedVoucherId !== null) {
+                $selectedVoucher = \App\Models\UserVoucher::where('id', $selectedVoucherId)
+                    ->where('user_id', Auth::id())
+                    ->where('is_used', false)
+                    ->where('expires_at', '>', now())
+                    ->first();
+                
+                if ($selectedVoucher) {
+                    $voucherDiscount = $selectedVoucher->discount_amount;
+                }
+            }
+
+            $totalAmount = $subtotal + $deliveryFee - $voucherDiscount;
 
             // Create order
             $order = Order::create([
                 'user_id'          => Auth::id(),
                 'order_number'     => 'GG-' . strtoupper(Str::random(8)),
                 'subtotal'         => $subtotal,
-                'discount'         => 0,
+                'discount'         => $voucherDiscount,
                 'delivery_fee'     => $deliveryFee,
-                'total_amount'     => $totalAmount,
+                'total_amount'     => max(0, $totalAmount), // Ensure no negative totals
                 'delivery_address' => $validated['delivery_address'],
                 'contact_number'   => $validated['contact_number'],
                 'latitude'         => $validated['latitude'] ?? null,
@@ -372,6 +403,11 @@ class OrderController extends Controller
                     'subtotal'     => $itemData['subtotal'],
                     'is_reward'    => $itemData['is_reward'],
                 ]);
+            }
+
+            // Mark voucher as used if one was selected
+            if ($selectedVoucher) {
+                $selectedVoucher->update(['is_used' => true]);
             }
 
             // Create Payment record

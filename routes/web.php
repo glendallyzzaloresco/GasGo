@@ -232,6 +232,7 @@ Route::prefix('rider')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/history', [DeliveryController::class, 'riderHistory'])->name('rider.history');
     Route::get('/route', [RiderController::class, 'route'])->name('rider.route');
     Route::get('/route/live-map', [RiderController::class, 'liveRouteMap'])->name('rider.route.map');
+    Route::get('/route/navigation/{delivery}', [RiderController::class, 'navigation'])->name('rider.navigation');
     Route::get('/route/waypoints', [RiderController::class, 'routeWaypoints'])->name('rider.route.waypoints');
     Route::put('/location/live', [DeliveryController::class, 'updateRiderLiveLocation'])->name('rider.location.live');
     Route::post('/orders/{order}/accept', [RiderController::class, 'acceptOrder'])->name('rider.order.accept');

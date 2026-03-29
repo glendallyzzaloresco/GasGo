@@ -6,6 +6,7 @@
 
 @section('rider-styles')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
 <link rel="stylesheet" href="{{ asset('css/leaflet-custom.css') }}" />
 <style>
     .route-map-container {
@@ -470,6 +471,49 @@
         font-weight: 600;
         white-space: nowrap;
     }
+
+    /* Route styling */
+    .leaflet-routing-container {
+        background: rgba(26, 39, 68, 0.95) !important;
+        border-radius: 8px !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .leaflet-routing-container h3 {
+        color: var(--gasgo-orange) !important;
+        padding: 10px !important;
+        margin: 0 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .leaflet-routing-alt {
+        background: rgba(255, 255, 255, 0.05) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .leaflet-routing-alt h4 {
+        color: var(--gasgo-orange) !important;
+    }
+
+    .leaflet-routing-error {
+        color: #e74c3c !important;
+        padding: 10px !important;
+    }
+
+    /* Route line styling */
+    .leaflet-routing-line {
+        stroke: #f7941d !important;
+        stroke-width: 5 !important;
+        opacity: 0.8 !important;
+    }
+
+    .leaflet-routing-Alt {
+        opacity: 0.5 !important;
+    }
 </style>
 @endsection
 
@@ -580,6 +624,7 @@
 
 @section('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.umd.js"></script>
 <script src="{{ asset('js/leaflet-utils.js') }}"></script>
 <script>
     // Helper function to show alerts
@@ -650,9 +695,9 @@
             if (navigateBtn) {
                 navigateBtn.addEventListener('click', function (event) {
                     event.stopPropagation();
-                    const lat = parseFloat(task.dataset.lat);
-                    const lng = parseFloat(task.dataset.lng);
-                    navigateTo(lat, lng);
+                    const deliveryId = task.dataset.deliveryId;
+                    // Redirect to full-screen navigation
+                    window.location.href = `/rider/route/navigation/${deliveryId}`;
                 });
             }
 
@@ -685,12 +730,15 @@
         // Get all task coordinates
         const tasks = document.querySelectorAll('.task-card');
         let coordinates = [];
+        let allTasksMap = {};
 
         tasks.forEach(task => {
             const lat = parseFloat(task.dataset.lat);
             const lng = parseFloat(task.dataset.lng);
             if (lat && lng) {
-                coordinates.push({ lat, lng, id: task.dataset.deliveryId });
+                const coord = { lat, lng, id: task.dataset.deliveryId };
+                coordinates.push(coord);
+                allTasksMap[task.dataset.deliveryId] = coord;
             }
         });
 
@@ -703,34 +751,35 @@
             centerLng = coordinates[0].lng;
         }
 
-        // Initialize map
-        routeMap = initLeafletMap('liveRouteMap', centerLat, centerLng, 12);
+        // Store all coordinates globally for reference
+        window.allDeliveryCoordinates = allTasksMap;
 
-        // Add markers for each delivery
+        // Initialize map
+        routeMap = initLeafletMap('liveRouteMap', centerLat, centerLng, 14);
+
+        // Show ALL deliveries as numbered pins
         coordinates.forEach((coord, index) => {
             const marker = createNumberedMarker(coord.lat, coord.lng, index + 1, '#f7941d');
             marker.addTo(routeMap);
-            marker.bindPopup(`<div style="padding:8px;text-align:center;"><strong>Stop ${index + 1}</strong><br><small>Click to view details</small></div>`);
+            marker.bindPopup(`<div style="padding:8px;text-align:center;"><strong>Stop ${index + 1}</strong><br><small>Click LOCATE to view route</small></div>`);
             marker.on('click', () => {
                 focusOnTask(coord.id, coord.lat, coord.lng);
             });
             markers.push({ marker, id: coord.id, lat: coord.lat, lng: coord.lng });
         });
 
-        // Draw route polyline if multiple points
-        if (coordinates.length > 1) {
-            const pathCoords = coordinates.map(c => [c.lat, c.lng]);
-            polyline = drawRouteLine(routeMap, pathCoords, {
-                color: '#3498db',
-                weight: 4,
-                opacity: 0.7
-            });
-        }
-
-        // Fit bounds
+        // Fit map to show all deliveries
         if (coordinates.length > 0) {
             const bounds = L.latLngBounds(coordinates.map(c => [c.lat, c.lng]));
             routeMap.fitBounds(bounds, { padding: [50, 50] });
+        }
+    }
+
+    function displaySingleDeliveryOnMap(delivery) {
+        // Clear existing route lines and temp markers (but keep delivery pins)
+        if (currentRouteLine) {
+            routeMap.removeLayer(currentRouteLine);
+            currentRouteLine = null;
         }
     }
 
@@ -756,7 +805,7 @@
 
     function startTracking() {
         if (!navigator.geolocation) {
-            alert('Geolocation is not supported by your browser');
+            showAlert('error', 'Geolocation is not supported by your browser');
             return false;
         }
 
@@ -770,14 +819,27 @@
                 riderPosition = { lat, lng };
                 updateRiderMarker(lat, lng);
                 sendLocationToServer(lat, lng);
+                showAlert('success', 'Location tracking started!');
             },
             function(error) {
                 console.error('Initial location error:', error);
+                let errorMsg = 'Location tracking failed.';
+                
+                if (error.code === error.PERMISSION_DENIED) {
+                    errorMsg = 'Location permission denied! Click the 🔒 lock icon in your address bar and enable location access.';
+                } else if (error.code === error.POSITION_UNAVAILABLE) {
+                    errorMsg = 'Location information unavailable. GPS may not be available.';
+                } else if (error.code === error.TIMEOUT) {
+                    errorMsg = 'Location request timed out. Please try again.';
+                }
+                
+                showAlert('error', errorMsg);
+                isTracking = false;
             },
             {
-                enableHighAccuracy: false,
+                enableHighAccuracy: true,
                 timeout: 10000,
-                maximumAge: 30000
+                maximumAge: 0
             }
         );
 
@@ -795,9 +857,9 @@
                 console.error('Geolocation watch error:', error);
             },
             {
-                enableHighAccuracy: false,
+                enableHighAccuracy: true,
                 timeout: 10000,
-                maximumAge: 30000
+                maximumAge: 0
             }
         );
 
@@ -849,6 +911,9 @@
             },
             function(error) {
                 console.warn('Initial geolocation unavailable:', error);
+                if (error.code === error.PERMISSION_DENIED) {
+                    showAlert('error', 'Location permission denied. Tap the 🔒 lock icon in your address bar to enable location access.');
+                }
             },
             {
                 enableHighAccuracy: true,
@@ -883,13 +948,13 @@
     }
 
     function focusOnTask(deliveryId, lat, lng) {
-        // Update active state
+        // Update active state in sidebar
         document.querySelectorAll('.task-card').forEach(card => {
             card.classList.remove('active');
         });
         document.getElementById(`task-${deliveryId}`).classList.add('active');
 
-        // Pan map to location
+        // Zoom to the selected delivery on the map (without removing other pins)
         if (routeMap && lat && lng) {
             routeMap.setView([lat, lng], 15, { animate: true });
         }
@@ -916,9 +981,9 @@
                         if (error.code === 1) {
                             errorMsg = 'Location permission denied - check browser settings';
                         } else if (error.code === 2) {
-                            errorMsg = 'Location unavailable - try again';
+                            errorMsg = 'Location unavailable - try again in a moment';
                         } else if (error.code === 3) {
-                            errorMsg = 'Location timeout - try again';
+                            errorMsg = 'Location request timed out - try again';
                         }
                         
                         showAlert('error', errorMsg);
@@ -929,9 +994,9 @@
                         }
                     },
                     {
-                        enableHighAccuracy: false,  // Don't require high accuracy which times out
-                        timeout: 10000,
-                        maximumAge: 30000  // Accept cached location up to 30 seconds old
+                        enableHighAccuracy: true,
+                        timeout: 8000,
+                        maximumAge: 0
                     }
                 );
             } else {
@@ -945,6 +1010,19 @@
 
     // Global variable to store current route line
     let currentRouteLine = null;
+
+    // Calculate distance between two coordinates using Haversine formula
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Earth's radius in km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = 
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
 
     function drawRoute(fromLat, fromLng, toLat, toLng) {
         console.log('drawRoute called:', fromLat, fromLng, 'to', toLat, toLng);
@@ -1029,28 +1107,177 @@
                     const duration = Math.round(route.duration / 60);
                     showAlert('success', `Route: ${distance}km, ~${duration} mins`);
                 } else {
-                    console.error('No route found in OSRM response');
-                    showAlert('error', 'Route unavailable, showing destination only');
-                    // Fallback: just center on destination
-                    if (routeMap && toLat && toLng) {
-                        routeMap.setView([toLat, toLng], 16, { animate: true });
-                    }
+                    console.error('No route found in OSRM response:', data);
+                    // Fallback: show direct distance instead
+                    showAlert('info', 'Showing direct path to destination');
+                    
+                    // Draw simple direct line from rider to destination
+                    const directLine = L.polyline([[fromLat, fromLng], [toLat, toLng]], {
+                        color: '#f39c12',
+                        weight: 5,
+                        opacity: 0.7,
+                        dashArray: '10,5',
+                        lineCap: 'round'
+                    }).addTo(routeMap);
+                    currentRouteLine = directLine;
+
+                    // Add rider marker
+                    const riderRouteMarker = L.circleMarker([fromLat, fromLng], {
+                        radius: 10,
+                        fillColor: '#27ae60',
+                        color: '#ffffff',
+                        weight: 3,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    }).addTo(routeMap);
+                    riderRouteMarker._isRouteMarker = true;
+                    riderRouteMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Your Location</b></div>');
+
+                    // Add destination marker
+                    const destMarker = L.circleMarker([toLat, toLng], {
+                        radius: 10,
+                        fillColor: '#e74c3c',
+                        color: '#ffffff',
+                        weight: 3,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    }).addTo(routeMap);
+                    destMarker._isRouteMarker = true;
+                    destMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Delivery Location</b></div>');
+
+                    // Calculate direct distance
+                    const directDistance = calculateDistance(fromLat, fromLng, toLat, toLng);
+                    
+                    // Fit bounds
+                    const bounds = L.latLngBounds([[fromLat, fromLng], [toLat, toLng]]);
+                    routeMap.fitBounds(bounds, { padding: [100, 100], maxZoom: 16 });
+
+                    // Show distance info
+                    showAlert('success', `Direct path: ${directDistance.toFixed(1)}km`);
                 }
             })
             .catch(error => {
                 console.error('Route request failed:', error);
-                showAlert('error', 'Route service error, showing destination');
-                // Fallback: just center on destination
-                if (routeMap && toLat && toLng) {
-                    routeMap.setView([toLat, toLng], 16, { animate: true });
-                }
+                // Fallback: show direct distance
+                showAlert('info', 'Showing direct path to destination');
+                
+                // Draw simple direct line
+                const directLine = L.polyline([[fromLat, fromLng], [toLat, toLng]], {
+                    color: '#f39c12',
+                    weight: 5,
+                    opacity: 0.7,
+                    dashArray: '10,5',
+                    lineCap: 'round'
+                }).addTo(routeMap);
+                currentRouteLine = directLine;
+
+                // Add markers
+                const riderMarker = L.circleMarker([fromLat, fromLng], {
+                    radius: 10,
+                    fillColor: '#27ae60',
+                    color: '#ffffff',
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).addTo(routeMap);
+                riderMarker._isRouteMarker = true;
+                riderMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Your Location</b></div>');
+
+                const destMarker = L.circleMarker([toLat, toLng], {
+                    radius: 10,
+                    fillColor: '#e74c3c',
+                    color: '#ffffff',
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).addTo(routeMap);
+                destMarker._isRouteMarker = true;
+                destMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Delivery Location</b></div>');
+
+                // Fit bounds
+                const bounds = L.latLngBounds([[fromLat, fromLng], [toLat, toLng]]);
+                routeMap.fitBounds(bounds, { padding: [100, 100], maxZoom: 16 });
+
+                // Calculate and show direct distance
+                const directDistance = calculateDistance(fromLat, fromLng, toLat, toLng);
+                showAlert('success', `Direct path: ${directDistance.toFixed(1)}km`);
             });
     }
 
+    let navigationControl = null;
+
     function navigateTo(lat, lng) {
-        // Open Google Maps navigation
-        const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
-        window.open(url, '_blank');
+        // Get rider's current position
+        if (!riderPosition) {
+            showAlert('error', 'Unable to get your current location. Please enable location services.');
+            return;
+        }
+
+        // Remove existing route control if present
+        if (navigationControl) {
+            routeMap.removeControl(navigationControl);
+        }
+
+        // Create new routing control with actual road-based route
+        navigationControl = L.Routing.control({
+            waypoints: [
+                L.latLng(riderPosition.latitude, riderPosition.longitude), // Rider's current position
+                L.latLng(lat, lng) // Destination
+            ],
+            routeWhileDragging: false,
+            showAlternatives: false,
+            lineOptions: {
+                styles: [
+                    { color: '#f7941d', opacity: 0.8, weight: 6 } // Orange route line
+                ]
+            },
+            altLineOptions: {
+                styles: [
+                    { color: 'gray', opacity: 0.5, weight: 3 }
+                ]
+            },
+            createMarker: function(i, wp) {
+                if (i === 0) {
+                    // Start marker (rider position)
+                    return L.marker(wp.latLng, {
+                        icon: L.icon({
+                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34]
+                        }),
+                        title: 'Your Location'
+                    });
+                } else {
+                    // End marker (destination)
+                    return L.marker(wp.latLng, {
+                        icon: L.icon({
+                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34]
+                        }),
+                        title: 'Delivery Address'
+                    });
+                }
+            }
+        }).addTo(routeMap);
+
+        // Fit map to show entire route
+        navigationControl.on('routesfound', function(e) {
+            const bounds = e.routes[0].getBounds();
+            routeMap.fitBounds(bounds, { padding: [50, 50] });
+            showAlert('success', 'Route calculated! Follow the orange line to the delivery address.');
+        });
+
+        navigationControl.on('routingerror', function() {
+            showAlert('error', 'Unable to calculate route. Please try again or open in Google Maps.');
+            // Fallback to Google Maps
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+            window.open(url, '_blank');
+        });
     }
 
     function markAsDelivered(deliveryId) {

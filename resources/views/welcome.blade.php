@@ -232,12 +232,12 @@
         <div class="row align-items-center">
             <div class="col-lg-6 hero-content" data-aos="fade-right" data-reveal="slide-up">
                 <h1 class="hero-title">{{ $homepageSettings->hero_title_prefix ?? 'Fast, Reliable' }} <span>{{ $homepageSettings->hero_title_highlight ?? 'LPG Delivery' }}</span> {{ $homepageSettings->hero_title_suffix ?? 'to Your Door' }}</h1>
-                <p class="hero-subtitle">{{ $homepageSettings->hero_subtitle ?? 'Fast, reliable LPG delivery right to your door. Earn loyalty rewards with every order.' }}</p>
+                <p class="hero-subtitle">{{ $homepageSettings->hero_subtitle ?? 'Fast, reliable LPG delivery right to your door. Earn loyalty & promos with every order.' }}</p>
                 <a href="{{ url('/customer/product') }}" class="btn btn-gasgo btn-lg">
                     <i class="fas fa-fire me-2"></i>{{ $homepageSettings->hero_primary_button_label ?? 'Browse Products' }}
                 </a>
                 <div class="hero-badges">
-                    <span class="hero-badge"><i class="fas fa-star"></i> Loyalty Rewards</span>
+                    <span class="hero-badge"><i class="fas fa-star"></i> Loyalty & Promos</span>
                     <span class="hero-badge"><i class="fas fa-bolt"></i> Fast Delivery</span>
                     <span class="hero-badge"><i class="fas fa-receipt"></i> Order Updates</span>
                 </div>
@@ -359,7 +359,7 @@
                 <div class="step-card">
                     <div class="step-icon purple"><i class="fas fa-hand-holding-heart"></i></div>
                     <h5 class="fw-bold">4. Receive</h5>
-                    <p class="text-muted">Get your LPG delivered and earn rewards</p>
+                    <p class="text-muted">Get your LPG delivered and earn loyalty & promos</p>
                 </div>
             </div>
         </div>
@@ -391,8 +391,8 @@
             <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="300">
                 <div class="why-card text-center">
                     <i class="fas fa-award" style="color:#27ae60;"></i>
-                    <h5 class="fw-bold mt-2">Rewards Program</h5>
-                    <p class="text-muted small">Earn loyalty points and redeem rewards</p>
+                    <h5 class="fw-bold mt-2">Loyalty & Promos Program</h5>
+                    <p class="text-muted small">Earn loyalty points and redeem loyalty & promos</p>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="400">
@@ -411,6 +411,7 @@
 <script>
 const cartStoreUrl = '{{ route("customer.cart.store") }}';
 const csrfToken = '{{ csrf_token() }}';
+const isAuthenticatedUser = {{ Auth::check() ? 'true' : 'false' }};
 
 // Give cards a light 3D tilt for a more interactive home screen.
 function applyTiltEffect() {
@@ -477,9 +478,7 @@ function addToCartWelcome(id, name, price, image) {
 
 // Buy Now from welcome page
 function buyNowWelcome(productId) {
-    const isAuthenticated = @json(Auth::check());
-    
-    if (!isAuthenticated) {
+    if (!isAuthenticatedUser) {
         window.location.href = "{{ url('/customer/loginRegistration?tab=register&redirect=checkout') }}";
         return;
     }

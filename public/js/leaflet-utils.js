@@ -274,13 +274,39 @@ async function fetchOSRMRoute(waypoints) {
  * @returns {L.Map} Leaflet map instance
  */
 function initLeafletMap(elementId, lat, lng, zoom = 13) {
-    const map = L.map(elementId).setView([lat, lng], zoom);
+    const element = document.getElementById(elementId);
+    
+    if (!element) {
+        console.error(`Map element with ID "${elementId}" not found`);
+        return null;
+    }
+    
+    const rect = element.getBoundingClientRect();
+    console.log(`Creating Leaflet map in element "${elementId}":`, {
+        width: rect.width,
+        height: rect.height,
+        offsetWidth: element.offsetWidth,
+        offsetHeight: element.offsetHeight
+    });
+    
+    // Ensure element has visible dimensions
+    if (element.offsetHeight === 0 || element.offsetWidth === 0) {
+        console.warn('Warning: Map element has zero dimensions');
+    }
+    
+    try {
+        const map = L.map(elementId).setView([lat, lng], zoom);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-        minZoom: 3
-    }).addTo(map);
-
-    return map;
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19,
+            minZoom: 3
+        }).addTo(map);
+        
+        console.log('Leaflet map created successfully');
+        return map;
+    } catch (error) {
+        console.error('Error creating Leaflet map:', error);
+        return null;
+    }
 }

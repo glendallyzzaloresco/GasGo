@@ -23,15 +23,7 @@ class RiderController extends Controller
             ->whereDate('delivered_at', today())
             ->count();
 
-        // Get available orders (approved but not yet assigned to any rider)
-        $availableOrders = \App\Models\Order::with('user', 'orderItems.product')
-            ->where('status', 'approved')
-            ->whereDoesntHave('delivery') // Orders without delivery records
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
-
-        return view('rider.dashboard', compact('activeDeliveries', 'completedCount', 'availableOrders'));
+        return view('rider.dashboard', compact('activeDeliveries', 'completedCount'));
     }
 
     // Rider: accept an available order
@@ -255,6 +247,19 @@ class RiderController extends Controller
             ->get();
 
         return view('rider.route-map', compact('activeDeliveries'));
+    }
+
+    // Rider: Full-screen turn-by-turn navigation
+    public function navigation(Delivery $delivery)
+    {
+        // Verify rider owns this delivery
+        if ($delivery->rider_id !== Auth::id()) {
+            abort(403, 'Unauthorized');
+        }
+
+        $delivery->load('order.user', 'order.orderItems.product');
+
+        return view('rider.navigation', compact('delivery'));
     }
 
     // Rider: get route waypoints as JSON (for map rendering)

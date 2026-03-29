@@ -179,10 +179,13 @@
         @else
             <div class="col-lg-8">
                 <div class="cart-card">
-                    <div style="padding:20px 24px 10px;border-bottom:1px solid #f0f0f0;">
+                    <div style="padding:20px 24px 10px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;">
                         <h5 class="fw-bold mb-0" style="color:var(--gasgo-blue);">
                             <i class="fas fa-box me-2"></i><span id="cart-items-count">Cart Items ({{ $cartItems->sum('quantity') }})</span>
                         </h5>
+                        <button id="select-all-btn" class="btn btn-sm" style="background:linear-gradient(135deg,var(--gasgo-orange),#ff6b35);color:white;border:none;border-radius:8px;padding:8px 16px;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.3s ease;">
+                            <i class="fas fa-check-square me-1"></i>Select All
+                        </button>
                     </div>
 
                     @foreach($cartItems as $item)
@@ -523,6 +526,50 @@ document.querySelectorAll('.item-checkbox').forEach(cb => {
 window.addEventListener('load', function() {
     initQuantityState();
     updateCartTotal();
+    
+    // Setup Select All button
+    const selectAllBtn = document.getElementById('select-all-btn');
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', function() {
+            const allCheckboxes = document.querySelectorAll('.item-checkbox');
+            const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+            
+            // Toggle all checkboxes
+            allCheckboxes.forEach(cb => {
+                cb.checked = !allChecked;
+            });
+            
+            // Update button text and appearance
+            updateSelectAllBtn();
+            
+            // Update cart total
+            updateCartTotal();
+        });
+        
+        // Update button state on checkbox changes
+        document.querySelectorAll('.item-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateSelectAllBtn);
+        });
+    }
 });
+
+function updateSelectAllBtn() {
+    const selectAllBtn = document.getElementById('select-all-btn');
+    if (!selectAllBtn) return;
+    
+    const allCheckboxes = document.querySelectorAll('.item-checkbox');
+    const checkedCheckboxes = document.querySelectorAll('.item-checkbox:checked');
+    const allChecked = allCheckboxes.length > 0 && checkedCheckboxes.length === allCheckboxes.length;
+    const someChecked = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
+    
+    // Update button text and icon
+    if (allChecked) {
+        selectAllBtn.innerHTML = '<i class="fas fa-times me-1"></i>Deselect All';
+    } else if (someChecked) {
+        selectAllBtn.innerHTML = '<i class="fas fa-square me-1"></i>Select All';
+    } else {
+        selectAllBtn.innerHTML = '<i class="fas fa-check-square me-1"></i>Select All';
+    }
+}
 </script>
 @endsection

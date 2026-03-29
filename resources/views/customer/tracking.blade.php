@@ -165,6 +165,20 @@
                         </span>
                     </div>
                 </div>
+
+                <!-- Location Permission Reminder -->
+                <div class="alert alert-info alert-dismissible fade show mb-3" id="locationPermissionAlert" role="alert" style="background: linear-gradient(135deg, #e8f4fc 0%, #d1ecf1 100%); border: 1px solid #0c5460; border-radius: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fas fa-map-marker-alt" style="font-size: 1.2rem; color: #0c5460;"></i>
+                        <div>
+                            <strong style="color: #0c5460;">Enable Location for Better Tracking</strong>
+                            <br>
+                            <small style="color: #0c5460; opacity: 0.9;">Click the <strong>🔒 lock icon</strong> in your browser address bar and select <strong>"Allow"</strong> to get real-time rider location updates.</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
                 <div class="map-container">
                     <div class="map-overlay" id="mapOverlay">
                         <i class="fas fa-map-marked-alt"></i>
@@ -398,8 +412,24 @@
 
     // Wait for Google Maps to load
     window.addEventListener('load', function() {
-        if (hasDeliveryCoords && deliveryInitLat && deliveryInitLng) {
+        // Initialize map with whatever coordinates we have
+        const hasCoords = (deliveryInitLat && deliveryInitLng);
+        
+        if (hasCoords) {
             initMap(deliveryInitLat, deliveryInitLng);
+        } else {
+            // Show message if no coordinates available yet
+            const msg = document.getElementById('mapMessage');
+            if (orderStatus === 'pending' || orderStatus === 'approved') {
+                msg.textContent = 'Rider location will appear once a rider is assigned';
+            } else {
+                msg.textContent = 'Waiting for rider location update...';
+            }
+        }
+        
+        // Start polling updates immediately if order is active
+        if (orderStatus !== 'delivered' && orderStatus !== 'cancelled') {
+            pollStatus();
         }
     });
 
@@ -522,14 +552,53 @@
             }
         }
 
-        // Update map
+        // Calculate and display distance
+        if (data.rider_lat && data.rider_lng && deliveryLat && deliveryLng) {
+            const distance = calculateDistance(
+                parseFloat(data.rider_lat),
+                parseFloat(data.rider_lng),
+                deliveryLat,
+                deliveryLng
+            );
+            
+            const distanceEl = document.getElementById('distanceIndicator');
+            if (distanceEl) {
+                distanceEl.style.display = 'inline-flex';
+                document.getElementById('distanceValue').textContent = distance.toFixed(1);
+            }
+        }
+
+        // Initialize map if not yet initialized (use first waypoint as center)
+        if (!map && data.waypoints && data.waypoints.length > 0) {
+            const firstWaypoint = data.waypoints[0];
+            const initLat = parseFloat(firstWaypoint.latitude) || deliveryInitLat;
+            const initLng = parseFloat(firstWaypoint.longitude) || deliveryInitLng;
+            if (initLat && initLng) {
+                initMap(initLat, initLng);
+            }
+        }
+
+        // Update map with rider position
         if (data.rider_lat && data.rider_lng) {
             updateRiderPosition(parseFloat(data.rider_lat), parseFloat(data.rider_lng));
         }
 
         // Render waypoints from rider's route
-        if (data.waypoints && Array.isArray(data.waypoints) && data.waypoints.length > 0 && map) {
-            renderWaypoints(data.waypoints, parseFloat(data.rider_lat), parseFloat(data.rider_lng));
+        if (data.waypoints && Array.isArray(data.waypoints) && data.waypoints.length > 0) {
+            // Initialize map with first waypoint if not already done
+            if (!map) {
+                const firstWaypoint = data.waypoints[0];
+                const initLat = parseFloat(firstWaypoint.latitude);
+                const initLng = parseFloat(firstWaypoint.longitude);
+                if (initLat && initLng) {
+                    initMap(initLat, initLng);
+                }
+            }
+            
+            // Show waypoints
+            if (map && data.rider_lat && data.rider_lng) {
+                renderWaypoints(data.waypoints, parseFloat(data.rider_lat), parseFloat(data.rider_lng));
+            }
         }
 
         // Update map overlay message
@@ -541,12 +610,18 @@
         } else if (data.status === 'cancelled') {
             overlay.classList.remove('hidden');
             msg.textContent = 'This order was cancelled';
-        } else if (!data.rider_lat && !data.rider_lng) {
+        } else if (!data.rider_lat || !data.rider_lng) {
             if (data.status === 'pending' || data.status === 'approved') {
                 msg.textContent = 'Rider location will appear once a rider is assigned';
+            } else if (data.waypoints && data.waypoints.length > 0) {
+                msg.textContent = ''; // Hide message if map is showing waypoints
+                overlay.classList.add('hidden');
             } else {
                 msg.textContent = 'Waiting for rider location update...';
             }
+        } else {
+            // Rider is available, hide overlay
+            overlay.classList.add('hidden');
         }
 
         // Update timeline if status changed
@@ -560,6 +635,19 @@
             const estEl = document.getElementById('estimatedTime');
             if (estEl) estEl.textContent = data.estimated_delivery;
         }
+    }
+
+    // Calculate distance between two coordinates using Haversine formula
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Earth's radius in km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = 
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 
     function renderWaypoints(waypoints, riderLat, riderLng) {
@@ -624,7 +712,7 @@
         }
     }
 
-    // Poll for updates every 10 seconds (only for active orders)
+    // Poll for updates (increased frequency to 5 seconds for live tracking)
     function pollStatus() {
         if (currentStatus === 'delivered' || currentStatus === 'cancelled') return;
 
@@ -633,17 +721,72 @@
         })
         .then(r => r.json())
         .then(data => {
-            if (!data.error) updateUI(data);
+            if (!data.error) {
+                updateUI(data);
+            }
         })
         .catch(() => {});
 
-        setTimeout(pollStatus, 10000);
+        // Poll every 5 seconds instead of 10 for better real-time tracking
+        setTimeout(pollStatus, 5000);
     }
 
-    // Start polling after initial page load
+    // Start polling immediately (not after delay) for live tracking
     if (currentStatus !== 'delivered' && currentStatus !== 'cancelled') {
-        setTimeout(pollStatus, 10000);
+        // First poll immediately
+        fetch(statusUrl, {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.error) {
+                updateUI(data);
+                // Then continue polling
+                setTimeout(pollStatus, 5000);
+            }
+        })
+        .catch(() => {
+            // If first poll fails, still start polling
+            setTimeout(pollStatus, 5000);
+        });
     }
+
+    // Check and request geolocation permission
+    function checkLocationPermission() {
+        if (!navigator.geolocation) {
+            return;
+        }
+
+        // Try to get current position to check permission status
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                // Permission granted, hide alert
+                const alert = document.getElementById('locationPermissionAlert');
+                if (alert) {
+                    alert.style.display = 'none';
+                }
+            },
+            function(error) {
+                // Permission denied or error
+                if (error.code === error.PERMISSION_DENIED || error.code === 1) {
+                    const alert = document.getElementById('locationPermissionAlert');
+                    if (alert) {
+                        // Keep alert visible if permission is denied
+                        alert.style.display = 'block';
+                    }
+                }
+            },
+            {
+                timeout: 5000,
+                maximumAge: 30000
+            }
+        );
+    }
+
+    // Check location permission after page loads
+    window.addEventListener('load', function() {
+        setTimeout(checkLocationPermission, 1000); // Check after 1 second
+    });
 })();
 </script>
 @endsection

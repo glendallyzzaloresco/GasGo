@@ -275,8 +275,67 @@
                     @endif
                 </div>
 
+                <!-- ===== AVAILABLE VOUCHERS SECTION ===== -->
+                @php
+                    $availableVouchers = $availableVouchers ?? collect();
+                @endphp
+                @if ($availableVouchers->count() > 0)
+                <div class="checkout-card">
+                    <h5><i class="fas fa-ticket-alt me-2" style="color: var(--gasgo-orange);"></i>Your Available Vouchers</h5>
+                    <p class="text-muted mb-3" style="font-size:.88rem;">
+                        Select a voucher to apply a discount to your order
+                    </p>
+
+                    <div id="vouchersContainer">
+                        @foreach ($availableVouchers as $voucher)
+                        <div class="voucher-item mb-3" data-voucher-id="{{ $voucher->id }}" data-discount="{{ $voucher->discount_amount }}" style="border: 2px solid #eee; border-radius: 14px; padding: 16px; transition: all 0.25s;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div style="font-weight: 800; color: var(--gasgo-orange); font-size: 1.8rem;">
+                                            ₱{{ (int) $voucher->discount_amount }}
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: 700; color: var(--gasgo-blue);">OFF Voucher</div>
+                                            <small style="color: #888; font-size: 0.8rem;">
+                                                Expires in <strong>{{ $voucher->isDaysUntilExpiry() }}</strong> day{{ $voucher->isDaysUntilExpiry() === 1 ? '' : 's' }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn voucher-apply-btn" 
+                                        style="background: var(--gasgo-orange); color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;"
+                                        onclick="applyVoucher('{{ $voucher->id }}', '{{ $voucher->discount_amount }}')">
+                                    <i class="fas fa-check-circle me-1"></i>Apply Voucher
+                                </button>
+                            </div>
+                            <div id="appliedBadge-{{ $voucher->id }}" style="display: none; color: #27ae60; font-size: 0.8rem; font-weight: 600; margin-top: 10px;">
+                                <i class="fas fa-check-circle me-1"></i>✓ Applied
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+
+                    <input type="hidden" name="voucher_id" id="voucherId" value="">
+                </div>
+                @endif
+
+                <!-- ===== FREEBIE SECTION ===== -->
                 @if ($smallRewardCount > 0)
-                    <div class="checkout-card">
+                    <!-- Freebie Warning (shown when voucher is applied) -->
+                    <div id="freebieDisabledNote" style="display: none; background: rgba(247, 148, 29, 0.1); border-left: 4px solid var(--gasgo-orange); padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+                        <div style="display: flex; gap: 12px; align-items: flex-start;">
+                            <i class="fas fa-info-circle" style="color: var(--gasgo-orange); margin-top: 2px; flex-shrink: 0;"></i>
+                            <div>
+                                <strong style="color: var(--gasgo-blue); display: block; margin-bottom: 4px;">Freebies Not Available</strong>
+                                <p style="margin: 0; font-size: 0.9rem; color: #666;">
+                                    Freebies cannot be combined with vouchers. Your voucher discount will be applied to the order total instead.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="freebiesSection" class="checkout-card">
                         <h5><i class="fas fa-gift"></i>Select Your Freebie</h5>
                         <p class="text-muted mb-3" style="font-size:.88rem;">
                             You can choose <strong>1 freebie item</strong> from below at no extra cost!
@@ -350,6 +409,13 @@
                     </div>
                     @endforeach
                     <div class="summary-item mt-3"><span>Subtotal</span><span id="summarySubtotal">₱{{ number_format($subtotal, 2) }}</span></div>
+                    
+                    <!-- NEW: Voucher Discount Line Item (shown conditionally) -->
+                    <div id="discountSummaryRow" class="summary-item" style="display: none; color: #27ae60;">
+                        <span><i class="fas fa-tag me-1" style="color:var(--gasgo-orange);"></i>Voucher Discount</span>
+                        <span id="discountAmount" style="font-weight: 700; color: #27ae60; font-size: 1rem;">-₱0.00</span>
+                    </div>
+                    
                     <div class="summary-item total"><span>Total</span><span class="val" id="summaryTotal">₱{{ number_format($subtotal, 2) }}</span></div>
                     
                     <input type="hidden" id="selectedCartIds" name="selected_cart_ids" value="">
@@ -872,6 +938,157 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
         return true;
+    });
+
+    // ===== VOUCHER & FREEBIE MANAGEMENT =====
+    let selectedVoucherId = null;
+    let selectedVoucherDiscount = 0;
+    const originalSubtotal = parseFloat(document.getElementById('summarySubtotal').textContent.replace('₱', '').replace(/,/g, ''));
+
+    window.applyVoucher = function(voucherId, discountAmount) {
+        // Convert string parameters to numbers
+        voucherId = parseInt(voucherId);
+        discountAmount = parseFloat(discountAmount);
+        
+        const vouchersContainer = document.getElementById('vouchersContainer');
+        
+        // If this voucher is already applied, remove it
+        if (selectedVoucherId === voucherId) {
+            removeVoucher();
+            return;
+        }
+        
+        // Clear previously applied voucher UI
+        document.querySelectorAll('.voucher-item').forEach(item => {
+            const vid = item.dataset.voucherId;
+            const badge = document.getElementById('appliedBadge-' + vid);
+            const btn = item.querySelector('.voucher-apply-btn');
+            if (badge) badge.style.display = 'none';
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Apply Voucher';
+                btn.style.background = 'var(--gasgo-orange)';
+            }
+        });
+        
+        // Set this voucher as selected
+        selectedVoucherId = voucherId;
+        selectedVoucherDiscount = discountAmount;
+        
+        // Update form field
+        document.getElementById('voucherId').value = voucherId;
+        
+        // Update UI for this voucher
+        const voucherItem = document.querySelector(`[data-voucher-id="${voucherId}"]`);
+        if (voucherItem) {
+            const badge = document.getElementById('appliedBadge-' + voucherId);
+            const btn = voucherItem.querySelector('.voucher-apply-btn');
+            
+            if (badge) badge.style.display = 'block';
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-times-circle me-1"></i>Remove';
+                btn.style.background = '#e74c3c';
+            }
+        }
+        
+        // Hide freebies section
+        hideFreebiesSection();
+        
+        // Update order summary with discount
+        updateOrderSummaryWithDiscount(discountAmount);
+        
+        // Clear selected freebie
+        clearSelectedFreebie();
+        
+        console.log('Voucher applied: ID=' + voucherId + ', Discount=₱' + discountAmount);
+    };
+
+    window.removeVoucher = function() {
+        selectedVoucherId = null;
+        selectedVoucherDiscount = 0;
+        
+        // Clear form field
+        document.getElementById('voucherId').value = '';
+        
+        // Reset all voucher buttons
+        document.querySelectorAll('.voucher-item').forEach(item => {
+            const vid = item.dataset.voucherId;
+            const badge = document.getElementById('appliedBadge-' + vid);
+            const btn = item.querySelector('.voucher-apply-btn');
+            if (badge) badge.style.display = 'none';
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Apply Voucher';
+                btn.style.background = 'var(--gasgo-orange)';
+            }
+        });
+        
+        // Show freebies section again
+        showFreebiesSection();
+        
+        // Remove discount from order summary
+        updateOrderSummaryWithDiscount(0);
+        
+        console.log('Voucher removed');
+    };
+
+    function hideFreebiesSection() {
+        const freebiesSection = document.getElementById('freebiesSection');
+        const disabledNote = document.getElementById('freebieDisabledNote');
+        
+        if (freebiesSection) freebiesSection.style.display = 'none';
+        if (disabledNote) disabledNote.style.display = 'block';
+    }
+
+    function showFreebiesSection() {
+        const freebiesSection = document.getElementById('freebiesSection');
+        const disabledNote = document.getElementById('freebieDisabledNote');
+        
+        if (freebiesSection) freebiesSection.style.display = 'block';
+        if (disabledNote) disabledNote.style.display = 'none';
+    }
+
+    function clearSelectedFreebie() {
+        document.querySelectorAll('.freebie-option').forEach(option => {
+            option.classList.remove('selected');
+            const radio = option.querySelector('input[type="radio"]');
+            if (radio) radio.checked = false;
+        });
+        const inputField = document.querySelector('input[name="selected_freebie_id"]');
+        if (inputField) inputField.value = '';
+    }
+
+    function updateOrderSummaryWithDiscount(discountAmount) {
+        const subtotalText = document.getElementById('summarySubtotal').textContent;
+        const subtotal = parseFloat(subtotalText.replace('₱', '').replace(/,/g, ''));
+        
+        const total = subtotal - discountAmount;
+        
+        const discountRow = document.getElementById('discountSummaryRow');
+        
+        if (discountAmount > 0) {
+            // Show discount row
+            if (discountRow) discountRow.style.display = 'flex';
+            document.getElementById('discountAmount').textContent = '-₱' + discountAmount.toFixed(2);
+        } else {
+            // Hide discount row
+            if (discountRow) discountRow.style.display = 'none';
+        }
+        
+        // Update total
+        document.getElementById('summaryTotal').textContent = '₱' + total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    // Prevent freebie selection when voucher is applied
+    document.querySelectorAll('.freebie-option').forEach(option => {
+        const radio = option.querySelector('input[type="radio"]');
+        if (radio) {
+            radio.addEventListener('change', function() {
+                if (selectedVoucherId !== null) {
+                    alert('Please remove the applied voucher first to select a freebie.');
+                    this.checked = false;
+                    option.classList.remove('selected');
+                }
+            });
+        }
     });
 });
 </script>

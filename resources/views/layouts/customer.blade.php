@@ -852,7 +852,7 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link nav-link-gasgo @yield('nav-loyalty')" href="{{ url('/customer/loyaltyRewards') }}">
-                            <i class="fas fa-gift"></i>Rewards
+                            <i class="fas fa-gift"></i>Loyalty & Promos
                         </a>
                     </li>
                     <li class="nav-item">
@@ -916,7 +916,7 @@
                 <div class="col-lg-4 col-md-3">
                     <img src="{{ $homepageSettings->footer_logo_url }}" alt="{{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }}" class="footer-logo">
                     <p class="footer-desc">
-                        {{ $homepageSettings->footer_description ?? 'Your trusted partner for fast, reliable LPG delivery. Track your orders in real-time and earn rewards with every purchase.' }}
+                        {{ $homepageSettings->footer_description ?? 'Your trusted partner for fast, reliable LPG delivery. Track your orders in real-time and earn loyalty & promos with every purchase.' }}
                     </p>
                     <div class="social-links">
                         <a href="#"><i class="fab fa-facebook-f"></i></a>
@@ -931,7 +931,7 @@
                     <ul class="footer-links">
                         <li><a href="{{ url('/') }}"><i class="fas fa-chevron-right"></i>Home</a></li>
                         <li><a href="{{ url('/customer/product') }}"><i class="fas fa-chevron-right"></i>Products</a></li>
-                        <li><a href="{{ url('/customer/loyaltyRewards') }}"><i class="fas fa-chevron-right"></i>Rewards</a></li>
+                        <li><a href="{{ url('/customer/loyaltyRewards') }}"><i class="fas fa-chevron-right"></i>Loyalty & Promos</a></li>
                         @auth
                             <li><a href="{{ url('/customer/orderHistory') }}"><i class="fas fa-chevron-right"></i>My Orders</a></li>
                         @else

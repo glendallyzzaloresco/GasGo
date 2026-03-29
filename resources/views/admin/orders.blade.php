@@ -163,23 +163,6 @@
                                     {{ $order->delivery->rider->name ?? 'Rider' }}
                                 </span>
                             @elseif($order->status === 'delivered')
-                                <div class="d-flex gap-1 align-items-center flex-wrap">
-                                    @if($order->delivery && !$order->delivery->tankReturn)
-                                        <button class="btn btn-sm btn-success btn-create-return" 
-                                            data-delivery-id="{{ $order->delivery->id }}" 
-                                            data-item-count="{{ $order->orderItems()->count() }}"
-                                            title="Create Tank Return">
-                                            <i class="fas fa-undo me-1"></i>Return
-                                        </button>
-                                    @elseif($order->delivery && $order->delivery->tankReturn)
-                                        <a href="{{ route('admin.returns.show', $order->delivery->tankReturn->id) }}" 
-                                            class="btn btn-sm btn-info" title="View Tank Return">
-                                            <i class="fas fa-eye me-1"></i>Return
-                                        </a>
-                                    @else
-                                        <span class="text-muted" style="font-size:.82rem;"><i class="fas fa-check-circle text-success me-1"></i>Done</span>
-                                    @endif
-                                </div>
                             @elseif($order->status === 'cancelled')
                                 <span class="text-muted" style="font-size:.82rem;">Cancelled</span>
                             @endif
