@@ -17,15 +17,21 @@ class LoyaltyController extends Controller
         $userId = Auth::id();
         $isGuest = !$userId;
 
+        // Get all active vouchers from database sorted by unlock points (for both guests and logged-in users)
+        $allVouchers = \App\Models\Voucher::where('is_active', true)
+            ->orderBy('reward_points_required', 'asc')
+            ->get();
+
         $points = collect();
         $totalEarned = 0;
         $totalRedeemed = 0;
         $balance = 0;
         $completedOrders = 0;
         $availableVouchers = collect();
+        $unlockedVouchers = collect();
         $pointsToNextReward = 0;
         $nextMilestone = 10;      // Default first tier
-        $nextReward = 30;         // Default first tier reward
+        $nextReward = $allVouchers->first()?->discount_amount ?? 30; // Get from first voucher or default to 30
 
         if ($userId) {
             // Real data for logged-in users
@@ -45,30 +51,27 @@ class LoyaltyController extends Controller
             // Get balance after sync
             [$totalEarned, $totalRedeemed, $balance] = $this->getBalance($userId);
 
-            // DETERMINE NEXT MILESTONE based on delivered orders
+            // DETERMINE NEXT MILESTONE based on delivered orders and database vouchers
             $nextTarget = 10;      // Default to first tier
-            $nextRewardAmount = 30; // ₱30 OFF
-            
-            if ($completedOrders >= 30) {
-                // All rewards unlocked
-                $nextTarget = 30;
-                $nextRewardAmount = 0;
-                $pointsToNextReward = 0;
-            } else if ($completedOrders >= 20) {
-                // Tier 3: ₱100 OFF at 30 orders
-                $nextTarget = 30;
-                $nextRewardAmount = 100;
-                $pointsToNextReward = max(0, $nextTarget - $completedOrders);
-            } else if ($completedOrders >= 10) {
-                // Tier 2: ₱50 OFF at 20 orders
-                $nextTarget = 20;
-                $nextRewardAmount = 50;
-                $pointsToNextReward = max(0, $nextTarget - $completedOrders);
-            } else {
-                // Tier 1: ₱30 OFF at 10 orders
-                $nextTarget = 10;
-                $nextRewardAmount = 30;
-                $pointsToNextReward = max(0, $nextTarget - $completedOrders);
+            $nextRewardAmount = 0; // Default
+            $nextVoucher = $allVouchers->first(); // Get the first (easiest) voucher as default
+
+            if ($allVouchers->count() > 0 && $completedOrders < $allVouchers->last()->reward_points_required) {
+                // Find the next voucher the customer will unlock
+                $nextVoucher = $allVouchers->first(function ($voucher) use ($completedOrders) {
+                    return $voucher->reward_points_required > $completedOrders;
+                });
+
+                if ($nextVoucher) {
+                    $nextTarget = $nextVoucher->reward_points_required;
+                    $nextRewardAmount = $nextVoucher->discount_amount;
+                    $pointsToNextReward = max(0, $nextTarget - $completedOrders);
+                } else {
+                    // All vouchers unlocked
+                    $nextTarget = $allVouchers->last()->reward_points_required;
+                    $nextRewardAmount = 0;
+                    $pointsToNextReward = 0;
+                }
             }
 
             // Pass milestone data to view
@@ -81,6 +84,12 @@ class LoyaltyController extends Controller
                 ->where('expires_at', '>', now())
                 ->orderBy('expires_at', 'asc')
                 ->get();
+
+            // Mark which vouchers are unlocked based on completed orders
+            $unlockedVouchers = $allVouchers->map(function ($voucher) use ($completedOrders) {
+                $voucher->isUnlocked = $completedOrders >= $voucher->reward_points_required;
+                return $voucher;
+            });
         }
 
         // Marketing data for both guest and logged-in users
@@ -120,19 +129,26 @@ class LoyaltyController extends Controller
 
         // Different rewards display for guests (voucher ladder) vs logged-in users (earned rewards)
         if ($isGuest) {
-            // Guest view: Marketing voucher ladder/preview
-            $rewards = [
-                ['tier' => 'Bronze', 'title' => '₱30 OFF Voucher', 'requirement' => '10 delivered orders within 12 months', 'icon' => 'fas fa-tag', 'color' => 'bronze'],
-                ['tier' => 'Silver', 'title' => '₱50 OFF Voucher', 'requirement' => '20 delivered orders within 12 months', 'icon' => 'fas fa-tag', 'color' => 'silver'],
-                ['tier' => 'Gold', 'title' => '₱100 OFF Voucher', 'requirement' => '30 delivered orders within 12 months', 'icon' => 'fas fa-crown', 'color' => 'gold'],
-            ];
+            // Guest view: Marketing voucher ladder/preview - use database vouchers
+            $rewards = $allVouchers->map(function ($voucher, $index) {
+                return [
+                    'tier' => ['Bronze', 'Silver', 'Gold', 'Platinum'][$index] ?? 'Tier ' . ($index + 1),
+                    'title' => $voucher->name,
+                    'requirement' => $voucher->reward_points_required . ' delivered orders within 12 months',
+                    'icon' => 'fas fa-tag',
+                    'color' => ['bronze', 'silver', 'gold', 'platinum'][$index] ?? 'default',
+                ];
+            })->values()->toArray();
         } else {
-            // Logged-in view: Personal earned/achievable rewards
-            $rewards = [
-                ['title' => '₱30 OFF Voucher', 'requirement' => '10 delivered orders', 'icon' => 'fas fa-tag', 'earned' => $completedOrders >= 10],
-                ['title' => '₱50 OFF Voucher', 'requirement' => '20 delivered orders', 'icon' => 'fas fa-tag', 'earned' => $completedOrders >= 20],
-                ['title' => '₱100 OFF Voucher', 'requirement' => '30 delivered orders', 'icon' => 'fas fa-crown', 'earned' => $completedOrders >= 30],
-            ];
+            // Logged-in view: Personal earned/achievable rewards - use database vouchers
+            $rewards = $allVouchers->map(function ($voucher) use ($completedOrders) {
+                return [
+                    'title' => $voucher->name,
+                    'requirement' => $voucher->reward_points_required . ' delivered orders',
+                    'icon' => 'fas fa-tag',
+                    'earned' => $completedOrders >= $voucher->reward_points_required,
+                ];
+            })->toArray();
         }
 
         $faqs = [
@@ -161,6 +177,7 @@ class LoyaltyController extends Controller
             'balance',
             'completedOrders',
             'availableVouchers',
+            'unlockedVouchers',
             'pointsToNextReward',
             'nextMilestone',
             'nextReward',
@@ -232,12 +249,19 @@ class LoyaltyController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        $rewards = Freebie::query()
-            ->where('redemption_type', 'loyalty_points')
-            ->orderBy('created_at', 'desc')
+        // Customer redeemable vouchers - sorted by unlock points (easiest to hardest)
+        $vouchers = \App\Models\Voucher::query()
+            ->where('is_active', true)
+            ->orderBy('reward_points_required', 'asc')
             ->get();
 
-        return view('admin.rewards', compact('transactions', 'rewards'));
+        // Calculate loyalty statistics
+        $loyaltyMembers = count($transactions->pluck('user_id')->unique());
+        $totalPointsEarned = $transactions->where('type', 'earned')->sum('points');
+        $totalPointsRedeemed = $transactions->where('type', 'redeemed')->sum('points');
+        $activePoints = $totalPointsEarned - $totalPointsRedeemed;
+
+        return view('admin.rewards', compact('transactions', 'vouchers', 'loyaltyMembers', 'totalPointsEarned', 'totalPointsRedeemed', 'activePoints'));
     }
 
     // Admin: create reward

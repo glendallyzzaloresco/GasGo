@@ -46,10 +46,17 @@
         border-color: var(--gasgo-orange);
         background: var(--gasgo-orange-light);
     }
+    .freebie-option:has(input:disabled):hover {
+        border-color: #eee;
+        background: transparent;
+    }
     .freebie-option input[type="radio"] {
         position: absolute;
         top: 12px;
         right: 12px;
+    }
+    .freebie-option input[type="radio"]:disabled {
+        cursor: not-allowed;
     }
     .freebie-option.selected {
         border-color: var(--gasgo-orange);
@@ -75,6 +82,7 @@
     .summary-item.total .val { color: var(--gasgo-orange); }
     .order-item-mini { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f8f8f8; align-items: center; }
     .order-item-mini input[type="checkbox"] { margin-top: 0; cursor: pointer; }
+    .cart-item-indicator { flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
     .order-item-mini img { width: 46px; height: 46px; border-radius: 8px; object-fit: contain; background: #fff; }
     .order-item-mini .name { font-weight: 600; font-size: .85rem; color: #333; }
     .order-item-mini .qty { font-size: .78rem; color: #888; }
@@ -185,14 +193,17 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Complete Address</label>
-                            <textarea class="form-control form-control-gasgo" name="delivery_address" rows="3" placeholder="House/Unit No., Street, Barangay, City/Municipality" required>{{ old('delivery_address', Auth::user()->address) }}</textarea>
+                            <textarea class="form-control form-control-gasgo" name="delivery_address" rows="3" placeholder="House/Unit No., Street, Barangay, City/Municipality" required>{{ trim(old('delivery_address', Auth::user()->address ?? '')) }}</textarea>
+                            <small class="text-muted d-block mt-1">
+                                <i class="fas fa-info-circle me-1"></i>This address from your profile will appear. You can modify it for this order.
+                            </small>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Delivery Notes (optional)</label>
                             <input type="text" class="form-control form-control-gasgo" name="notes" value="{{ old('notes') }}" placeholder="Landmark, gate color, etc.">
                         </div>
                         <div class="col-12 mt-2">
-                            <label class="form-label"><i class="fas fa-map me-1" style="color:var(--gasgo-orange)"></i>Pin Your Location</label>
+                            <label class="form-label"><i class="fas fa-map me-1" style="color:var(--gasgo-orange)"></i>Pin Your Location <span style="color: #999; font-weight: normal;">(Optional)</span></label>
                             <div class="map-search-wrap">
                                 <input type="text" id="mapSearch" placeholder="Search address or place..." autocomplete="off">
                                 <button type="button" class="search-btn" id="mapSearchBtn" onclick="searchAddress()"><i class="fas fa-search" id="mapSearchBtnIcon"></i></button>
@@ -200,7 +211,7 @@
                             </div>
                             <div id="checkoutMap"></div>
                             <div class="d-flex justify-content-between align-items-center" style="margin-top: 12px;">
-                                <p class="map-hint mb-0"><i class="fas fa-info-circle me-1"></i>Click on the map or drag the pin to set your exact delivery location</p>
+                                <p class="map-hint mb-0"><i class="fas fa-info-circle me-1"></i>Click on the map or drag the pin to set your exact delivery location (optional)</p>
                                 <button type="button" class="btn btn-sm mt-1" style="background:var(--gasgo-blue);color:white;border-radius:8px;font-size:.78rem;" onclick="useMyLocation()"><i class="fas fa-crosshairs me-1"></i>Use My Location</button>
                             </div>
                             <input type="hidden" name="latitude" id="latitude" value="{{ old('latitude') }}">
@@ -236,6 +247,7 @@
                     <input type="hidden" name="payment_method" id="paymentMethod" value="cash">
 
                     <!-- GCash Account Details (shown when GCash is selected) -->
+
                     <div id="gcashDetails" style="display:none; margin-top:20px; padding:16px; background:#e7fff0; border-radius:12px; border-left:4px solid #007dfe;">
                         <h6 class="fw-bold mb-2" style="color:#007dfe;"><i class="fas fa-info-circle me-2"></i>GCash Account Details</h6>
                         @if($homepageSettings->gcash_account_number && $homepageSettings->gcash_account_name)
@@ -273,6 +285,25 @@
                             </div>
                         </div>
                     @endif
+                </div>
+
+                <!-- Urgent Order Option -->
+                <div class="checkout-card" style="background: linear-gradient(135deg, rgba(247, 148, 29, 0.05) 0%, rgba(33, 150, 243, 0.05) 100%); border: 2px solid #f0f0f0;">
+                    <h5><i class="fas fa-bolt" style="color: var(--gasgo-orange);"></i>Delivery Options</h5>
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 16px; background: white; border-radius: 12px; border: 1px solid #eee;">
+                        <input 
+                            type="checkbox" 
+                            id="isUrgent" 
+                            name="is_urgent" 
+                            class="form-check-input" 
+                            style="width: 24px; height: 24px; cursor: pointer; accent-color: var(--gasgo-orange);"
+                            value="1"
+                        >
+                        <div style="flex: 1;">
+                            <label for="isUrgent" style="cursor: pointer; margin: 0; font-weight: 600; color: #333; display: block;">Mark Order as Urgent <i class="fas fa-rocket" style="color: var(--gasgo-orange); margin-left: 8px;"></i></label>
+                            <small style="color: #666; display: block; margin-top: 4px;">Prioritize your delivery for faster service</small>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ===== AVAILABLE VOUCHERS SECTION ===== -->
@@ -321,7 +352,7 @@
                 @endif
 
                 <!-- ===== FREEBIE SECTION ===== -->
-                @if ($smallRewardCount > 0)
+                @if ($availableFreebies->isNotEmpty())
                     <!-- Freebie Warning (shown when voucher is applied) -->
                     <div id="freebieDisabledNote" style="display: none; background: rgba(247, 148, 29, 0.1); border-left: 4px solid var(--gasgo-orange); padding: 16px; border-radius: 8px; margin-bottom: 24px;">
                         <div style="display: flex; gap: 12px; align-items: flex-start;">
@@ -340,6 +371,13 @@
                         <p class="text-muted mb-3" style="font-size:.88rem;">
                             You can choose <strong>1 freebie item</strong> from below at no extra cost!
                         </p>
+                        
+                        <!-- Freebie requirement hint -->
+                        @if ($lockedFreebies->isNotEmpty())
+                            <div style="background: rgba(0,123,254,0.08); border-left: 4px solid #007dfe; padding: 10px 12px; border-radius: 8px; margin-bottom: 16px;">
+                                <small style="color: #007dfe; display: block;"><i class="fas fa-info-circle me-1"></i>Some freebies require a minimum number of items ordered. Add more items to unlock them!</small>
+                            </div>
+                        @endif
 
                         @if ($errors->has('selected_freebie_id'))
                             <div class="alert alert-danger py-2 px-3" style="font-size:.85rem;">
@@ -356,14 +394,25 @@
                                 @foreach ($freebieChoices as $freebie)
                                     @php
                                         $freebieImageUrl = $resolveImageUrl($freebie->image);
+                                        $pointsRequired = $freebie->reward_points_required ?? 0;
+                                        $isUnlocked = $pointsRequired <= $totalCheckoutItems;
+                                        $itemsNeeded = $pointsRequired - $totalCheckoutItems;
                                     @endphp
                                     <div class="col-lg-4 col-md-6">
-                                        <label class="freebie-option {{ (string) old('selected_freebie_id') === (string) $freebie->id ? 'selected' : '' }}">
+                                        <label class="freebie-option {{ (string) old('selected_freebie_id') === (string) $freebie->id ? 'selected' : '' }}" style="{{ !$isUnlocked ? 'opacity: 0.6; cursor: not-allowed; position: relative;' : '' }}">
+                                            @if(!$isUnlocked)
+                                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.05); border-radius: 10px; z-index: 1; display: flex; align-items: center; justify-content: center;">
+                                                    <div style="background: rgba(0,0,0,0.8); color: white; padding: 8px 12px; border-radius: 6px; font-size: 0.75rem; text-align: center; font-weight: 600;">
+                                                        <i class="fas fa-lock me-1"></i>Need {{ $itemsNeeded }} more item{{ $itemsNeeded !== 1 ? 's' : '' }}
+                                                    </div>
+                                                </div>
+                                            @endif
                                             <input
                                                 type="radio"
                                                 name="selected_freebie_id"
                                                 value="{{ $freebie->id }}"
                                                 {{ (string) old('selected_freebie_id') === (string) $freebie->id ? 'checked' : '' }}
+                                                {{ !$isUnlocked ? 'disabled' : '' }}
                                             >
                                             @if($freebieImageUrl)
                                                 <div class="freebie-image-wrapper">
@@ -372,7 +421,20 @@
                                             @endif
                                             <div class="freebie-title">{{ $freebie->name }}</div>
                                             <div class="freebie-desc">{{ $freebie->description ?: 'Complimentary reward item' }}</div>
-                                            <div class="freebie-stock">{{ $freebie->stock }} available</div>
+                                            <div class="freebie-stock">
+                                                {{ $freebie->stock }} available
+                                                @if($pointsRequired > 0)
+                                                    <br>
+                                                    <small style="color: #f79429; font-weight: 600;">
+                                                        <i class="fas fa-star me-1"></i>Requires {{ $pointsRequired }} item{{ $pointsRequired !== 1 ? 's' : '' }}
+                                                    </small>
+                                                @else
+                                                    <br>
+                                                    <small style="color: #27ae60; font-weight: 600;">
+                                                        <i class="fas fa-check-circle me-1"></i>Free to claim anytime
+                                                    </small>
+                                                @endif
+                                            </div>
                                         </label>
                                     </div>
                                 @endforeach
@@ -388,14 +450,23 @@
                     <h5><i class="fas fa-receipt me-2"></i>Order Summary</h5>
                     <p class="text-muted" style="font-size:.85rem; margin-bottom:12px;">Select items to include in your order:</p>
                     @foreach ($cartItems as $item)
-                    <div class="order-item-mini" data-cart-id="{{ $item->id }}" data-price="{{ $item->product->price * $item->quantity }}">
+                    <div class="order-item-mini" data-cart-id="{{ $item->id }}" data-price="{{ $item->product->price * $item->quantity }}" data-is-buy-now="false">
                         <input 
                             type="checkbox" 
                             class="cart-item-checkbox" 
                             value="{{ $item->id }}" 
-                            checked
                             data-price="{{ $item->product->price * $item->quantity }}"
+                            style="display: none;"
                         >
+                        <div class="cart-item-indicator" style="display: flex; align-items: center; justify-content: center; width: 20px; height: 20px;">
+                            <input 
+                                type="checkbox" 
+                                class="cart-item-checkbox-visual" 
+                                value="{{ $item->id }}" 
+                                data-price="{{ $item->product->price * $item->quantity }}"
+                                style="cursor: pointer; width: 18px; height: 18px;"
+                            >
+                        </div>
                         @if($item->product->resolved_image)
                             <img src="{{ $item->product->resolved_image }}" alt="{{ $item->product->name }}">
                         @else
@@ -799,9 +870,11 @@ function initMap() {
         const lng = parseFloat(existingLng);
         map.setView([lat, lng], 16);
         marker.setLatLng([lat, lng]);
-        reverseGeocode(lat, lng, 16);
+        // Don't call reverseGeocode here to preserve address field
     } else {
-        reverseGeocode(defaultLat, defaultLng, 14);
+        // On initial load, just set default view without modifying address
+        map.setView([defaultLat, defaultLng], 14);
+        marker.setLatLng([defaultLat, defaultLng]);
     }
 }
 
@@ -837,8 +910,84 @@ function resetPinnedLocation() {
     document.getElementById('addressFull').value = '';
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+// Geocode customer's default address when page loads
+async function geocodeDefaultAddress() {
+    const deliveryAddress = document.querySelector('[name="delivery_address"]').value.trim();
+    
+    console.log('Geocoding address:', deliveryAddress);
+    
+    // If latitude/longitude already exist (from previous submission), skip auto-geocoding
+    const hasStoredCoordinates = document.getElementById('latitude').value && document.getElementById('longitude').value;
+    if (hasStoredCoordinates || !deliveryAddress) {
+        console.log('Skipping geocode - stored coords:', hasStoredCoordinates, 'address:', deliveryAddress);
+        return;
+    }
+
+    try {
+        // Build search queries for the address (includes variations and context)
+        const variants = buildSearchQueries(deliveryAddress);
+        console.log('Search variants:', variants);
+        
+        const settled = await Promise.allSettled(variants.map(fetchSearchCandidates));
+        const merged = [];
+
+        settled.forEach(item => {
+            if (item.status === 'fulfilled' && Array.isArray(item.value)) {
+                merged.push(...item.value);
+            }
+        });
+
+        console.log('Merged results count:', merged.length);
+        
+        if (merged.length === 0) {
+            console.log('No results found');
+            return;
+        }
+
+        // Rank results
+        const unique = [];
+        const seen = new Set();
+        merged.forEach(item => {
+            const key = item.place_id || item.display_name;
+            if (!seen.has(key)) {
+                seen.add(key);
+                unique.push(item);
+            }
+        });
+
+        const ranked = unique.sort((a, b) => scoreResult(b, deliveryAddress) - scoreResult(a, deliveryAddress));
+        console.log('Top result:', ranked[0]);
+        
+        if (ranked.length > 0) {
+            const result = ranked[0];
+            const lat = parseFloat(result.lat);
+            const lng = parseFloat(result.lon);
+            
+            console.log('Positioning map to:', lat, lng);
+            
+            // Position map at the address
+            map.setView([lat, lng], 17);
+            marker.setLatLng([lat, lng]);
+            
+            // Set hidden coordinate fields
+            document.getElementById('latitude').value = lat.toFixed(7);
+            document.getElementById('longitude').value = lng.toFixed(7);
+            document.getElementById('addressFull').value = result.display_name || '';
+            
+            console.log('Map positioned successfully');
+        }
+    } catch (error) {
+        console.error('Auto-geocode error:', error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async function () {
     initMap();
+    
+    // Wait a bit for map to fully render, then geocode customer's default address
+    setTimeout(() => {
+        geocodeDefaultAddress();
+    }, 500);
 
     const searchInput = document.getElementById('mapSearch');
     searchInput.addEventListener('input', function () {
@@ -895,6 +1044,39 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.cart-item-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', updateSelectedItems);
     });
+
+    // Sync visual checkboxes with hidden checkboxes
+    document.querySelectorAll('.cart-item-checkbox-visual').forEach(visualCheckbox => {
+        visualCheckbox.addEventListener('change', function() {
+            const cartItem = this.closest('.order-item-mini');
+            const hiddenCheckbox = cartItem.querySelector('.cart-item-checkbox');
+            hiddenCheckbox.checked = this.checked;
+            updateSelectedItems();
+        });
+    });
+
+    // Handle selected_items parameter from URL (Buy Now flow)
+    const urlParams = new URLSearchParams(window.location.search);
+    const selectedItemsParam = urlParams.get('selected_items');
+    
+    if (selectedItemsParam) {
+        const selectedIds = selectedItemsParam.split(',').map(id => id.trim());
+        document.querySelectorAll('.order-item-mini').forEach(itemDiv => {
+            const checkbox = itemDiv.querySelector('.cart-item-checkbox');
+            const visualCheckbox = itemDiv.querySelector('.cart-item-checkbox-visual');
+            const indicator = itemDiv.querySelector('.cart-item-indicator');
+            
+            if (selectedIds.includes(checkbox.value)) {
+                // This is a "Buy Now" item - mark it and hide the checkbox
+                checkbox.checked = true;
+                itemDiv.setAttribute('data-is-buy-now', 'true');
+                
+                // Hide the visual checkbox and show a checkmark icon instead
+                visualCheckbox.style.display = 'none';
+                indicator.innerHTML = '<i class="fas fa-check-circle" style="color: var(--gasgo-orange); font-size: 1.1rem;"></i>';
+            }
+        });
+    }
 
     // Initialize selected items
     updateSelectedItems();

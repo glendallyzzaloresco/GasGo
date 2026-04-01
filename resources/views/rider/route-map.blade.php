@@ -514,6 +514,27 @@
     .leaflet-routing-Alt {
         opacity: 0.5 !important;
     }
+
+    /* Urgent Badge */
+    .badge-urgent {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #e74c3c;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-right: 8px;
+    }
+
+    .task-status-badges {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
 </style>
 @endsection
 
@@ -565,10 +586,17 @@
                             <span class="order-dot"></span>
                             #ORD-{{ $delivery->order->id }}
                         </div>
-                        <span class="task-status {{ $delivery->status === 'out_for_delivery' ? 'delivering' : 'locating' }}">
-                            <i class="fas fa-{{ $delivery->status === 'out_for_delivery' ? 'truck' : 'map-marker-alt' }} me-1"></i>
-                            {{ $delivery->status === 'out_for_delivery' ? 'DELIVERING' : 'LOCATING' }}
-                        </span>
+                        <div class="task-status-badges">
+                            @if($delivery->order->is_urgent)
+                                <span class="badge badge-urgent">
+                                    <i class="fas fa-bolt"></i> URGENT
+                                </span>
+                            @endif
+                            <span class="task-status {{ $delivery->status === 'out_for_delivery' ? 'delivering' : 'locating' }}">
+                                <i class="fas fa-{{ $delivery->status === 'out_for_delivery' ? 'truck' : 'map-marker-alt' }} me-1"></i>
+                                {{ $delivery->status === 'out_for_delivery' ? 'DELIVERING' : 'LOCATING' }}
+                            </span>
+                        </div>
                     </div>
                     <div class="task-customer">{{ $delivery->order->user->name }}</div>
                     <div class="task-address">
@@ -768,11 +796,71 @@
             markers.push({ marker, id: coord.id, lat: coord.lat, lng: coord.lng });
         });
 
+        // Draw delivery sequence line
+        if (coordinates.length > 0) {
+            drawDeliverySequenceLine(coordinates.map(c => [c.lat, c.lng]));
+        }
+
         // Fit map to show all deliveries
         if (coordinates.length > 0) {
             const bounds = L.latLngBounds(coordinates.map(c => [c.lat, c.lng]));
             routeMap.fitBounds(bounds, { padding: [50, 50] });
         }
+    }
+
+    // Draw line connecting all delivery points in sequence using OSRM routing
+    function drawDeliverySequenceLine(coords) {
+        if (!routeMap || coords.length < 2) return;
+        
+        // Remove existing sequence line
+        if (window.deliverySequenceLine) {
+            routeMap.removeLayer(window.deliverySequenceLine);
+        }
+        
+        // Build OSRM URL for all waypoints
+        const waypoints = coords.map(coord => `${coord[1]},${coord[0]}`).join(';');
+        const osmUrl = `https://router.project-osrm.org/route/v1/driving/${waypoints}?overview=full&geometries=geojson`;
+        
+        fetch(osmUrl, { method: 'GET', timeout: 8000 })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch route');
+                return response.json();
+            })
+            .then(data => {
+                if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                    const route = data.routes[0];
+                    const routeCoords = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                    
+                    // Draw road-based delivery sequence line
+                    window.deliverySequenceLine = L.polyline(routeCoords, {
+                        color: '#3498db',
+                        weight: 3,
+                        opacity: 0.5,
+                        lineCap: 'round',
+                        lineJoin: 'round'
+                    }).addTo(routeMap);
+                } else {
+                    // Fallback: simple line between all stops
+                    window.deliverySequenceLine = L.polyline(coords, {
+                        color: '#95a5a6',
+                        weight: 2,
+                        opacity: 0.3,
+                        dashArray: '5,5',
+                        lineCap: 'round'
+                    }).addTo(routeMap);
+                }
+            })
+            .catch(error => {
+                console.error('Delivery sequence routing error:', error);
+                // Minimal fallback line
+                window.deliverySequenceLine = L.polyline(coords, {
+                    color: '#95a5a6',
+                    weight: 2,
+                    opacity: 0.2,
+                    dashArray: '5,5',
+                    lineCap: 'round'
+                }).addTo(routeMap);
+            });
     }
 
     function displaySingleDeliveryOnMap(delivery) {
@@ -887,11 +975,54 @@
             riderMarker.bindPopup('<div style="padding:8px;"><b>Your Location</b></div>');
         }
 
-        // Update polyline to include rider position
-        if (markers.length > 0 && polyline) {
-            const pathCoords = [[lat, lng]];
-            markers.forEach(m => pathCoords.push([m.lat, m.lng]));
-            polyline.setLatLngs(pathCoords);
+        // Update polyline to include rider position using road routing
+        if (markers.length > 0) {
+            // Build OSRM waypoints: rider position + all delivery points
+            const waypoints = `${lng},${lat};` + markers.map(m => `${m.lng},${m.lat}`).join(';');
+            const osmUrl = `https://router.project-osrm.org/route/v1/driving/${waypoints}?overview=full&geometries=geojson`;
+            
+            fetch(osmUrl, { method: 'GET', timeout: 5000 })
+                .then(response => {
+                    if (!response.ok) throw new Error('Route fetch failed');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                        const route = data.routes[0];
+                        const pathCoords = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                        
+                        // Remove old rider-to-deliveries line
+                        if (window.riderToDeliveriesLine) {
+                            routeMap.removeLayer(window.riderToDeliveriesLine);
+                        }
+                        
+                        // Draw road-based line from rider to deliveries
+                        window.riderToDeliveriesLine = L.polyline(pathCoords, {
+                            color: '#27ae60',
+                            weight: 2,
+                            opacity: 0.5,
+                            lineCap: 'round',
+                            lineJoin: 'round'
+                        }).addTo(routeMap);
+                    }
+                })
+                .catch(error => {
+                    console.log('Rider routing update failed, using fallback');
+                    // Fallback: simple direct line (minimal - only if routing fails)
+                    const pathCoords = [[lat, lng]];
+                    markers.forEach(m => pathCoords.push([m.lat, m.lng]));
+                    
+                    if (window.riderToDeliveriesLine) {
+                        routeMap.removeLayer(window.riderToDeliveriesLine);
+                    }
+                    
+                    window.riderToDeliveriesLine = L.polyline(pathCoords, {
+                        color: '#95a5a6',
+                        weight: 1,
+                        opacity: 0.2,
+                        dashArray: '3,3'
+                    }).addTo(routeMap);
+                });
         }
     }
 
@@ -957,6 +1088,11 @@
         // Zoom to the selected delivery on the map (without removing other pins)
         if (routeMap && lat && lng) {
             routeMap.setView([lat, lng], 15, { animate: true });
+        }
+        
+        // Draw route line from rider's current position to delivery
+        if (riderPosition) {
+            drawRoute(riderPosition.lat, riderPosition.lng, lat, lng);
         }
     }
 
@@ -1049,9 +1185,10 @@
         const osmUrl = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
         console.log('OSRM URL:', osmUrl);
 
-        fetch(osmUrl, { method: 'GET' })
+        fetch(osmUrl, { method: 'GET', timeout: 5000 })
             .then(response => {
                 console.log('OSRM response status:', response.status);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 return response.json();
             })
             .then(data => {
@@ -1064,14 +1201,13 @@
                     const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
                     console.log('Polyline coordinates count:', coordinates.length);
 
-                    // Draw route polyline with better styling
+                    // Draw route polyline with better styling - SOLID BLUE LINE
                     currentRouteLine = L.polyline(coordinates, {
                         color: '#2196f3',
-                        weight: 6,
-                        opacity: 0.9,
+                        weight: 5,
+                        opacity: 0.8,
                         lineCap: 'round',
-                        lineJoin: 'round',
-                        dashArray: '0,0'
+                        lineJoin: 'round'
                     }).addTo(routeMap);
 
                     // Add rider position marker (temporary for this route)
@@ -1108,100 +1244,57 @@
                     showAlert('success', `Route: ${distance}km, ~${duration} mins`);
                 } else {
                     console.error('No route found in OSRM response:', data);
-                    // Fallback: show direct distance instead
-                    showAlert('info', 'Showing direct path to destination');
-                    
-                    // Draw simple direct line from rider to destination
-                    const directLine = L.polyline([[fromLat, fromLng], [toLat, toLng]], {
-                        color: '#f39c12',
-                        weight: 5,
-                        opacity: 0.7,
-                        dashArray: '10,5',
-                        lineCap: 'round'
-                    }).addTo(routeMap);
-                    currentRouteLine = directLine;
-
-                    // Add rider marker
-                    const riderRouteMarker = L.circleMarker([fromLat, fromLng], {
-                        radius: 10,
-                        fillColor: '#27ae60',
-                        color: '#ffffff',
-                        weight: 3,
-                        opacity: 1,
-                        fillOpacity: 0.9
-                    }).addTo(routeMap);
-                    riderRouteMarker._isRouteMarker = true;
-                    riderRouteMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Your Location</b></div>');
-
-                    // Add destination marker
-                    const destMarker = L.circleMarker([toLat, toLng], {
-                        radius: 10,
-                        fillColor: '#e74c3c',
-                        color: '#ffffff',
-                        weight: 3,
-                        opacity: 1,
-                        fillOpacity: 0.9
-                    }).addTo(routeMap);
-                    destMarker._isRouteMarker = true;
-                    destMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Delivery Location</b></div>');
-
-                    // Calculate direct distance
-                    const directDistance = calculateDistance(fromLat, fromLng, toLat, toLng);
-                    
-                    // Fit bounds
-                    const bounds = L.latLngBounds([[fromLat, fromLng], [toLat, toLng]]);
-                    routeMap.fitBounds(bounds, { padding: [100, 100], maxZoom: 16 });
-
-                    // Show distance info
-                    showAlert('success', `Direct path: ${directDistance.toFixed(1)}km`);
+                    drawSimpleDirectLine(fromLat, fromLng, toLat, toLng);
                 }
             })
             .catch(error => {
-                console.error('Route request failed:', error);
-                // Fallback: show direct distance
-                showAlert('info', 'Showing direct path to destination');
-                
-                // Draw simple direct line
-                const directLine = L.polyline([[fromLat, fromLng], [toLat, toLng]], {
-                    color: '#f39c12',
-                    weight: 5,
-                    opacity: 0.7,
-                    dashArray: '10,5',
-                    lineCap: 'round'
-                }).addTo(routeMap);
-                currentRouteLine = directLine;
-
-                // Add markers
-                const riderMarker = L.circleMarker([fromLat, fromLng], {
-                    radius: 10,
-                    fillColor: '#27ae60',
-                    color: '#ffffff',
-                    weight: 3,
-                    opacity: 1,
-                    fillOpacity: 0.9
-                }).addTo(routeMap);
-                riderMarker._isRouteMarker = true;
-                riderMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Your Location</b></div>');
-
-                const destMarker = L.circleMarker([toLat, toLng], {
-                    radius: 10,
-                    fillColor: '#e74c3c',
-                    color: '#ffffff',
-                    weight: 3,
-                    opacity: 1,
-                    fillOpacity: 0.9
-                }).addTo(routeMap);
-                destMarker._isRouteMarker = true;
-                destMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Delivery Location</b></div>');
-
-                // Fit bounds
-                const bounds = L.latLngBounds([[fromLat, fromLng], [toLat, toLng]]);
-                routeMap.fitBounds(bounds, { padding: [100, 100], maxZoom: 16 });
-
-                // Calculate and show direct distance
-                const directDistance = calculateDistance(fromLat, fromLng, toLat, toLng);
-                showAlert('success', `Direct path: ${directDistance.toFixed(1)}km`);
+                console.error('OSRM fetch error:', error);
+                drawSimpleDirectLine(fromLat, fromLng, toLat, toLng);
             });
+    }
+
+    // Fallback: draw simple direct line when OSRM fails
+    function drawSimpleDirectLine(fromLat, fromLng, toLat, toLng) {
+        console.log('Drawing direct line fallback');
+        showAlert('info', 'Showing direct path to destination');
+        
+        // Draw simple direct line from rider to destination - SOLID ORANGE LINE
+        const directLine = L.polyline([[fromLat, fromLng], [toLat, toLng]], {
+            color: '#f39c12',
+            weight: 5,
+            opacity: 0.8,
+            lineCap: 'round',
+            lineJoin: 'round'
+        }).addTo(routeMap);
+        currentRouteLine = directLine;
+
+        // Add rider marker
+        const riderRouteMarker = L.circleMarker([fromLat, fromLng], {
+            radius: 10,
+            fillColor: '#27ae60',
+            color: '#ffffff',
+            weight: 3,
+            opacity: 1,
+            fillOpacity: 0.9
+        }).addTo(routeMap);
+        riderRouteMarker._isRouteMarker = true;
+        riderRouteMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Your Location</b></div>');
+
+        // Add destination marker
+        const destMarker = L.circleMarker([toLat, toLng], {
+            radius: 10,
+            fillColor: '#e74c3c',
+            color: '#ffffff',
+            weight: 3,
+            opacity: 1,
+            fillOpacity: 0.9
+        }).addTo(routeMap);
+        destMarker._isRouteMarker = true;
+        destMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Delivery Location</b></div>');
+        
+        // Fit bounds
+        const bounds = L.latLngBounds([[fromLat, fromLng], [toLat, toLng]]);
+        routeMap.fitBounds(bounds, { padding: [100, 100], maxZoom: 16 });
     }
 
     let navigationControl = null;

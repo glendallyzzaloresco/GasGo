@@ -15,15 +15,19 @@ return new class extends Migration
             });
         }
 
-        // Normalize existing values to the two supported categories.
+        // Normalize existing values to the three supported categories.
         DB::table('products')
             ->whereNull('category')
             ->orWhere('category', '')
             ->update(['category' => 'tank']);
 
         DB::table('products')
-            ->whereRaw("LOWER(category) IN ('tanks', 'tank', 'regulators', 'regulator', 'hoses', 'hose')")
+            ->whereRaw("LOWER(category) IN ('tanks', 'tank')")
             ->update(['category' => 'tank']);
+
+        DB::table('products')
+            ->whereRaw("LOWER(category) IN ('regulators', 'regulator', 'hoses', 'hose', 'accessories', 'accessory')")
+            ->update(['category' => 'accessory']);
 
         DB::table('products')
             ->whereRaw("LOWER(category) IN ('freebie', 'freebies', 'reward', 'rewards')")
@@ -31,7 +35,7 @@ return new class extends Migration
 
         // Safety catch: force any remaining non-supported value to tank.
         DB::table('products')
-            ->whereNotIn('category', ['tank', 'freebie'])
+            ->whereNotIn('category', ['tank', 'accessory', 'freebie'])
             ->update(['category' => 'tank']);
     }
 

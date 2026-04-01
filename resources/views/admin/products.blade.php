@@ -11,7 +11,7 @@
         overflow:hidden; transition:transform .3s;
     }
     .product-card:hover { transform:translateY(-4px); }
-    .product-card img { width:100%; height:240px; object-fit:contain; background-color:#fff; padding:12px; }
+    .product-card img { width:100%; height:300px; object-fit:contain; background-color:#fff; padding:12px; }
     .product-card .card-body { padding:18px; }
     .product-card .card-body h6 { font-weight:700; color:var(--gasgo-blue); }
     .product-card .price { color:var(--gasgo-orange); font-weight:700; font-size:1.15rem; }
@@ -109,6 +109,18 @@
         ->filter(fn ($p) => strtolower((string) ($p->category ?? '')) === 'freebie')
         ->values();
 
+    $lpgTankProducts = $saleProducts
+        ->filter(fn ($p) => strtolower((string) ($p->category ?? '')) === 'tank')
+        ->values();
+
+    $accessoriesProducts = $saleProducts
+        ->filter(fn ($p) => strtolower((string) ($p->category ?? '')) === 'accessories')
+        ->values();
+
+    $appliancesProducts = $saleProducts
+        ->filter(fn ($p) => strtolower((string) ($p->category ?? '')) === 'appliances')
+        ->values();
+
     $saleProductsInStock = $saleProducts
         ->filter(fn ($p) => (int) ($p->quantity_on_hand ?? 0) > 0)
         ->values();
@@ -183,7 +195,7 @@
         <i class="fas fa-bag-shopping me-2"></i>Products For Sale
     </button>
     <button class="section-tab" data-section="freebies" onclick="switchSection('freebies', this)">
-        <i class="fas fa-gift me-2"></i>Freebies & Rewards
+        <i class="fas fa-gift me-2"></i>Freebies
     </button>
     <button class="section-tab" data-section="outOfStock" onclick="switchSection('outOfStock', this)">
         <i class="fas fa-box-open me-2"></i>Out of Stock
@@ -205,7 +217,16 @@
 
 <!-- Products Grid -->
 <div class="row g-4" id="productsGrid">
-    @forelse($saleProducts as $product)
+    <!-- LPG Tanks Section -->
+    @if($lpgTankProducts->count() > 0)
+    <div class="col-12">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #e0e0e0;">
+            <i class="fas fa-fire" style="font-size:1.5rem;color:var(--gasgo-orange);"></i>
+            <h6 style="margin:0;color:var(--gasgo-blue);font-weight:700;font-size:1.1rem;">LPG Tanks</h6>
+            <span style="margin-left:auto;background:#f0f0f0;padding:6px 12px;border-radius:20px;font-size:0.85rem;color:#666;font-weight:600;">{{ $lpgTankProducts->count() }} items</span>
+        </div>
+    </div>
+    @foreach($lpgTankProducts as $product)
     <div class="col-lg-3 col-md-4 col-sm-6 product-item">
         <div class="product-card">
             @php $productImageUrl = $resolveImageUrl($product->image); @endphp
@@ -259,11 +280,147 @@
             </div>
         </div>
     </div>
-    @empty
+    @endforeach
+    @endif
+
+    <!-- Accessories Section -->
+    @if($accessoriesProducts->count() > 0)
+    <div class="col-12">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #e0e0e0;margin-top:20px;">
+            <i class="fas fa-tools" style="font-size:1.5rem;color:#6C757D;"></i>
+            <h6 style="margin:0;color:var(--gasgo-blue);font-weight:700;font-size:1.1rem;">Accessories</h6>
+            <span style="margin-left:auto;background:#f0f0f0;padding:6px 12px;border-radius:20px;font-size:0.85rem;color:#666;font-weight:600;">{{ $accessoriesProducts->count() }} items</span>
+        </div>
+    </div>
+    @foreach($accessoriesProducts as $product)
+    <div class="col-lg-3 col-md-4 col-sm-6 product-item">
+        <div class="product-card">
+            @php $productImageUrl = $resolveImageUrl($product->image); @endphp
+            @php $qty = (int) ($product->quantity_on_hand ?? 0); @endphp
+            @if($productImageUrl)
+                <img src="{{ $productImageUrl }}" alt="{{ $product->name }}">
+            @else
+                <div style="width:100%;height:240px;background:linear-gradient(135deg,var(--gasgo-blue-light),#fff);display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-box" style="font-size:3rem;color:var(--gasgo-blue);opacity:.5;"></i>
+                </div>
+            @endif
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0">{{ $product->name }}</h6>
+                        @if($qty == 0)
+                        <span class="badge bg-danger stock-badge">Out</span>
+                        @elseif($qty <= 5)
+                            <span class="badge bg-warning text-dark stock-badge">Low Stock</span>
+                    @else
+                        <span class="badge bg-success stock-badge">In Stock</span>
+                    @endif
+                </div>
+                <p class="text-muted mb-2" style="font-size:.82rem;">{{ $product->description ?? 'No description' }}</p>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="price">₱{{ number_format($product->price, 2) }}</span>
+                        <span class="text-muted" style="font-size:.82rem;">Stock: <strong class="{{ $qty <= 5 ? 'text-danger' : '' }}">{{ $qty }}</strong></span>
+                </div>
+                <div class="d-flex gap-2">
+                    <button
+                        class="btn btn-sm flex-grow-1"
+                        style="background:var(--gasgo-blue);color:#fff;border-radius:8px;font-weight:600;"
+                        data-bs-toggle="modal"
+                        data-bs-target="#productModal"
+                        onclick="openEditProduct(this)"
+                        data-id="{{ $product->id }}"
+                        data-name="{{ $product->name }}"
+                        data-category="{{ $product->category ?? 'tank' }}"
+                        data-description="{{ $product->description }}"
+                        data-price="{{ $product->price }}"
+                        data-stock="{{ $qty }}"
+                        data-weight="{{ $product->weight }}"
+                        data-is-active="{{ $product->is_active ? '1' : '0' }}"
+                        data-update-url="{{ route('admin.products.update', $product) }}"
+                    ><i class="fas fa-edit me-1"></i>Edit</button>
+                    <form action="{{ route('admin.products.destroy', $product) }}" method="POST" onsubmit="return confirm('Delete this product?');">
+                        @csrf
+                        @method('DELETE')
+                        <button class="btn btn-sm" type="submit" style="background:#f8d7da;color:#dc3545;border-radius:8px;" title="Delete"><i class="fas fa-trash"></i></button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endforeach
+    @endif
+
+    <!-- Appliances Section -->
+    @if($appliancesProducts->count() > 0)
+    <div class="col-12">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #e0e0e0;margin-top:20px;">
+            <i class="fas fa-blender" style="font-size:1.5rem;color:#e74c3c;"></i>
+            <h6 style="margin:0;color:var(--gasgo-blue);font-weight:700;font-size:1.1rem;">Appliances</h6>
+            <span style="margin-left:auto;background:#f0f0f0;padding:6px 12px;border-radius:20px;font-size:0.85rem;color:#666;font-weight:600;">{{ $appliancesProducts->count() }} items</span>
+        </div>
+    </div>
+    @foreach($appliancesProducts as $product)
+    <div class="col-lg-3 col-md-4 col-sm-6 product-item">
+        <div class="product-card">
+            @php $productImageUrl = $resolveImageUrl($product->image); @endphp
+            @php $qty = (int) ($product->quantity_on_hand ?? 0); @endphp
+            @if($productImageUrl)
+                <img src="{{ $productImageUrl }}" alt="{{ $product->name }}">
+            @else
+                <div style="width:100%;height:240px;background:linear-gradient(135deg,var(--gasgo-blue-light),#fff);display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-box" style="font-size:3rem;color:var(--gasgo-blue);opacity:.5;"></i>
+                </div>
+            @endif
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0">{{ $product->name }}</h6>
+                        @if($qty == 0)
+                        <span class="badge bg-danger stock-badge">Out</span>
+                        @elseif($qty <= 5)
+                            <span class="badge bg-warning text-dark stock-badge">Low Stock</span>
+                    @else
+                        <span class="badge bg-success stock-badge">In Stock</span>
+                    @endif
+                </div>
+                <p class="text-muted mb-2" style="font-size:.82rem;">{{ $product->description ?? 'No description' }}</p>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="price">₱{{ number_format($product->price, 2) }}</span>
+                        <span class="text-muted" style="font-size:.82rem;">Stock: <strong class="{{ $qty <= 5 ? 'text-danger' : '' }}">{{ $qty }}</strong></span>
+                </div>
+                <div class="d-flex gap-2">
+                    <button
+                        class="btn btn-sm flex-grow-1"
+                        style="background:var(--gasgo-blue);color:#fff;border-radius:8px;font-weight:600;"
+                        data-bs-toggle="modal"
+                        data-bs-target="#productModal"
+                        onclick="openEditProduct(this)"
+                        data-id="{{ $product->id }}"
+                        data-name="{{ $product->name }}"
+                        data-category="{{ $product->category ?? 'tank' }}"
+                        data-description="{{ $product->description }}"
+                        data-price="{{ $product->price }}"
+                        data-stock="{{ $qty }}"
+                        data-weight="{{ $product->weight }}"
+                        data-is-active="{{ $product->is_active ? '1' : '0' }}"
+                        data-update-url="{{ route('admin.products.update', $product) }}"
+                    ><i class="fas fa-edit me-1"></i>Edit</button>
+                    <form action="{{ route('admin.products.destroy', $product) }}" method="POST" onsubmit="return confirm('Delete this product?');">
+                        @csrf
+                        @method('DELETE')
+                        <button class="btn btn-sm" type="submit" style="background:#f8d7da;color:#dc3545;border-radius:8px;" title="Delete"><i class="fas fa-trash"></i></button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endforeach
+    @endif
+
+    <!-- Empty State -->
+    @if($lpgTankProducts->count() === 0 && $accessoriesProducts->count() === 0 && $appliancesProducts->count() === 0)
     <div class="col-12">
         <p class="text-muted text-center py-5">No products found. <a href="#" onclick="openAddProduct()" class="text-decoration-none">Add your first product</a></p>
     </div>
-    @endforelse
+    @endif
 </div>
 </div>
 
@@ -493,6 +650,8 @@
                             <label class="mb-1">Category</label>
                             <select class="form-select" name="category" id="productCategory" required>
                                 <option value="tank">Tank</option>
+                                <option value="accessories">Accessories</option>
+                                <option value="appliances">Appliances</option>
                                 <option value="freebie">Freebie</option>
                             </select>
                         </div>

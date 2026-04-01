@@ -120,7 +120,12 @@
             <div class="detail-row">
                 <div class="detail-col">
                     <span class="detail-label">Current Status</span>
-                    <span class="badge-status badge-{{ $order->status }}">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</span>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <span class="badge-status badge-{{ $order->status }}">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</span>
+                        @if($order->is_urgent)
+                            <span class="badge" style="background:#dc3545; color:white; font-size:.85rem; font-weight:600; padding:6px 12px;"><i class="fas fa-bolt me-1"></i>URGENT</span>
+                        @endif
+                    </div>
                 </div>
                 @if($order->delivery)
                     <div class="detail-col">

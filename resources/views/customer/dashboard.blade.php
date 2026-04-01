@@ -116,8 +116,16 @@
         height: 200px;
         background: white;
         display: flex; align-items: center; justify-content: center;
+        position: relative;
     }
     .product-card .product-img img { max-height: 160px; object-fit: contain; }
+    .product-badge {
+        position: absolute; top: 14px; left: 14px;
+        background: var(--gasgo-orange); color: white;
+        padding: 4px 14px; border-radius: 20px; font-size: .75rem; font-weight: 600;
+        text-transform: capitalize;
+    }
+    .product-badge.accessory { background: var(--gasgo-blue); }
     .product-card .product-body { padding: 20px; }
     .product-card .product-body h5 { font-weight: 700; color: #2f2f2f; margin-bottom: 4px; }
     .product-price { font-size: 1.25rem; font-weight: 700; color: var(--gasgo-orange); }
@@ -290,6 +298,9 @@
                                 <img src="{{ $img }}" alt="{{ $product->name }}" class="img-fluid">
                             @else
                                 <span class="text-muted small">No image available</span>
+                            @endif
+                            @if($product->category)
+                                <span class="product-badge {{ strtolower($product->category) === 'accessories' ? 'accessory' : '' }}">{{ $product->category }}</span>
                             @endif
                         </div>
                         <div class="product-body">

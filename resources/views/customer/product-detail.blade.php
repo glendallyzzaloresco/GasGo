@@ -230,6 +230,18 @@
 @php
     $inStock = (int) ($product->quantity_on_hand ?? 0) > 0;
     $img = $product->resolved_image;
+    $productCategory = strtolower((string) ($product->category ?? 'tank'));
+    
+    // Determine spec label based on category
+    if ($productCategory === 'tank') {
+        $specLabel = 'Weight/Size';
+    } elseif ($productCategory === 'accessories') {
+        $specLabel = 'Length/Size';
+    } elseif ($productCategory === 'appliances') {
+        $specLabel = 'Specifications';
+    } else {
+        $specLabel = 'Weight/Size';
+    }
 @endphp
 
 <section class="page-header">
@@ -262,9 +274,9 @@
                 <h2>{{ $product->name }}</h2>
                 
                 @if($product->description)
-                    <!-- <p class="product-detail-variant">
-                        <strong>Variant:</strong> {{ $product->description }}
-                    </p> -->
+                    <div class="product-detail-description">
+                        <p>{{ $product->description }}</p>
+                    </div>
                 @endif
 
                 <div class="product-detail-price">
@@ -273,7 +285,7 @@
 
                 <div class="product-detail-specs">
                     <div class="spec-item">
-                        <span class="spec-label">Weight/Size:</span>
+                        <span class="spec-label">{{ $specLabel }}:</span>
                         <span class="spec-value">{{ $product->weight ?: 'Standard' }}</span>
                     </div>
                     <div class="spec-item">

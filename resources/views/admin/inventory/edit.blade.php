@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Edit Inventory - ' . $inventory->product->name)
+@section('title', 'Inventory Settings - ' . $inventory->product->name)
 
 @section('styles')
 <style>
@@ -54,8 +54,8 @@
     <div class="header-section">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-                <h1 class="mb-2">Edit Inventory</h1>
-                <p class="mb-0">Update inventory details for {{ $inventory->product->name }}</p>
+                <h1 class="mb-2">Inventory Settings</h1>
+                <p class="mb-0">Configure settings for {{ $inventory->product->name }}</p>
             </div>
             <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-light">
                 <i class="fas fa-arrow-left me-2"></i>Back
@@ -85,31 +85,52 @@
             @csrf
             @method('PUT')
 
-            <!-- Stock Information -->
+            <!-- Stock Overview (Read-Only) -->
             <div class="form-section">
-                <h5><i class="fas fa-warehouse me-2"></i>Stock Information</h5>
+                <h5><i class="fas fa-warehouse me-2"></i>Stock Overview</h5>
+                
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Stock Management:</strong> All stock adjustments must be made through the "Adjust Stock" modal to maintain complete audit trails.
+                </div>
                 
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Current Stock Level</label>
-                            <input type="number" name="quantity_on_hand" class="form-control @error('quantity_on_hand') is-invalid @enderror"
-                                   value="{{ old('quantity_on_hand', $inventory->quantity_on_hand) }}" 
-                                   min="0" required>
-                            <small class="form-text text-muted">Current number of units in stock</small>
-                            @error('quantity_on_hand')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                            <label class="form-label">Full Tanks Available</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" value="{{ $inventory->quantity_on_hand }}" disabled>
+                                <span class="input-group-text">units</span>
+                            </div>
+                            <small class="form-text text-muted">Read-only: Managed via Adjust Stock modal</small>
                         </div>
                     </div>
                     
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Empty Tanks Collected</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" value="{{ $inventory->empty_on_hand }}" disabled>
+                                <span class="input-group-text">units</span>
+                            </div>
+                            <small class="form-text text-muted">Read-only: Tracked from deliveries</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reorder Settings -->
+            <div class="form-section">
+                <h5><i class="fas fa-bell me-2"></i>Reorder Settings</h5>
+                
+                <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Reorder Level</label>
                             <input type="number" name="reorder_level" class="form-control @error('reorder_level') is-invalid @enderror"
                                    value="{{ old('reorder_level', $inventory->reorder_level) }}" 
                                    min="0" required>
-                            <small class="form-text text-muted">Alert when stock falls below this level</small>
+                            <small class="form-text text-muted">Alert when full tanks fall below this level</small>
                             @error('reorder_level')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror

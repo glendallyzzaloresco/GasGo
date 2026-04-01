@@ -429,6 +429,8 @@
                                     <span class="badge bg-success">Available</span>
                                 @elseif($rider->availability === 'busy')
                                     <span class="badge bg-warning text-dark">Busy</span>
+                                @elseif($rider->availability === 'returning')
+                                    <span class="badge bg-info">Returning to Store</span>
                                 @else
                                     <span class="badge bg-secondary">Offline</span>
                                 @endif

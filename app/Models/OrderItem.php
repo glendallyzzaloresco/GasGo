@@ -17,6 +17,7 @@ class OrderItem extends Model
         'price',
         'subtotal',
         'is_reward',
+        'reward_image_url',
     ];
 
     protected function casts(): array

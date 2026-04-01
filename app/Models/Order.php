@@ -23,6 +23,7 @@ class Order extends Model
         'payment_method',
         'status',
         'notes',
+        'is_urgent',
         'estimated_delivery_time',
         'delivered_at',
     ];
@@ -34,6 +35,7 @@ class Order extends Model
             'discount' => 'decimal:2',
             'delivery_fee' => 'decimal:2',
             'total_amount' => 'decimal:2',
+            'is_urgent' => 'boolean',
             'estimated_delivery_time' => 'datetime',
             'delivered_at' => 'datetime',
         ];

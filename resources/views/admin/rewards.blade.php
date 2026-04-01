@@ -23,61 +23,102 @@
 </style>
 @endsection
 
-@php
-    // Calculate loyalty statistics from transactions
-    $loyaltyMembers = count($transactions->pluck('user_id')->unique());
-    $totalPointsEarned = $transactions->where('type', 'earned')->sum('points');
-    $totalPointsRedeemed = $transactions->where('type', 'redeemed')->sum('points');
-    $activePoints = $totalPointsEarned - $totalPointsRedeemed;
-@endphp
-
 @section('content')
-<!-- Loyalty Stats -->
+@if ($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius:12px;">
+        <i class="fas fa-exclamation-circle me-2"></i><strong>Validation Errors:</strong>
+        <ul class="mb-0 mt-2">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
 
+@if (session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert" style="border-radius:12px;">
+        <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
+<!-- Loyalty Stats -->
+<div class="row g-3 mb-5">
+    <div class="col-md-3">
+        <div class="loyalty-stat">
+            <h3 style="font-size:2.2rem; color:var(--gasgo-orange);">{{ $loyaltyMembers }}</h3>
+            <p>Loyalty Members</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="loyalty-stat">
+            <h3 style="font-size:2.2rem; color:var(--gasgo-blue);">{{ $totalPointsEarned }}</h3>
+            <p>Total Points Earned</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="loyalty-stat">
+            <h3 style="font-size:2.2rem; color:#28a745;">{{ $totalPointsRedeemed }}</h3>
+            <p>Points Redeemed</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="loyalty-stat">
+            <h3 style="font-size:2.2rem; color:#6f42c1;">{{ $activePoints }}</h3>
+            <p>Active Points</p>
+        </div>
+    </div>
+</div>
 
 <!-- Rewards List -->
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h6 class="fw-bold" style="color:var(--gasgo-blue);"><i class="fas fa-gift me-2" style="color:var(--gasgo-orange);"></i>Available Rewards</h6>
-    <button class="btn" style="background:var(--gasgo-orange);color:#fff;border-radius:12px;font-weight:600;padding:10px 22px;" data-bs-toggle="modal" data-bs-target="#rewardModal" onclick="openAddReward()">
-        <i class="fas fa-plus me-2"></i>Add Reward
+    <h6 class="fw-bold" style="color:var(--gasgo-blue);"><i class="fas fa-ticket-alt me-2" style="color:var(--gasgo-orange);"></i>Customer Redeemable Vouchers</h6>
+    <button class="btn" style="background:var(--gasgo-orange);color:#fff;border-radius:12px;font-weight:600;padding:10px 22px;" data-bs-toggle="modal" data-bs-target="#voucherModal" onclick="openAddVoucher()">
+        <i class="fas fa-plus me-2"></i>Add Voucher
     </button>
 </div>
 
 <div class="row g-4 mb-4">
-    @forelse($rewards as $reward)
+    @forelse($vouchers as $voucher)
         <div class="col-lg-4 col-md-6">
             <div class="reward-card">
                 <div class="d-flex align-items-center gap-3 mb-3">
-                    <div class="reward-icon" style="background:linear-gradient(135deg,var(--gasgo-blue),#2196f3);"><i class="fas fa-gift"></i></div>
+                    <div class="reward-icon" style="background:linear-gradient(135deg,var(--gasgo-orange),#ff9800);"><i class="fas fa-tag"></i></div>
                     <div>
-                        <h6 class="fw-bold mb-0">{{ $reward->name }}</h6>
-                        <small class="text-muted">{{ $reward->description ?: 'No description' }}</small>
+                        <h6 class="fw-bold mb-0">{{ $voucher->name }}</h6>
+                        <small class="text-muted">Customer Voucher</small>
                     </div>
                 </div>
                 <div class="d-flex justify-content-between mb-2" style="font-size:.85rem;">
-                    <span class="text-muted">Points Required:</span>
-                    <span class="fw-bold" style="color:var(--gasgo-orange);">{{ $reward->reward_points_required }} pts</span>
+                    <span class="text-muted">Unlock at:</span>
+                    <span class="fw-bold" style="color:var(--gasgo-orange);">{{ $voucher->reward_points_required }} points</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2" style="font-size:.85rem;">
+                    <span class="text-muted">Discount:</span>
+                    <span class="fw-bold">₱{{ $voucher->discount_amount }}</span>
                 </div>
                 <div class="d-flex justify-content-between mb-3" style="font-size:.85rem;">
-                    <span class="text-muted">Stock:</span>
-                    <span class="fw-bold">{{ $reward->stock }}</span>
+                    <span class="text-muted">Status:</span>
+                    <span class="badge {{ $voucher->is_active ? 'bg-success' : 'bg-secondary' }}">
+                        {{ $voucher->is_active ? 'Active' : 'Inactive' }}
+                    </span>
                 </div>
                 <div class="d-flex gap-2">
                     <button
                         class="btn btn-sm flex-grow-1"
                         style="background:var(--gasgo-blue);color:#fff;border-radius:8px;font-weight:600;"
                         data-bs-toggle="modal"
-                        data-bs-target="#rewardModal"
-                        onclick="openEditReward(this)"
-                        data-update-url="{{ route('admin.rewards.update', $reward) }}"
-                        data-name="{{ $reward->name }}"
-                        data-description="{{ $reward->description }}"
-                        data-points="{{ $reward->reward_points_required }}"
-                        data-stock="{{ $reward->stock }}"
-                        data-category="{{ $reward->category }}"
-                        data-is-active="{{ $reward->is_active ? '1' : '0' }}"
+                        data-bs-target="#voucherModal"
+                        onclick="openEditVoucher(this)"
+                        data-update-url="{{ route('admin.vouchers.update', $voucher) }}"
+                        data-name="{{ $voucher->name }}"
+                        data-description="{{ $voucher->description }}"
+                        data-points="{{ $voucher->reward_points_required }}"
+                        data-amount="{{ $voucher->discount_amount }}"
+                        data-is-active="{{ $voucher->is_active ? '1' : '0' }}"
                     >Edit</button>
-                    <form action="{{ route('admin.rewards.destroy', $reward) }}" method="POST" onsubmit="return confirm('Delete this reward?');">
+                    <form action="{{ route('admin.vouchers.destroy', $voucher) }}" method="POST" onsubmit="return confirm('Delete this voucher?');">
                         @csrf
                         @method('DELETE')
                         <button class="btn btn-sm" type="submit" style="background:#f8d7da;color:#dc3545;border-radius:8px;"><i class="fas fa-trash"></i></button>
@@ -87,7 +128,9 @@
         </div>
     @empty
         <div class="col-12">
-            <div class="text-center text-muted py-4">No rewards configured yet.</div>
+            <div class="alert alert-info" style="border-radius:12px;">
+                <i class="fas fa-info-circle me-2"></i>No customer vouchers configured yet. Create vouchers that customers can claim on their loyalty dashboard!
+            </div>
         </div>
     @endforelse
 </div>
@@ -95,51 +138,48 @@
 <!-- Recent Claims -->
 
 
-<!-- Add Reward Modal -->
-<div class="modal fade" id="rewardModal" tabindex="-1">
+<!-- Add/Edit Voucher Modal -->
+<div class="modal fade" id="voucherModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content" style="border-radius:16px;">
             <div class="modal-header" style="border-bottom:none;padding:24px 24px 0;">
-                <h5 class="modal-title fw-bold" style="color:var(--gasgo-blue);" id="rewardModalTitle">Add Reward</h5>
+                <h5 class="modal-title fw-bold" style="color:var(--gasgo-blue);" id="voucherModalTitle">Add Voucher</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" style="padding:24px;">
-                <form id="rewardForm" method="POST" action="{{ route('admin.rewards.store') }}" enctype="multipart/form-data">
+                <form id="voucherForm" method="POST" action="{{ route('admin.vouchers.store') }}" enctype="multipart/form-data">
                     @csrf
-                    <input type="hidden" name="_method" id="rewardFormMethod" value="POST">
+                    <input type="hidden" name="_method" id="voucherFormMethod" value="POST">
                     <div class="mb-3">
-                        <label class="form-label fw-bold" style="font-size:.88rem;">Reward Name</label>
-                        <input type="text" class="form-control" name="name" id="rewardName" style="border-radius:10px;" placeholder="e.g. Free Delivery" required>
+                        <label class="form-label fw-bold" style="font-size:.88rem;">Voucher Name</label>
+                        <input type="text" class="form-control" name="name" id="voucherName" style="border-radius:10px;" placeholder="e.g. ₱50 OFF Voucher" required>
                     </div>
+                    
                     <div class="mb-3">
                         <label class="form-label fw-bold" style="font-size:.88rem;">Description</label>
-                        <textarea class="form-control" name="description" id="rewardDescription" rows="2" style="border-radius:10px;" placeholder="Reward description..."></textarea>
+                        <textarea class="form-control" name="description" id="voucherDescription" rows="2" style="border-radius:10px;" placeholder="e.g. Get ₱50 discount on your next order"></textarea>
                     </div>
+                    
                     <div class="mb-3">
-                        <label class="form-label fw-bold" style="font-size:.88rem;">Points Required</label>
-                        <input type="number" class="form-control" name="reward_points_required" id="rewardPoints" style="border-radius:10px;" placeholder="0" min="0" required>
+                        <label class="form-label fw-bold" style="font-size:.88rem;">Discount Amount (₱)</label>
+                        <input type="number" class="form-control" name="discount_amount" id="voucherAmount" style="border-radius:10px;" placeholder="e.g. 50" min="0" step="0.01" required>
                     </div>
+                    
                     <div class="mb-3">
-                        <label class="form-label fw-bold" style="font-size:.88rem;">Stock</label>
-                        <input type="number" class="form-control" name="stock" id="rewardStock" style="border-radius:10px;" placeholder="0" min="0" required>
+                        <label class="form-label fw-bold" style="font-size:.88rem;">Unlock at Points</label>
+                        <input type="number" class="form-control" name="reward_points_required" id="voucherPoints" style="border-radius:10px;" placeholder="e.g. 10" min="0" required>
+                        <small class="text-muted">Customers can claim this voucher after earning this many loyalty points (1 point = 1 delivered order)</small>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold" style="font-size:.88rem;">Category</label>
-                        <input type="text" class="form-control" name="category" id="rewardCategory" style="border-radius:10px;" placeholder="Rewards">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold" style="font-size:.88rem;">Reward Image</label>
-                        <input type="file" class="form-control" name="image" accept="image/*" style="border-radius:10px;">
-                    </div>
+                    
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="rewardActive" name="is_active" value="1" checked>
-                        <label class="form-check-label" for="rewardActive">Active</label>
+                        <input class="form-check-input" type="checkbox" id="voucherActive" name="is_active" value="1" checked>
+                        <label class="form-check-label" for="voucherActive">Active - Show on customer dashboard</label>
                     </div>
                 </form>
             </div>
             <div class="modal-footer" style="border-top:none;padding:0 24px 24px;">
                 <button class="btn" data-bs-dismiss="modal" style="border-radius:10px;">Cancel</button>
-                <button class="btn" type="submit" form="rewardForm" style="background:var(--gasgo-orange);color:#fff;border-radius:10px;font-weight:600;padding:10px 28px;">Save Reward</button>
+                <button class="btn" type="submit" form="voucherForm" style="background:var(--gasgo-orange);color:#fff;border-radius:10px;font-weight:600;padding:10px 28px;">Save Voucher</button>
             </div>
         </div>
     </div>
@@ -148,28 +188,49 @@
 
 @section('scripts')
 <script>
-function openAddReward() {
-    document.getElementById('rewardModalTitle').textContent = 'Add Reward';
-    document.getElementById('rewardForm').action = "{{ route('admin.rewards.store') }}";
-    document.getElementById('rewardFormMethod').value = 'POST';
-    document.getElementById('rewardName').value = '';
-    document.getElementById('rewardDescription').value = '';
-    document.getElementById('rewardPoints').value = '';
-    document.getElementById('rewardStock').value = '';
-    document.getElementById('rewardCategory').value = 'Rewards';
-    document.getElementById('rewardActive').checked = true;
+function openAddVoucher() {
+    document.getElementById('voucherModalTitle').textContent = 'Add Voucher';
+    document.getElementById('voucherForm').action = "{{ route('admin.vouchers.store') }}";
+    document.getElementById('voucherFormMethod').value = 'POST';
+    document.getElementById('voucherName').value = '';
+    document.getElementById('voucherDescription').value = '';
+    document.getElementById('voucherAmount').value = '';
+    document.getElementById('voucherPoints').value = '';
+    document.getElementById('voucherActive').checked = true;
 }
 
-function openEditReward(button) {
-    document.getElementById('rewardModalTitle').textContent = 'Edit Reward';
-    document.getElementById('rewardForm').action = button.dataset.updateUrl;
-    document.getElementById('rewardFormMethod').value = 'PUT';
-    document.getElementById('rewardName').value = button.dataset.name || '';
-    document.getElementById('rewardDescription').value = button.dataset.description || '';
-    document.getElementById('rewardPoints').value = button.dataset.points || '0';
-    document.getElementById('rewardStock').value = button.dataset.stock || '0';
-    document.getElementById('rewardCategory').value = button.dataset.category || 'Rewards';
-    document.getElementById('rewardActive').checked = (button.dataset.isActive === '1');
+function openEditVoucher(button) {
+    document.getElementById('voucherModalTitle').textContent = 'Edit Voucher';
+    document.getElementById('voucherForm').action = button.dataset.updateUrl;
+    document.getElementById('voucherFormMethod').value = 'PUT';
+    document.getElementById('voucherName').value = button.dataset.name || '';
+    document.getElementById('voucherDescription').value = button.dataset.description || '';
+    document.getElementById('voucherAmount').value = button.dataset.amount || '0';
+    document.getElementById('voucherPoints').value = button.dataset.points || '0';
+    document.getElementById('voucherActive').checked = (button.dataset.isActive === '1');
 }
+
+// Form submit handler
+document.getElementById('voucherForm').addEventListener('submit', function(e) {
+    const name = document.getElementById('voucherName').value.trim();
+    const amount = parseFloat(document.getElementById('voucherAmount').value);
+    const points = parseInt(document.getElementById('voucherPoints').value);
+    
+    if (!name || amount < 0 || points < 0) {
+        e.preventDefault();
+        alert('Please fill in all required fields correctly');
+        return false;
+    }
+    
+    console.log('Submitting voucher form', {
+        name: name,
+        description: document.getElementById('voucherDescription').value,
+        discount_amount: amount,
+        reward_points_required: points,
+        is_active: document.getElementById('voucherActive').checked,
+        action: this.action,
+        method: document.getElementById('voucherFormMethod').value
+    });
+});
 </script>
 @endsection

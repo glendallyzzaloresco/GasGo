@@ -68,8 +68,7 @@
         margin-bottom: 18px;
     }
 
-    .details-card h5,
-    .adjust-form h5 {
+    .details-card h5 {
         color: var(--gasgo-blue);
         font-weight: 700;
     }
@@ -142,33 +141,7 @@
         font-weight: 600;
     }
 
-    .adjust-form {
-        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-        padding: 20px;
-        border-radius: 12px;
-        margin-bottom: 18px;
-        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
-        border: 1px solid #edf2f7;
-    }
 
-    .adjust-form .form-label {
-        font-weight: 600;
-        color: #34495e;
-        font-size: 0.9rem;
-    }
-
-    .adjust-form .form-control,
-    .adjust-form .form-select {
-        border-radius: 9px;
-        border: 1px solid #dbe5f0;
-        min-height: 42px;
-    }
-
-    .adjust-form .form-control:focus,
-    .adjust-form .form-select:focus {
-        border-color: var(--gasgo-blue);
-        box-shadow: 0 0 0 0.18rem rgba(26, 109, 176, 0.15);
-    }
 
     .movements-table {
         background: #fff;
@@ -280,9 +253,6 @@
         </div>
         @endif
         <div>
-            <a href="{{ route('admin.inventory.edit', $inventory) }}" class="btn btn-light me-2">
-                <i class="fas fa-edit me-2"></i>Edit Inventory
-            </a>
             <a href="{{ route('admin.inventory.index') }}" class="btn btn-light">
                 <i class="fas fa-arrow-left me-2"></i>Back
             </a>
@@ -359,6 +329,15 @@
                     </span>
                 </div>
                 
+                @if(strtolower($inventory->product->category) === 'tank')
+                <div class="detail-row">
+                    <span class="detail-label">Empty Tanks Collected</span>
+                    <span class="detail-value fw-bold text-warning">
+                        {{ $inventory->empty_on_hand ?? 0 }} units
+                    </span>
+                </div>
+                @endif
+                
                 <div class="detail-row">
                     <span class="detail-label">Reorder Level</span>
                     <span class="detail-value">{{ $inventory->reorder_level }} units</span>
@@ -418,46 +397,121 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="col-lg-6">
-            <div class="adjust-form">
-                <h5 class="mb-3"><i class="fas fa-exchange-alt me-2"></i>Quick Stock Adjustment</h5>
+    <!-- Inventory Settings Section -->
+    <div class="row mt-4">
+        <div class="col-lg-12">
+            <div class="details-card" style="background: #f8f9fa; border-left: 4px solid var(--gasgo-blue);">
+                <h5 class="mb-4"><i class="fas fa-sliders-h me-2"></i>Inventory Settings</h5>
                 
-                <form action="{{ route('admin.inventory.adjust', $inventory) }}" method="POST">
+                @if($errors->any())
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <h6 class="alert-heading"><i class="fas fa-exclamation-circle me-2"></i>Validation Errors</h6>
+                        <ul class="mb-0">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                @endif
+                
+                <form action="{{ route('admin.inventory.update', $inventory) }}" method="POST" id="settingsForm">
                     @csrf
+                    @method('PUT')
                     
-                    <div class="mb-3">
-                        <label class="form-label">Adjustment Type</label>
-                        <select name="type" class="form-select" required>
-                            <option value="">Select type...</option>
-                            <option value="purchase">Purchase</option>
-                            <option value="sale">Sale</option>
-                            <option value="damage">Damage</option>
-                            <option value="return">Return</option>
-                        </select>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label"><i class="fas fa-bell me-2"></i>Reorder Level</label>
+                                <div class="input-group">
+                                    <input type="number" name="reorder_level" class="form-control @error('reorder_level') is-invalid @enderror"
+                                           value="{{ old('reorder_level', $inventory->reorder_level) }}" 
+                                           min="0" required>
+                                    <span class="input-group-text">units</span>
+                                </div>
+                                <small class="form-text text-muted">Alert when stock falls below this level</small>
+                                @error('reorder_level')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label"><i class="fas fa-check-circle me-2"></i>Status</label>
+                                <select name="status" class="form-select @error('status') is-invalid @enderror" required>
+                                    <option value="">Select status...</option>
+                                    <option value="active" {{ old('status', $inventory->status) === 'active' ? 'selected' : '' }}>Active</option>
+                                    <option value="discontinued" {{ old('status', $inventory->status) === 'discontinued' ? 'selected' : '' }}>Discontinued</option>
+                                    <option value="damaged" {{ old('status', $inventory->status) === 'damaged' ? 'selected' : '' }}>Damaged</option>
+                                </select>
+                                @error('status')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label class="form-label">Quantity</label>
-                        <input type="number" name="quantity" class="form-control" min="1" required 
-                               placeholder="Enter quantity...">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label"><i class="fas fa-building me-2"></i>Supplier</label>
+                                <input type="text" name="supplier" class="form-control @error('supplier') is-invalid @enderror"
+                                       value="{{ old('supplier', $inventory->supplier) }}"
+                                       placeholder="e.g., Premium Gas Co."
+                                       maxlength="255">
+                                <small class="form-text text-muted">Optional: Supplier name or contact</small>
+                                @error('supplier')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label"><i class="fas fa-barcode me-2"></i>Batch Number</label>
+                                <input type="text" name="batch_number" class="form-control @error('batch_number') is-invalid @enderror"
+                                       value="{{ old('batch_number', $inventory->batch_number) }}"
+                                       placeholder="e.g., BATCH2024001"
+                                       maxlength="255">
+                                <small class="form-text text-muted">Optional: For tracking and QC</small>
+                                @error('batch_number')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label class="form-label">Reference/Notes</label>
-                        <input type="text" name="notes" class="form-control" 
-                               placeholder="Optional notes..." maxlength="255">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label"><i class="fas fa-calendar me-2"></i>Expiry Date</label>
+                                <input type="date" name="expiry_date" class="form-control @error('expiry_date') is-invalid @enderror"
+                                       value="{{ old('expiry_date', $inventory->expiry_date?->format('Y-m-d')) }}">
+                                <small class="form-text text-muted">Optional: Expiration date</small>
+                                @error('expiry_date')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
                     </div>
                     
-                    <button type="submit" class="btn btn-gasgo w-100">
-                        <i class="fas fa-save me-2"></i>Adjust Stock
-                    </button>
+                    <div class="d-flex gap-2 justify-content-end mt-3">
+                        <button type="reset" class="btn btn-secondary">
+                            <i class="fas fa-undo me-2"></i>Reset
+                        </button>
+                        <button type="submit" class="btn btn-gasgo">
+                            <i class="fas fa-save me-2"></i>Save Settings
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <div class="movements-table">
+    <div class="movements-table mt-4">
         <div style="padding: 20px; border-bottom: 1px solid #f0f0f0;">
             <h5><i class="fas fa-history me-2"></i>Stock Movement History</h5>
         </div>
@@ -482,7 +536,7 @@
                     @foreach($movements as $movement)
                         <tr>
                             <td>
-                                <small>{{ $movement->created_at->format('M d, Y H:i') }}</small>
+                                <small>{{ $movement->movement_date->format('M d, Y H:i') ?? $movement->created_at->format('M d, Y H:i') }}</small>
                             </td>
                             <td>
                                 <span class="type-badge type-{{ $movement->type }}">

@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Carbon\Carbon;
 
 class InventoryController extends Controller
 {
@@ -120,7 +121,8 @@ class InventoryController extends Controller
     public function show(Inventory $inventory)
     {
         $inventory->load('product', 'movements.creator');
-        $movements = $inventory->movements()->latest()->paginate(15);
+        // Sort by movement_date (DESC) instead of created_at for accurate audit trail
+        $movements = $inventory->movements()->orderBy('movement_date', 'desc')->paginate(15);
 
         return view('admin.inventory.show', compact('inventory', 'movements'));
     }
@@ -139,7 +141,6 @@ class InventoryController extends Controller
     public function update(Request $request, Inventory $inventory)
     {
         $validated = $request->validate([
-            'quantity_on_hand' => 'required|integer|min:0',
             'reorder_level' => 'required|integer|min:0',
             'supplier' => 'nullable|string|max:255',
             'status' => 'required|in:active,discontinued,damaged',
@@ -147,25 +148,12 @@ class InventoryController extends Controller
             'batch_number' => 'nullable|string|max:255',
         ]);
 
-        $oldQuantity = $inventory->quantity_on_hand;
-        $newQuantity = $validated['quantity_on_hand'];
-
-        // Update inventory
+        // Update only settings fields - never update quantity_on_hand here
+        // All stock changes must go through the adjust() method
         $inventory->update($validated);
 
-        // Record stock movement if quantity changed
-        if ($oldQuantity !== $newQuantity) {
-            StockMovement::create([
-                'inventory_id' => $inventory->id,
-                'quantity_change' => $newQuantity - $oldQuantity,
-                'type' => 'adjustment',
-                'notes' => $request->input('notes') ?? 'Manual adjustment',
-                'created_by' => Auth::id(),
-            ]);
-        }
-
         return redirect()->route('admin.inventory.show', $inventory)
-            ->with('success', 'Inventory updated successfully.');
+            ->with('success', 'Inventory settings updated successfully.');
     }
 
     /**
@@ -173,26 +161,53 @@ class InventoryController extends Controller
      */
     public function adjust(Request $request, Inventory $inventory)
     {
+        // Get raw input first
+        $movementDateRaw = $request->input('movement_date');
+        
         $validated = $request->validate([
-            'quantity_change' => 'required|integer|not_in:0',
-            'type' => 'required|in:purchase,sale,adjustment,damage,return',
-            'notes' => 'nullable|string',
+            'quantity_change' => 'required|integer|min:1',
+            'type' => 'required|in:stock_in,stock_out,sale,damage,return',
+            'notes' => 'nullable|string|max:255',
+            'movement_date' => 'nullable|string', // Accept raw string format
         ]);
 
-        // Update inventory
-        $inventory->increment('quantity_on_hand', $validated['quantity_change']);
-        $inventory->update(['last_restocked' => now()]);
+        // Convert datetime-local format (YYYY-MM-DDTHH:MM) to Y-m-d H:i:s
+        if ($movementDateRaw && !empty($movementDateRaw)) {
+            try {
+                // Replace T with space to convert from datetime-local format
+                $movementDateFormatted = str_replace('T', ' ', $movementDateRaw);
+                $movementDate = Carbon::createFromFormat('Y-m-d H:i', $movementDateFormatted);
+            } catch (\Exception $e) {
+                $movementDate = now();
+            }
+        } else {
+            $movementDate = now();
+        }
+        
+        $quantityChange = $validated['quantity_change'];
+        $type = $validated['type'];
 
-        // Record movement
+        // For Stock In: add to inventory, update last_restocked
+        // For Stock Out types: subtract from inventory
+        if ($type === 'stock_in') {
+            $inventory->increment('quantity_on_hand', $quantityChange);
+            $inventory->update(['last_restocked' => $movementDate]);
+        } else {
+            // Stock Out: subtract quantity
+            $inventory->decrement('quantity_on_hand', $quantityChange);
+        }
+
+        // Record movement with positive quantity for tracking
         StockMovement::create([
             'inventory_id' => $inventory->id,
-            'quantity_change' => $validated['quantity_change'],
-            'type' => $validated['type'],
+            'quantity_change' => $type === 'stock_in' ? $quantityChange : -$quantityChange,
+            'type' => $type,
             'notes' => $validated['notes'],
+            'movement_date' => $movementDate,
             'created_by' => Auth::id(),
         ]);
 
-        return back()->with('success', 'Stock adjusted successfully.');
+        return back()->with('success', 'Stock adjusted successfully. Movement recorded.');
     }
 
     /**

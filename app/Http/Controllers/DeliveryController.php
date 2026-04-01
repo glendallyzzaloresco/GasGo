@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Delivery;
 use App\Models\Order;
+use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -136,6 +137,53 @@ class DeliveryController extends Controller
                 'status'       => 'delivered',
                 'delivered_at' => now(),
             ]);
+
+            // Create stock OUT movements for each order item (delivered tanks)
+            // and increment empty_on_hand (tanks collected during exchange)
+            DB::transaction(function () use ($delivery) {
+                foreach ($delivery->order->orderItems as $item) {
+                    try {
+                        // Decrement full tanks (quantity_on_hand)
+                        InventoryService::stockOut(
+                            productId: $item->product_id,
+                            quantity: $item->quantity,
+                            movementDate: now(),
+                            referenceType: 'order',
+                            referenceId: $delivery->order_id,
+                            notes: 'Delivery completed - Full tank(s) delivered to customer',
+                            userId: Auth::id()
+                        );
+
+                        // Increment empty tanks collected (exchange-only) - LPG TANKS ONLY
+                        $product = $item->product;
+                        if (strtolower($product->category) === 'tank') {
+                            $inventory = \App\Models\Inventory::where('product_id', $item->product_id)
+                                ->lockForUpdate()
+                                ->first();
+                            if ($inventory) {
+                                $inventory->increment('empty_on_hand', $item->quantity);
+
+                                // Log the empty tank collection
+                                \App\Models\InventoryMovement::create([
+                                    'product_id'     => $item->product_id,
+                                    'movement_date'  => now(),
+                                    'type'           => 'IN',
+                                    'quantity'       => $item->quantity,
+                                    'reference_type' => 'order_exchange',
+                                    'reference_id'   => $delivery->order_id,
+                                    'notes'          => 'Empty tank(s) collected during delivery exchange',
+                                    'created_by'     => Auth::id(),
+                                ]);
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        // Log the error but don't fail the delivery update
+                        \Log::warning(
+                            "Failed to record inventory movement for order {$delivery->order_id}, product {$item->product_id}: " . $e->getMessage()
+                        );
+                    }
+                }
+            });
         }
 
         $delivery->update($updateData);

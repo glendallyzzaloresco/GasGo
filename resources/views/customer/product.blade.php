@@ -250,6 +250,7 @@
             <button class="filter-btn active" data-filter="all">All</button>
             <button class="filter-btn" data-filter="lpg">LPG Tanks</button>
             <button class="filter-btn" data-filter="accessories">Accessories</button>
+            <button class="filter-btn" data-filter="appliances">Appliances</button>
             <div class="ms-auto">
                 <input type="text" class="form-control form-control-gasgo" placeholder="Search products..." id="searchProduct" style="padding:10px 18px;font-size:.9rem;">
             </div>
@@ -260,8 +261,20 @@
     <div class="row g-4" id="productGrid">
         @forelse($products as $index => $product)
             @php
-                $label = strtolower($product->name ?? '');
-                $category = (str_contains($label, 'lpg') || str_contains($label, 'kg')) ? 'lpg' : 'accessories';
+                $productCategory = strtolower((string) ($product->category ?? 'accessory'));
+                
+                // Map database category to display category
+                $categoryMap = [
+                    'tank' => 'lpg',
+                    'lpg' => 'lpg',
+                    'appliances' => 'appliances',
+                    'accessory' => 'accessories',
+                    'accessories' => 'accessories',
+                    'freebie' => 'accessories'
+                ];
+                
+                $category = $categoryMap[$productCategory] ?? 'accessories';
+                
                 $inStock = (int) ($product->quantity_on_hand ?? 0) > 0;
                 $img = $product->resolved_image;
             @endphp
@@ -269,7 +282,13 @@
                 <a href="{{ route('customer.product.show', $product->id) }}" style="text-decoration: none; color: inherit;">
                     <div class="product-card">
                         <div class="product-img">
-                            <span class="product-badge {{ $category === 'lpg' ? '' : 'accessory' }}">{{ $category === 'lpg' ? 'LPG' : 'Accessory' }}</span>
+                            @if($category === 'lpg')
+                                <span class="product-badge">LPG</span>
+                            @elseif($category === 'appliances')
+                                <span class="product-badge" style="background: #e74c3c;">Appliances</span>
+                            @else
+                                <span class="product-badge accessory">Accessory</span>
+                            @endif
                             @if($img)
                                 <img src="{{ $img }}" alt="{{ $product->name }}" class="img-fluid">
                             @else
@@ -285,10 +304,10 @@
                                 <span class="product-price">₱{{ number_format($product->price, 2) }}</span>
                             </div>
                             <div class="product-actions" style="flex-direction: column;">
-                                <button class="btn-buy buy-now-btn" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" {{ $inStock ? '' : 'disabled' }} onclick="event.stopPropagation(); buyNow({{ $product->id }});" title="Buy Now">
+                                <button class="btn-buy buy-now-btn" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" {{ $inStock ? '' : 'disabled' }} title="Buy Now">
                                     <i class="fas fa-bolt"></i>Buy Now
                                 </button>
-                                <button class="btn-add add-to-cart-btn" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" data-image="{{ $img }}" {{ $inStock ? '' : 'disabled' }} onclick="event.stopPropagation();" title="Add to Cart">
+                                <button class="btn-add add-to-cart-btn" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" data-image="{{ $img }}" {{ $inStock ? '' : 'disabled' }} title="Add to Cart">
                                     <i class="fas fa-shopping-cart"></i>Add to Cart
                                 </button>
                             </div>
@@ -363,9 +382,18 @@ document.querySelectorAll('.add-to-cart-btn').forEach(function(btn) {
     });
 });
 
+// Buy Now button event listener
+document.querySelectorAll('.buy-now-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        buyNow(parseInt(this.dataset.id));
+    });
+});
+
 // Buy Now function - adds product and redirects to checkout
 function buyNow(productId) {
-    const button = event.target.closest('.buy-now-btn');
+    const button = document.querySelector(`.buy-now-btn[data-id="${productId}"]`);
     if (!button) return;
     
     // Check if user is authenticated
@@ -378,22 +406,24 @@ function buyNow(productId) {
     }
     
     // Disable button during loading
-    const originalContent = button.innerHTML;
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
     
-    // Add product to cart then redirect to checkout
-    addToCartAjax(productId, 1)
-        .then(() => {
-            // Redirect to checkout
-            window.location.href = "{{ route('customer.checkout') }}";
-        })
-        .catch(error => {
-            console.error('Buy now error:', error);
-            button.disabled = false;
-            button.innerHTML = originalContent;
-            showNotificationWithAction('Failed to process order. Please try again.', 'error', 3000);
-        });
+    // Direct redirect to checkout without adding to cart
+    const checkoutUrl = "{{ route('customer.checkout') }}" + '?selected_items=' + productId;
+    window.location.href = checkoutUrl;
+}
+
+// Combined filter and search logic
+let activeFilter = 'all';
+let searchQuery = '';
+
+function updateProductDisplay() {
+    document.querySelectorAll('.product-item').forEach(item => {
+        const matchesFilter = (activeFilter === 'all' || item.dataset.category === activeFilter);
+        const matchesSearch = item.dataset.name.toLowerCase().includes(searchQuery.toLowerCase());
+        item.style.display = (matchesFilter && matchesSearch) ? '' : 'none';
+    });
 }
 
 // filter buttons
@@ -401,19 +431,15 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
-        const filter = this.dataset.filter;
-        document.querySelectorAll('.product-item').forEach(item => {
-            item.style.display = (filter === 'all' || item.dataset.category === filter) ? '' : 'none';
-        });
+        activeFilter = this.dataset.filter;
+        updateProductDisplay();
     });
 });
 
 // search
 document.getElementById('searchProduct').addEventListener('input', function() {
-    const q = this.value.toLowerCase();
-    document.querySelectorAll('.product-item').forEach(item => {
-        item.style.display = item.dataset.name.toLowerCase().includes(q) ? '' : 'none';
-    });
+    searchQuery = this.value;
+    updateProductDisplay();
 });
 </script>
 @endsection

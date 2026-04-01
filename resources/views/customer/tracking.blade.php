@@ -99,6 +99,16 @@
     .status-out_for_delivery { background: #fff5e6; color: #e07d0a; }
     .status-delivered { background: #d4edda; color: #155724; }
     .status-cancelled { background: #f8d7da; color: #721c24; }
+
+    /* Rider marker animation */
+    @keyframes riderPulse {
+        0%, 100% {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 0 0 rgba(247, 148, 29, 0.7);
+        }
+        50% {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 0 20px rgba(247, 148, 29, 0);
+        }
+    }
 </style>
 @endsection
 
@@ -147,8 +157,8 @@
                 id="trackingData"
                 data-order-id="{{ $order->id }}"
                 data-order-status="{{ $order->status }}"
-                data-order-lat="{{ $order->latitude ?? '' }}"
-                data-order-lng="{{ $order->longitude ?? '' }}"
+                data-order-lat="{{ $order->latitude ?? '15.7968' }}"
+                data-order-lng="{{ $order->longitude ?? '120.5631' }}"
                 data-delivery-lat="{{ ($order->delivery && $order->delivery->latitude) ? $order->delivery->latitude : '' }}"
                 data-delivery-lng="{{ ($order->delivery && $order->delivery->longitude) ? $order->delivery->longitude : '' }}"
                 data-status-url="{{ route('customer.tracking.status', $order) }}">
@@ -201,7 +211,7 @@
 
             <!-- Rider Info -->
             <div class="rider-card mb-4" data-aos="fade-up" id="riderCard">
-                <div class="rider-avatar"><i class="fas fa-motorcycle"></i></div>
+                <div class="rider-avatar"><i class="fas fa-truck"></i></div>
                 <div class="flex-grow-1">
                     <h6 class="fw-bold mb-0" id="riderName">
                         @if($order->delivery && $order->delivery->rider)
@@ -233,6 +243,20 @@
                 </div>
             </div>
 
+            <!-- Customer Address Info -->
+            <div class="rider-card mb-4" data-aos="fade-up" style="background: linear-gradient(135deg, #e8f4fc 0%, #f0f8ff 100%); border-left: 4px solid #1a6db0;">
+                <div class="rider-avatar" style="background: linear-gradient(135deg, #1a6db0, #0d3a70);"><i class="fas fa-map-marker-alt"></i></div>
+                <div class="flex-grow-1">
+                    <h6 class="fw-bold mb-0" style="color:#1a6db0;">Delivery Address</h6>
+                    <p class="text-muted mb-0" style="font-size:.88rem;" id="customerAddressInfo">
+                        {{ $order->delivery_address }}
+                    </p>
+                </div>
+                <div class="text-end">
+                    <span style="font-size:1.4rem;color:#1a6db0;"><i class="fas fa-location-dot"></i></span>
+                </div>
+            </div>
+
             <!-- Order Items -->
             <div class="tracking-card" data-aos="fade-up">
                 <h5 class="fw-bold mb-3" style="color:var(--gasgo-blue);">
@@ -240,16 +264,37 @@
                 </h5>
                 @foreach($order->orderItems as $item)
                 @php
-                    $itemImage = $item->product?->resolved_image ?: null;
+                    // For reward items, use the stored image URL; for regular items, use product image
+                    $itemImage = null;
+                    
+                    if ($item->is_reward) {
+                        // First try the stored reward_image_url
+                        if ($item->reward_image_url) {
+                            $itemImage = $item->reward_image_url;
+                        } else {
+                            // Fallback for legacy: try to get from product relationship
+                            $itemImage = $item->product?->resolved_image;
+                        }
+                    } else {
+                        // For regular items, always use product image
+                        $itemImage = $item->product?->resolved_image;
+                    }
                 @endphp
                 <div class="order-item-mini">
                     @if($itemImage)
                         <img src="{{ $itemImage }}" alt="{{ $item->product_name }}">
                     @else
-                        <span class="text-muted small">No image available</span>
+                        <div class="text-muted small" style="padding: 8px; background: #f8f9fa; border-radius: 8px; min-width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;">
+                            No image
+                        </div>
                     @endif
                     <div class="flex-grow-1">
-                        <div class="name">{{ $item->product_name }}</div>
+                        <div class="name">
+                            {{ $item->product_name }}
+                            @if($item->is_reward)
+                                <span style="background: #d4edda; color: #155724; padding: 2px 6px; border-radius: 4px; font-size: .7rem; font-weight: 600; margin-left: 4px;"><i class="fas fa-gift me-1"></i>FREE</span>
+                            @endif
+                        </div>
                         <div class="qty">Qty: {{ $item->quantity }} &times; ₱{{ number_format($item->price, 2) }}</div>
                     </div>
                     <div class="fw-bold" style="font-size:.88rem;">₱{{ number_format($item->subtotal, 2) }}</div>
@@ -405,26 +450,16 @@
     let map = null;
     let riderMarker = null;
     let destMarker = null;
-    let waypointMarkers = [];
-    let polyline = null;
-    let bounds = null;
+    let routeLine = null;
     let currentStatus = orderStatus;
 
     // Wait for Google Maps to load
     window.addEventListener('load', function() {
-        // Initialize map with whatever coordinates we have
-        const hasCoords = (deliveryInitLat && deliveryInitLng);
-        
-        if (hasCoords) {
-            initMap(deliveryInitLat, deliveryInitLng);
-        } else {
-            // Show message if no coordinates available yet
-            const msg = document.getElementById('mapMessage');
-            if (orderStatus === 'pending' || orderStatus === 'approved') {
-                msg.textContent = 'Rider location will appear once a rider is assigned';
-            } else {
-                msg.textContent = 'Waiting for rider location update...';
-            }
+        // Don't initialize map yet - wait for first poll to get rider's actual location
+        // Show message if no rider assigned yet
+        const msg = document.getElementById('mapMessage');
+        if (orderStatus === 'pending' || orderStatus === 'approved') {
+            msg.textContent = 'Rider location will appear once a rider is assigned';
         }
         
         // Start polling updates immediately if order is active
@@ -441,64 +476,115 @@
         // Initialize Leaflet map
         map = initLeafletMap('trackingMap', lat, lng, 15);
 
-        bounds = L.latLngBounds();
+        // Rider marker - use simple div with emoji
+        const riderDiv = document.createElement('div');
+        riderDiv.style.width = '80px';
+        riderDiv.style.height = '80px';
+        riderDiv.style.background = '#f7941d';
+        riderDiv.style.borderRadius = '50%';
+        riderDiv.style.display = 'flex';
+        riderDiv.style.alignItems = 'center';
+        riderDiv.style.justifyContent = 'center';
+        riderDiv.style.border = '4px solid white';
+        riderDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+        riderDiv.style.fontSize = '45px';
+        riderDiv.textContent = '🚚';
 
-        // Rider marker (orange pulsing)
         riderMarker = L.marker([lat, lng], {
             icon: L.divIcon({
-                className: 'rider-marker-icon',
-                html: `
-                    <div class="rider-icon-container" style="
-                        width: 50px;
-                        height: 50px;
-                        background: #f7941d;
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: white;
-                        font-size: 22px;
-                        border: 4px solid white;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                        animation: riderPulse 2s infinite;
-                    ">
-                        <i class="fas fa-motorcycle"></i>
-                    </div>
-                    <style>
-                    @keyframes riderPulse {
-                        0%, 100% {
-                            box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 0 0 rgba(247, 148, 29, 0.7);
-                        }
-                        50% {
-                            box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 0 20px rgba(247, 148, 29, 0);
-                        }
-                    }
-                    </style>
-                `,
-                iconSize: [50, 50],
-                iconAnchor: [25, 25]
+                html: riderDiv.outerHTML,
+                iconSize: [80, 80],
+                iconAnchor: [40, 40]
             })
-        });
-        riderMarker.addTo(map);
-        riderMarker.bindPopup('<div style="padding:8px;"><b>🏍️ Your Rider</b><br><small>Live location</small></div>');
-        bounds.extend(riderMarker.getLatLng());
+        }).addTo(map);
+        riderMarker.bindPopup('<div style="padding:8px;"><b>Rider Location</b><br><small>Live tracking</small></div>');
 
-        // Destination marker (blue)
-        if (deliveryLat && deliveryLng) {
-            destMarker = createCustomMarker(deliveryLat, deliveryLng, {
-                color: '#1a6db0',
-                iconType: 'circle',
-                size: 24
-            });
-            destMarker.addTo(map);
+        // Destination marker - use the delivery coordinates from order
+        const destLat = parseFloat(trackingEl.dataset.orderLat);
+        const destLng = parseFloat(trackingEl.dataset.orderLng);
+        
+        if (destLat && destLng && !isNaN(destLat) && !isNaN(destLng)) {
+            // Create a custom destination marker with label
+            const destDiv = document.createElement('div');
+            destDiv.style.width = '50px';
+            destDiv.style.height = '50px';
+            destDiv.style.background = '#1a6db0';
+            destDiv.style.borderRadius = '50%';
+            destDiv.style.display = 'flex';
+            destDiv.style.alignItems = 'center';
+            destDiv.style.justifyContent = 'center';
+            destDiv.style.border = '4px solid white';
+            destDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+            destDiv.style.fontSize = '24px';
+            destDiv.style.color = 'white';
+            destDiv.style.fontWeight = 'bold';
+            destDiv.textContent = '📍';
+            
+            destMarker = L.marker([destLat, destLng], {
+                icon: L.divIcon({
+                    html: destDiv.outerHTML,
+                    iconSize: [50, 50],
+                    iconAnchor: [25, 25]
+                })
+            }).addTo(map);
             destMarker.bindPopup('<div style="padding:8px;"><b>Your Delivery Address</b></div>');
-            bounds.extend(destMarker.getLatLng());
-        }
 
-        // Fit bounds
-        if (!bounds.isEmpty()) {
-            map.fitBounds(bounds, { padding: [50, 50] });
+            // Draw route line using OSRM for road-based routing
+            drawDeliveryRoute(lat, lng, destLat, destLng);
+        } else {
+            console.log('Destination coordinates missing or invalid:', {destLat, destLng});
         }
+    }
+
+    function drawDeliveryRoute(fromLat, fromLng, toLat, toLng) {
+        // Use OSRM API to get road-based route
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
+        
+        fetch(osrmUrl, {timeout: 5000})
+            .then(response => response.json())
+            .then(data => {
+                if (data.routes && data.routes.length > 0) {
+                    const route = data.routes[0];
+                    const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                    
+                    if (routeLine) {
+                        map.removeLayer(routeLine);
+                    }
+                    
+                    routeLine = L.polyline(coordinates, {
+                        color: '#f7941d',
+                        weight: 6,
+                        opacity: 0.9,
+                        lineCap: 'round',
+                        lineJoin: 'round'
+                    }).addTo(map);
+                    console.log('Route drawn via OSRM');
+                } else {
+                    console.log('No OSRM route found, using direct line');
+                    drawDirectLine(fromLat, fromLng, toLat, toLng);
+                }
+            })
+            .catch(error => {
+                console.error('OSRM error:', error);
+                drawDirectLine(fromLat, fromLng, toLat, toLng);
+            });
+    }
+
+    function drawDirectLine(fromLat, fromLng, toLat, toLng) {
+        if (routeLine) {
+            map.removeLayer(routeLine);
+        }
+        
+        routeLine = L.polyline(
+            [[fromLat, fromLng], [toLat, toLng]],
+            {
+                color: '#f7941d',
+                weight: 6,
+                opacity: 0.9,
+                dashArray: '5, 5'
+            }
+        ).addTo(map);
+        console.log('Direct line drawn (fallback)');
     }
 
     function updateRiderPosition(lat, lng) {
@@ -506,15 +592,14 @@
             initMap(lat, lng);
         } else if (riderMarker) {
             smoothMoveMarker(riderMarker, lat, lng, 2000); // 2 second smooth animation
+            map.panTo([lat, lng]); // Pan to rider location without zooming
 
-            if (destMarker) {
-                bounds = L.latLngBounds([
-                    riderMarker.getLatLng(),
-                    destMarker.getLatLng()
-                ]);
-                map.fitBounds(bounds, { padding: [50, 50] });
-            } else {
-                map.panTo([lat, lng]);
+            // Update route line to delivery address
+            const destLat = parseFloat(trackingEl.dataset.orderLat);
+            const destLng = parseFloat(trackingEl.dataset.orderLng);
+            
+            if (destLat && destLng && !isNaN(destLat) && !isNaN(destLng)) {
+                drawDeliveryRoute(lat, lng, destLat, destLng);
             }
         }
     }
@@ -543,7 +628,7 @@
             badge.innerHTML = statusBadgeLabels[data.status];
         }
 
-        // Update rider info
+        // Upd
         if (data.rider_name) {
             document.getElementById('riderName').textContent = data.rider_name;
             const info = document.getElementById('riderInfo');
@@ -568,14 +653,9 @@
             }
         }
 
-        // Initialize map if not yet initialized (use first waypoint as center)
-        if (!map && data.waypoints && data.waypoints.length > 0) {
-            const firstWaypoint = data.waypoints[0];
-            const initLat = parseFloat(firstWaypoint.latitude) || deliveryInitLat;
-            const initLng = parseFloat(firstWaypoint.longitude) || deliveryInitLng;
-            if (initLat && initLng) {
-                initMap(initLat, initLng);
-            }
+        // Initialize map with rider's actual location if not yet initialized
+        if (!map && data.rider_lat && data.rider_lng) {
+            initMap(parseFloat(data.rider_lat), parseFloat(data.rider_lng));
         }
 
         // Update map with rider position
@@ -583,22 +663,10 @@
             updateRiderPosition(parseFloat(data.rider_lat), parseFloat(data.rider_lng));
         }
 
-        // Render waypoints from rider's route
-        if (data.waypoints && Array.isArray(data.waypoints) && data.waypoints.length > 0) {
-            // Initialize map with first waypoint if not already done
-            if (!map) {
-                const firstWaypoint = data.waypoints[0];
-                const initLat = parseFloat(firstWaypoint.latitude);
-                const initLng = parseFloat(firstWaypoint.longitude);
-                if (initLat && initLng) {
-                    initMap(initLat, initLng);
-                }
-            }
-            
-            // Show waypoints
-            if (map && data.rider_lat && data.rider_lng) {
-                renderWaypoints(data.waypoints, parseFloat(data.rider_lat), parseFloat(data.rider_lng));
-            }
+        // Customer only sees their own delivery location, not other waypoints
+        // Initialize map with rider position if not already done
+        if (!map && data.rider_lat && data.rider_lng) {
+            initMap(parseFloat(data.rider_lat), parseFloat(data.rider_lng));
         }
 
         // Update map overlay message
@@ -637,7 +705,6 @@
         }
     }
 
-    // Calculate distance between two coordinates using Haversine formula
     function calculateDistance(lat1, lon1, lat2, lon2) {
         const R = 6371; // Earth's radius in km
         const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -648,68 +715,6 @@
             Math.sin(dLon / 2) * Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
-    }
-
-    function renderWaypoints(waypoints, riderLat, riderLng) {
-        // Clear existing waypoint markers
-        if (waypointMarkers && waypointMarkers.length > 0) {
-            waypointMarkers.forEach(marker => map.removeLayer(marker));
-        }
-        waypointMarkers = [];
-
-        // Clear existing polyline
-        if (polyline) {
-            map.removeLayer(polyline);
-            polyline = null;
-        }
-
-        // Build waypoint path for polyline
-        const waypointPath = [[riderLat, riderLng]];
-
-        // Create markers for each waypoint
-        waypoints.forEach((waypoint, index) => {
-            const waypointLat = parseFloat(waypoint.latitude);
-            const waypointLng = parseFloat(waypoint.longitude);
-            const isCurrentDelivery = waypoint.is_current === true || waypoint.is_current === 1 || waypoint.is_current === '1';
-
-            const position = [waypointLat, waypointLng];
-            waypointPath.push(position);
-
-            // Determine color and styling
-            let color = '#9e9e9e'; // Gray for pending
-            if (waypoint.status === 'completed') {
-                color = '#4caf50'; // Green
-            } else if (isCurrentDelivery) {
-                color = '#1a6db0'; // Blue for current
-            }
-
-            // Create numbered marker
-            const marker = createNumberedMarker(waypointLat, waypointLng, index + 1, color);
-            marker.addTo(map);
-
-            // Info window content
-            const popupContent = `
-                <div style="padding: 10px; max-width: 260px; font-family: system-ui;">
-                    <h6 style="margin: 0 0 8px 0; font-size: 14px;"><strong>Stop ${waypoint.sequence}</strong> - ${waypoint.customer}</h6>
-                    <p style="margin: 0 0 5px 0; font-size: 12px;"><strong>Address:</strong> ${waypoint.address}</p>
-                    <p style="margin: 0 0 5px 0; font-size: 12px;"><strong>Order:</strong> #${waypoint.order_number}</p>
-                    <p style="margin: 0 0 5px 0; font-size: 12px;"><strong>Amount:</strong> ₱${parseFloat(waypoint.amount).toFixed(2)}</p>
-                    <p style="margin: 0; font-size: 12px;"><span style="display: inline-block; padding: 2px 6px; background-color: ${color}; color: white; border-radius: 3px; font-size: 11px;">${waypoint.status.toUpperCase()}</span></p>
-                </div>
-            `;
-            marker.bindPopup(popupContent);
-
-            waypointMarkers.push(marker);
-        });
-
-        // Draw polyline connecting all waypoints
-        if (waypointPath.length > 1) {
-            polyline = drawRouteLine(map, waypointPath, {
-                color: '#2196f3',
-                weight: 3,
-                opacity: 0.6
-            });
-        }
     }
 
     // Poll for updates (increased frequency to 5 seconds for live tracking)

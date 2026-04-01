@@ -17,6 +17,8 @@ use App\Http\Controllers\RiderController;
 use App\Http\Controllers\LoyaltyController;
 use App\Http\Controllers\Customer\LocationController;
 use App\Http\Controllers\GeocodingController;
+use App\Http\Controllers\InventoryMovementController;
+use App\Http\Controllers\RestockController;
 
 Route::get('/geocode/search', [GeocodingController::class, 'search'])->name('geocode.search');
 Route::get('/geocode/reverse', [GeocodingController::class, 'reverse'])->name('geocode.reverse');
@@ -176,19 +178,43 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
         Route::get('/{inventory}/edit', [InventoryController::class, 'edit'])->name('admin.inventory.edit');
         Route::put('/{inventory}', [InventoryController::class, 'update'])->name('admin.inventory.update');
         Route::post('/{inventory}/adjust', [InventoryController::class, 'adjust'])->name('admin.inventory.adjust');
+
+        // Inventory Movements Ledger
+        Route::get('/movements/index', [InventoryMovementController::class, 'index'])->name('admin.inventory.movements');
+        Route::get('/movements/export', [InventoryMovementController::class, 'export'])->name('admin.inventory.movements.export');
+        Route::get('/movements/stock-summary', [InventoryMovementController::class, 'stockSummary'])->name('admin.inventory.stock-summary');
+    });
+
+    // Restock Management
+    Route::prefix('restocks')->group(function () {
+        Route::get('/', [RestockController::class, 'index'])->name('admin.restock.index');
+        Route::get('/create', [RestockController::class, 'create'])->name('admin.restock.create');
+        Route::post('/', [RestockController::class, 'store'])->name('admin.restock.store');
+        Route::get('/{restock}', [RestockController::class, 'show'])->name('admin.restock.show');
+        Route::get('/{restock}/edit', [RestockController::class, 'edit'])->name('admin.restock.edit');
+        Route::put('/{restock}', [RestockController::class, 'update'])->name('admin.restock.update');
+        Route::post('/{restock}/mark-received', [RestockController::class, 'markReceived'])->name('admin.restock.mark-received');
+        Route::delete('/{restock}', [RestockController::class, 'destroy'])->name('admin.restock.destroy');
     });
 
     // Riders
     Route::get('/riders', [RiderController::class, 'adminIndex'])->name('admin.riders');
     Route::post('/riders', [RiderController::class, 'storeRider'])->name('admin.riders.store');
     Route::get('/riders/{user}', [RiderController::class, 'show'])->name('admin.riders.show');
+    Route::put('/riders/{rider}', [RiderController::class, 'updateRiderInfo'])->name('admin.riders.update');
     Route::put('/riders/{rider}/availability', [RiderController::class, 'updateAvailability'])->name('admin.riders.availability');
+    Route::get('/riders/{rider}/stats', [RiderController::class, 'getRiderStats'])->name('admin.riders.stats');
     Route::delete('/riders/{rider}', [RiderController::class, 'destroy'])->name('admin.riders.destroy');
 
     // Deliveries
     Route::get('/deliveries', [DeliveryController::class, 'index'])->name('admin.deliveries');
     Route::post('/deliveries', [DeliveryController::class, 'store'])->name('admin.deliveries.store');
     Route::put('/deliveries/{delivery}/status', [DeliveryController::class, 'updateStatus'])->name('admin.deliveries.status');
+
+    // Vouchers
+    Route::post('/vouchers', [\App\Http\Controllers\Admin\VoucherController::class, 'store'])->name('admin.vouchers.store');
+    Route::put('/vouchers/{voucher}', [\App\Http\Controllers\Admin\VoucherController::class, 'update'])->name('admin.vouchers.update');
+    Route::delete('/vouchers/{voucher}', [\App\Http\Controllers\Admin\VoucherController::class, 'destroy'])->name('admin.vouchers.destroy');
 
     // Loyalty / Rewards
     Route::get('/rewards', [LoyaltyController::class, 'adminIndex'])->name('admin.rewards');

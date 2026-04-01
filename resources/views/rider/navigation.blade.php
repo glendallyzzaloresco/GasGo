@@ -358,11 +358,21 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.umd.js"></script>
 <script>
-    const deliveryId = {{ $delivery->id }};
-    const destinationLat = {{ $delivery->order->latitude }};
-    const destinationLng = {{ $delivery->order->longitude }};
-    const customerName = "{{ $delivery->order->user->name }}";
-    const address = "{{ $delivery->order->delivery_address }}";
+    const deliveryData = {
+        deliveryId: parseInt('{{ $delivery->id }}'),
+        destinationLat: parseFloat('{{ $delivery->order->latitude }}'),
+        destinationLng: parseFloat('{{ $delivery->order->longitude }}'),
+        customerName: '{{ addslashes($delivery->order->user->name) }}',
+        address: '{{ addslashes($delivery->order->delivery_address) }}',
+        routeMapUrl: "{{ route('rider.route.map') }}"
+    };
+    
+    const deliveryId = deliveryData.deliveryId;
+    const destinationLat = deliveryData.destinationLat;
+    const destinationLng = deliveryData.destinationLng;
+    const customerName = deliveryData.customerName;
+    const address = deliveryData.address;
+    const routeMapUrl = deliveryData.routeMapUrl;
 
     let navigationMap = null;
     let navigationControl = null;
@@ -596,7 +606,7 @@
             if (data.success) {
                 showSuccess('Delivery marked as completed! ✓');
                 setTimeout(() => {
-                    window.location.href = '{{ route('rider.route.map') }}';
+                    window.location.href = routeMapUrl;
                 }, 1500);
             } else {
                 showError(data.message || 'Failed to mark as delivered');

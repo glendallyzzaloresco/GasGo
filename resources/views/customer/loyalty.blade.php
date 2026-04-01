@@ -489,6 +489,12 @@
         color: var(--gasgo-orange);
         margin-bottom: 12px;
     }
+    .reward-icon.earned {
+        color: var(--gasgo-orange);
+    }
+    .reward-icon.inactive {
+        opacity: 0.5;
+    }
     .reward-item h6 {
         font-weight: 700;
         color: var(--gasgo-blue);
@@ -705,27 +711,26 @@ Generate the corrected controller/service logic and the template updates.S =====
     </div>
 
     <!-- AVAILABLE VOUCHERS - Only for logged-in users -->
-    @if ($availableVouchers->count() > 0)
     <div class="mb-5" data-aos="fade-up">
         <h3 class="section-title" style="font-size: 1.3rem;">
             <i class="fas fa-ticket-alt me-2" style="color: var(--gasgo-orange);"></i>
-            Your Available Vouchers ({{ $availableVouchers->count() }})
+            Vouchers Available to Claim
         </h3>
 
         <div class="row">
-            @foreach ($availableVouchers as $voucher)
+            @forelse ($unlockedVouchers->where('isUnlocked', true) as $voucher)
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="voucher-card" style="background: linear-gradient(135deg, rgba(247, 148, 29, 0.08) 0%, rgba(15, 52, 96, 0.05) 100%); border: 2px solid var(--gasgo-orange); border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(247, 148, 29, 0.1); transition: all 0.3s ease;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
                         <div>
                             <i class="fas fa-tag" style="font-size: 1.8rem; color: var(--gasgo-orange); opacity: 0.8;"></i>
                         </div>
-                        <span style="background: linear-gradient(135deg, var(--gasgo-orange), #ff6b35); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">
-                            ACTIVE
+                        <span style="background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">
+                            UNLOCKED
                         </span>
                     </div>
                     
-                    <h6 style="font-weight: 700; margin-bottom: 4px; color: var(--gasgo-blue);">{{ $voucher->voucher_name }}</h6>
+                    <h6 style="font-weight: 700; margin-bottom: 4px; color: var(--gasgo-blue);">{{ $voucher->name }}</h6>
                     <p style="color: #666; font-size: 0.9rem; margin-bottom: 12px;">{{ $voucher->description }}</p>
                     
                     <div style="background: white; padding: 12px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid var(--gasgo-orange);">
@@ -733,45 +738,71 @@ Generate the corrected controller/service logic and the template updates.S =====
                         <small style="color: #999;">Discount Value</small>
                     </div>
 
-                    <div style="background: rgba(247, 148, 29, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 12px;">
-                        <small style="color: #666; display: block;">
-                            <i class="fas fa-clock me-1" style="color: var(--gasgo-orange);"></i>
-                            Expires in <strong>{{ $voucher->isDaysUntilExpiry() }}</strong> day{{ $voucher->isDaysUntilExpiry() === 1 ? '' : 's' }}
-                        </small>
-                        <small style="color: #999; display: block; margin-top: 2px;">
-                            {{ $voucher->expires_at->format('M d, Y') }}
-                        </small>
-                    </div>
-
-                    <button class="btn" style="width: 100%; background: linear-gradient(135deg, var(--gasgo-orange), #ff6b35); color: white; border: none; padding: 10px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease; cursor: pointer;" @disabled($voucher->is_used)>
-                        @if ($voucher->is_used)
-                            <i class="fas fa-check me-1"></i> Used
-                        @else
-                            <i class="fas fa-arrow-right me-1"></i> Apply at Checkout
-                        @endif
+                    <button class="btn" style="width: 100%; background: linear-gradient(135deg, var(--gasgo-orange), #ff6b35); color: white; border: none; padding: 10px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease; cursor: pointer;">
+                        <i class="fas fa-arrow-right me-1"></i> Claim & Use at Checkout
                     </button>
                 </div>
             </div>
-            @endforeach
+            @empty
+            <div class="col-12">
+                <div class="alert" style="background: linear-gradient(135deg, rgba(15, 52, 96, 0.05), rgba(247, 148, 29, 0.05)); border: 1px solid rgba(247, 148, 29, 0.2); border-radius: 12px; padding: 20px;" role="alert" data-aos="fade-up">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fas fa-info-circle" style="font-size: 1.2rem; color: var(--gasgo-orange);"></i>
+                        <div>
+                            <strong style="color: var(--gasgo-blue);">No vouchers unlocked yet!</strong>
+                            <p style="margin: 4px 0 0 0; font-size: 0.9rem; color: #666;">
+                                Complete <strong>{{ $pointsToNextReward }} more delivered order{{ $pointsToNextReward === 1 ? '' : 's' }}</strong> to unlock your first voucher!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endforelse
         </div>
-    </div>
-    @else
-    <div class="alert" style="background: linear-gradient(135deg, rgba(15, 52, 96, 0.05), rgba(247, 148, 29, 0.05)); border: 1px solid rgba(247, 148, 29, 0.2); border-radius: 12px; padding: 20px; margin-bottom: 40px;" role="alert" data-aos="fade-up">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <i class="fas fa-info-circle" style="font-size: 1.2rem; color: var(--gasgo-orange);"></i>
-            <div>
-                <strong style="color: var(--gasgo-blue);">No vouchers yet!</strong>
-                <p style="margin: 4px 0 0 0; font-size: 0.9rem; color: #666;">
-                    Complete <strong>{{ $pointsToNextReward }} more delivered order{{ $pointsToNextReward === 1 ? '' : 's' }}</strong> to earn your first ₱{{ $nextReward }} OFF discount voucher!
-                </p>
+
+        <!-- FUTURE VOUCHERS PREVIEW -->
+        @php $lockedVouchers = $unlockedVouchers->where('isUnlocked', false); @endphp
+        @if ($lockedVouchers->count() > 0)
+        <div style="margin-top: 40px; padding-top: 30px; border-top: 2px solid #f0f0f0;">
+            <h5 class="mb-3" style="color: var(--gasgo-blue); font-weight: 700;">
+                <i class="fas fa-lock me-2" style="color: #ccc;"></i>Vouchers You Can Unlock
+            </h5>
+            <div class="row">
+                @foreach ($lockedVouchers as $voucher)
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="voucher-card" style="background: linear-gradient(135deg, #f8f9fa 0%, #fcfcfc 100%); border: 2px dashed #ddd; border-radius: 16px; padding: 20px; opacity: 0.7; transition: all 0.3s ease;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                            <div>
+                                <i class="fas fa-lock" style="font-size: 1.8rem; color: #999;"></i>
+                            </div>
+                            <span style="background: #e9ecef; color: #666; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">
+                                LOCKED
+                            </span>
+                        </div>
+                        
+                        <h6 style="font-weight: 700; margin-bottom: 4px; color: #999;">{{ $voucher->name }}</h6>
+                        <p style="color: #bbb; font-size: 0.9rem; margin-bottom: 12px;">{{ $voucher->description }}</p>
+                        
+                        <div style="background: #f0f0f0; padding: 12px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid #ddd;">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #999;">₱{{ number_format($voucher->discount_amount, 2) }}</div>
+                            <small style="color: #bbb;">Discount Value</small>
+                        </div>
+
+                        <div style="background: rgba(247, 148, 29, 0.1); padding: 10px; border-radius: 8px;">
+                            <small style="color: var(--gasgo-orange); display: block; font-weight: 600;">
+                                <i class="fas fa-target me-1"></i>
+                                {{ max(0, $voucher->reward_points_required - $completedOrders) }} more delivered order{{ max(0, $voucher->reward_points_required - $completedOrders) === 1 ? '' : 's' }} to unlock
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                @endforeach
             </div>
         </div>
+        @endif
     </div>
-    @endif
-    @endif
 
     <!-- REWARDS PREVIEW / VOUCHER LADDER - For Logged-In Users -->
-    @if (!$isGuest)
     <div class="my-5" data-aos="fade-up">
         <div class="mb-4">
             <h2 class="section-title">
@@ -784,25 +815,35 @@ Generate the corrected controller/service logic and the template updates.S =====
         </div>
 
         <div class="rewards-preview">
-            @foreach ($rewards as $reward)
+            @forelse ($unlockedVouchers as $voucher)
             <div class="reward-item" data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}">
                 <!-- LOGGED-IN: Personal Earned Rewards -->
-                <div class="reward-icon" style="@if($reward['earned']) color: var(--gasgo-orange); @else opacity: 0.5; @endif">
-                    <i class="{{ $reward['icon'] }}"></i>
+                <div class="reward-icon @if($voucher->isUnlocked) earned @else inactive @endif">
+                    <i class="fas fa-tag"></i>
                 </div>
-                @if ($reward['earned'])
+                @if ($voucher->isUnlocked)
                     <span style="display: inline-block; padding: 6px 12px; background: rgba(40, 167, 69, 0.15); color: #28a745; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 10px;">
-                        ✓ Earned
+                        ✓ Unlocked
                     </span>
                 @else
                     <span style="display: inline-block; padding: 6px 12px; background: rgba(0, 0, 0, 0.08); color: #666; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 10px;">
-                        In Progress
+                        Locked
                     </span>
                 @endif
-                <h6>{{ $reward['title'] }}</h6>
-                <p class="reward-requirement">{{ $reward['requirement'] }}</p>
+                <h6>{{ $voucher->name }}</h6>
+                <p class="reward-requirement">
+                    <strong>₱{{ number_format($voucher->discount_amount, 2) }} OFF</strong> • Unlock at {{ $voucher->reward_points_required }} orders
+                    @if (!$voucher->isUnlocked)
+                        • {{ max(0, $voucher->reward_points_required - $completedOrders) }} more orders needed
+                    @endif
+                </p>
             </div>
-            @endforeach
+            @empty
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px 20px;">
+                <i class="fas fa-inbox" style="font-size: 3rem; color: var(--gasgo-orange); opacity: 0.5; margin-bottom: 20px;"></i>
+                <p style="color: #666;">No rewards available yet. Check back soon!</p>
+            </div>
+            @endforelse
         </div>
     </div>
     @endif

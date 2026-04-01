@@ -114,7 +114,14 @@
                             {{ ucfirst($order->payment_method ?? 'N/A') }}
                         </span>
                     </td>
-                    <td><span class="badge-status badge-{{ $order->status }}">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</span></td>
+                    <td>
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            <span class="badge-status badge-{{ $order->status }}">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</span>
+                            @if($order->is_urgent)
+                                <span class="badge" style="background:#dc3545; color:white; font-size:.72rem; font-weight:600;"><i class="fas fa-bolt me-1"></i>URGENT</span>
+                            @endif
+                        </div>
+                    </td>
                     <td>
                         @php
                             $rewardItems = $order->orderItems->where('is_reward', true);
@@ -214,8 +221,12 @@
                                     </div>
                                     @if($rider->availability === 'available')
                                         <span class="badge bg-success ms-auto">Available</span>
-                                    @else
+                                    @elseif($rider->availability === 'busy')
                                         <span class="badge bg-warning text-dark ms-auto">Busy</span>
+                                    @elseif($rider->availability === 'returning')
+                                        <span class="badge bg-info ms-auto">Returning to Store</span>
+                                    @else
+                                        <span class="badge bg-secondary ms-auto">Offline</span>
                                     @endif
                                 </label>
                             @endforeach
@@ -269,8 +280,12 @@
                                     </div>
                                     @if($rider->availability === 'available')
                                         <span class="badge bg-success ms-auto">Available</span>
-                                    @else
+                                    @elseif($rider->availability === 'busy')
                                         <span class="badge bg-warning text-dark ms-auto">Busy</span>
+                                    @elseif($rider->availability === 'returning')
+                                        <span class="badge bg-info ms-auto">Returning to Store</span>
+                                    @else
+                                        <span class="badge bg-secondary ms-auto">Offline</span>
                                     @endif
                                 </label>
                             @endforeach

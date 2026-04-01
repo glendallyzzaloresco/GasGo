@@ -306,6 +306,14 @@
                         </div>
                     </div>
 
+                    <div class="field-group">
+                        <label for="phone">Phone Number</label>
+                        <input id="phone" type="text" name="phone" value="{{ old('phone', Auth::user()->phone) }}" class="form-control @error('phone') is-invalid @enderror" placeholder="e.g. 09XX-XXX-XXXX">
+                        @error('phone')
+                            <div class="field-error">{{ $message }}</div>
+                        @enderror
+                    </div>
+
                     <div class="password-section">
                         <h5>Change Password</h5>
                         <p class="field-note">Leave these blank if you do not want to change your password.</p>

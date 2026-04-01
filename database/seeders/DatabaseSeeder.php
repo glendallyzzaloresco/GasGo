@@ -73,6 +73,7 @@ class DatabaseSeeder extends Seeder
 
         Product::create([
             'name' => 'LPG Regulator',
+            'category' => 'accessory',
             'description' => 'Safety LPG Regulator',
             'price' => 450.00,
             'stock' => 150,

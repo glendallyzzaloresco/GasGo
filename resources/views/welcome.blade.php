@@ -116,8 +116,16 @@
         height: 200px;
         background: white;
         display: flex; align-items: center; justify-content: center;
+        position: relative;
     }
     .product-card .product-img img { max-height: 160px; object-fit: contain; }
+    .product-badge {
+        position: absolute; top: 14px; left: 14px;
+        background: var(--gasgo-orange); color: white;
+        padding: 4px 14px; border-radius: 20px; font-size: .75rem; font-weight: 600;
+        text-transform: capitalize;
+    }
+    .product-badge.accessory { background: var(--gasgo-blue); }
     .product-card .product-body { padding: 20px; }
     .product-card .product-body h5 { font-weight: 700; color: #2f2f2f; margin-bottom: 4px; }
     .product-price { font-size: 1.25rem; font-weight: 700; color: var(--gasgo-orange); }
@@ -185,6 +193,73 @@
             opacity: 1;
             transform: translateY(0);
         }
+    }
+
+    /* ===== PRODUCT ACTIONS BUTTONS ===== */
+    .product-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+    .product-actions .btn-add {
+        flex: 1;
+        background: var(--gasgo-orange);
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .product-actions .btn-add:hover:not(:disabled) {
+        background: #f07708;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(247, 148, 29, 0.3);
+    }
+
+    .product-actions .btn-add:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .product-actions .btn-buy {
+        flex: 1;
+        background: transparent;
+        color: var(--gasgo-blue);
+        border: 2px solid var(--gasgo-blue);
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .product-actions .btn-buy:hover:not(:disabled) {
+        background: var(--gasgo-blue);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(26, 109, 176, 0.3);
+    }
+
+    .product-actions .btn-buy:disabled {
+        border-color: #ccc;
+        color: #ccc;
+        cursor: not-allowed;
+        opacity: 0.6;
     }
 
     @media (max-width: 768px) {
@@ -291,6 +366,9 @@
                             @else
                                 <span class="text-muted small">No image available</span>
                             @endif
+                            @if($product->category)
+                                <span class="product-badge {{ strtolower($product->category) === 'accessories' ? 'accessory' : '' }}">{{ $product->category }}</span>
+                            @endif
                         </div>
                         <div class="product-body">
                             <h5>{{ $product->name }}</h5>
@@ -303,14 +381,22 @@
                             <div class="d-flex justify-content-between align-items-center mt-3" style="margin-bottom: 12px;">
                                 <span class="product-price">₱{{ number_format($product->price, 2) }}</span>
                             </div>
-                            <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <button class="btn btn-gasgo" style="font-size: 0.9rem; padding: 8px 12px; width: 100%; border: none;" onclick="buyNowWelcome({{ $product->id }});" {{ $inStock ? '' : 'disabled' }}>
-                                    <i class="fas fa-bolt me-1"></i>Buy Now
-                                </button>
-                                <button class="btn btn-gasgo-outline" style="font-size: 0.9rem; padding: 8px 12px; width: 100%; border: 2px solid var(--gasgo-blue); color: var(--gasgo-blue); background: white;" onclick="addToCartWelcome({{ $product->id }}, '{{ $product->name }}', {{ $product->price }}, '{{ $img }}');" {{ $inStock ? '' : 'disabled' }}>
-                                    <i class="fas fa-shopping-cart me-1"></i>Add to Cart
-                                </button>
-                            </div>
+                            @auth
+                                <div class="product-actions" style="flex-direction: column;">
+                                    <a href="{{ route('customer.product.show', $product->id) }}" class="btn btn-gasgo btn-sm" style="text-decoration: none; width: 100%; text-align: center; padding: 10px 15px; font-weight: 600;">
+                                        <i class="fas fa-eye me-1"></i>View
+                                    </a>
+                                </div>
+                            @else
+                                <div class="product-actions" style="flex-direction: column;">
+                                    <button class="btn-buy buy-now-btn" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" onclick="buyNowWelcome({{ $product->id }});" {{ $inStock ? '' : 'disabled' }} title="Buy Now">
+                                        <i class="fas fa-bolt"></i>Buy Now
+                                    </button>
+                                    <button class="btn-add add-to-cart-btn" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" data-image="{{ $img }}" onclick="addToCartWelcome({{ $product->id }}, '{{ $product->name }}', {{ $product->price }}, '{{ $img }}');" {{ $inStock ? '' : 'disabled' }} title="Add to Cart">
+                                        <i class="fas fa-shopping-cart"></i>Add to Cart
+                                    </button>
+                                </div>
+                            @endauth
                         </div>
                     </div>
                 </div>
@@ -476,21 +562,14 @@ function addToCartWelcome(id, name, price, image) {
         });
 }
 
-// Buy Now from welcome page
+// Buy Now from welcome page - go directly to checkout without adding to cart
 function buyNowWelcome(productId) {
     if (!isAuthenticatedUser) {
         window.location.href = "{{ url('/customer/loginRegistration?tab=register&redirect=checkout') }}";
         return;
     }
     
-    addToCartAjax(productId, 1)
-        .then(() => {
-            window.location.href = "{{ route('customer.checkout') }}";
-        })
-        .catch(error => {
-            console.error('Buy now error:', error);
-            showNotificationWithAction('Failed to process order. Please try again.', 'error', 3000);
-        });
+    window.location.href = "{{ route('customer.checkout') }}";
 }
 
 // Notification system

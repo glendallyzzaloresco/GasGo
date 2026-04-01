@@ -86,104 +86,83 @@
         box-shadow: 0 6px 16px rgba(26, 109, 176, 0.4);
     }
 
-    /* Card Grid Layout */
-    .inventory-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 24px;
+    /* Table Layout */
+    .inventory-table-wrapper {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        overflow: hidden;
         margin-bottom: 30px;
     }
 
-    .inventory-card {
-        background: white;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-        transition: all 0.3s ease;
-        border-top: 4px solid var(--primary-blue);
+    .table {
+        margin: 0;
+        font-size: 0.95rem;
+    }
+
+    .table thead {
+        background: linear-gradient(135deg, #1a6db0 0%, #2196f3 100%);
+        color: white;
+    }
+
+    .table thead th {
+        border: none;
+        padding: 16px 12px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        vertical-align: middle;
+    }
+
+    .table tbody tr {
+        border-bottom: 1px solid #f0f0f0;
+        transition: background 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+        background: #f9fbfd;
+    }
+
+    .table tbody td {
+        padding: 14px 12px;
+        vertical-align: middle;
+    }
+
+    .product-name-cell {
+        font-weight: 600;
+        color: #333;
+        max-width: 100%;
         display: flex;
-        flex-direction: column;
+        align-items: center;
+        gap: 12px;
     }
 
-    .inventory-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 8px 24px rgba(26, 109, 176, 0.16);
+    .product-table-image {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #e0e0e0;
+        flex-shrink: 0;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease;
     }
 
-    .inventory-card-image {
-        background: linear-gradient(135deg, #f0f4f8 0%, #e8ecf1 100%);
-        height: 160px;
+    .product-table-image:hover {
+        transform: scale(1.05);
+    }
+
+    .product-table-image-placeholder {
+        width: 50px;
+        height: 50px;
+        background: #f0f0f0;
+        border-radius: 6px;
+        border: 1px solid #e0e0e0;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 4rem;
-        color: var(--primary-blue);
-        border-bottom: 1px solid #e0e0e0;
-        overflow: hidden;
-    }
-
-    .inventory-card-image img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        background: #fff;
-        padding: 10px;
-    }
-
-    .inventory-card-content {
-        padding: 20px;
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .inventory-card-title {
-        font-size: 1rem;
-        font-weight: 700;
-        color: #333;
-        margin-bottom: 10px;
-        min-height: 2.2em;
-        line-clamp: 2;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .inventory-card-sku {
-        font-size: 0.75rem;
-        color: #999;
-        margin-bottom: 12px;
-        font-weight: 500;
-    }
-
-    .inventory-card-info {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-        margin-bottom: 16px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid #f0f0f0;
-    }
-
-    .info-item {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .info-label {
-        font-size: 0.75rem;
-        color: #999;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 4px;
-    }
-
-    .info-value {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #1a6db0;
+        flex-shrink: 0;
     }
 
     .stock-status-badge {
@@ -195,7 +174,6 @@
         text-transform: uppercase;
         letter-spacing: 0.5px;
         align-self: flex-start;
-        margin-bottom: 12px;
     }
 
     .stock-status-badge.in-stock {
@@ -240,64 +218,14 @@
     .inventory-card-actions {
         display: flex;
         gap: 8px;
-        margin-top: auto;
-    }
-
-    .inventory-card-actions .btn {
-        flex: 1;
-        padding: 10px 12px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        border-radius: 6px;
-        border: none;
-        transition: all 0.2s ease;
-        cursor: pointer;
-    }
-
-    .inventory-card-actions .btn-view {
-        background: #2196f3;
-        color: white;
-    }
-
-    .inventory-card-actions .btn-view:hover {
-        background: #1976d2;
-        transform: translateY(-2px);
-    }
-
-    .inventory-card-actions .btn-edit {
-        background: var(--primary-orange);
-        color: white;
-        flex: 0 0 40px;
-    }
-
-    .inventory-card-actions .btn-edit:hover {
-        background: #e07d0a;
-        transform: translateY(-2px);
     }
 
     .product-category {
-        margin-bottom: 40px;
+        display: none;
     }
 
     .category-header {
-        background: linear-gradient(135deg, #1a6db0 5%, #154e8a 100%);
-        color: white;
-        padding: 14px 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        font-weight: 700;
-        font-size: 1.05rem;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .category-header.freebies {
-        background: linear-gradient(135deg, #27ae60 5%, #1f8449 100%);
-    }
-
-    .category-header.regulators {
-        background: linear-gradient(135deg, #f39c12 5%, #d68910 100%);
+        display: none;
     }
 
     .empty-inventory {
@@ -366,58 +294,52 @@
     .overlay.show {
         display: block;
     }
+
+    /* Action Button Hover Effects */
+    .btn-sm {
+        transition: all 0.2s ease !important;
+    }
+
+    .btn-view {
+        transition: all 0.2s ease !important;
+    }
+
+    .btn-view:hover {
+        background: #1976d2 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4) !important;
+    }
+
+    .adjust-stock-btn {
+        transition: all 0.2s ease !important;
+    }
+
+    .adjust-stock-btn:hover {
+        background: #45a049 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4) !important;
+    }
+
+    .btn-edit {
+        transition: all 0.2s ease !important;
+    }
+
+    .btn-edit:hover {
+        background: #f57c00 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4) !important;
+    }
 </style>
 @endsection
 
 @section('content')
 <div class="container-fluid p-4">
-    @php
-        $resolveImageUrl = function (?string $path): ?string {
-            if (! $path) {
-                return null;
-            }
 
-            $normalized = ltrim($path, '/');
-
-            if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
-                return $path;
-            }
-
-            if (str_starts_with($normalized, 'storage/') || str_starts_with($normalized, 'images/')) {
-                return asset($normalized);
-            }
-
-            return asset('storage/' . $normalized);
-        };
-
-        $freebieImageByName = \App\Models\Freebie::query()
-            ->get(['name', 'image'])
-            ->mapWithKeys(function ($freebie) {
-                return [strtolower(trim($freebie->name)) => $freebie->image];
-            });
-
-        $resolveInventoryImagePath = function ($inventory) use ($freebieImageByName) {
-            $productImage = $inventory->product->image ?? null;
-            if (! empty($productImage)) {
-                return $productImage;
-            }
-
-            $name = strtolower(trim((string) ($inventory->product->name ?? '')));
-            $nameWithoutSuffix = strtolower(trim((string) preg_replace('/\s*\((freebie|reward)\)\s*$/i', '', $name)));
-
-            return $freebieImageByName[$name] ?? $freebieImageByName[$nameWithoutSuffix] ?? null;
-        };
-    @endphp
 
     <div class="inventory-header">
         <div>
             <h1 class="mb-2"><i class="fas fa-warehouse me-2"></i>Inventory Management</h1>
             <p class="mb-0">Monitor and manage your LPG product inventory</p>
-        </div>
-        <div>
-            <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#quickAddModal">
-                <i class="fas fa-plus me-2"></i>Add Stock
-            </button>
         </div>
     </div>
 
@@ -465,6 +387,7 @@
                 <select id="categorySelect" name="category" class="form-select">
                     <option value="">All Categories</option>
                     <option value="Tank" {{ request('category') === 'Tank' ? 'selected' : '' }}>Tank</option>
+                    <option value="Accessories" {{ request('category') === 'Accessories' ? 'selected' : '' }}>Accessories</option>
                     <option value="Freebie" {{ request('category') === 'Freebie' ? 'selected' : '' }}>Freebie</option>
                 </select>
             </div>
@@ -485,64 +408,22 @@
                 <p>Start adding products to inventory management</p>
             </div>
         @else
-            @php
-                $grouped = collect($inventories->items())->groupBy(function ($item) {
-                    $category = trim((string) ($item->product->category ?? ''));
-                    return $category !== '' ? $category : 'Uncategorized';
-                });
-
-                // Sort groups by priority: Tanks first, then Freebies, then others
-                $grouped = $grouped->sortBy(function ($items, $category) {
-                    $categoryLower = strtolower($category);
-                    
-                    // Priority 1: Tanks
-                    if (str_contains($categoryLower, 'tank') || str_contains($categoryLower, 'lpg')) {
-                        return '1_tank';
-                    }
-                    
-                    // Priority 2: Freebies & Rewards
-                    if (str_contains($categoryLower, 'freebie') || str_contains($categoryLower, 'reward') || str_contains($categoryLower, 'promo')) {
-                        return '2_freebie';
-                    }
-                    
-                    // Priority 3: Others
-                    return '3_' . $categoryLower;
-                });
-
-                $categoryIcon = function (string $category): string {
-                    $label = strtolower($category);
-
-                    if (str_contains($label, 'tank') || str_contains($label, 'lpg')) {
-                        return '🛢️';
-                    }
-                    if (str_contains($label, 'regulator') || str_contains($label, 'equipment') || str_contains($label, 'accessor')) {
-                        return '🔧';
-                    }
-                    if (str_contains($label, 'reward') || str_contains($label, 'freebie') || str_contains($label, 'promo')) {
-                        return '🎁';
-                    }
-
-                    return '📦';
-                };
-            @endphp
-            
-            @foreach($grouped as $groupName => $items)
-                <div class="product-category">
-                    <div class="category-header">
-                        <span>{{ $categoryIcon($groupName) }} {{ $groupName }}</span>
-                    </div>
-                    
-                    <div class="inventory-grid">
-                        @php
-                            // Separate in-stock from out-of-stock within this category
-                            $inStockItems = $items->filter(function($item) { return $item->quantity_on_hand > 0; });
-                            $outOfStockItems = $items->filter(function($item) { return $item->quantity_on_hand == 0; });
-                            
-                            // Display in-stock first, then out-of-stock
-                            $sortedItems = $inStockItems->concat($outOfStockItems);
-                        @endphp
-                        
-                        @foreach($sortedItems as $inventory)
+            <div class="inventory-table-wrapper">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width: 28%;">Product Name</th>
+                            <th style="width: 8%;">SKU</th>
+                            <th style="width: 10%;">Category</th>
+                            <th style="width: 9%;">Stock on Hand</th>
+                            <th style="width: 9%;">Empty Tanks <span style="font-size: 0.75rem; color: #999;">(LPG Only)</span></th>
+                            <th style="width: 8%;">Reorder Level</th>
+                            <th style="width: 10%;">Status</th>
+                            <th style="width: 18%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($inventories as $inventory)
                             @php
                                 $stockStatus = 'in-stock';
                                 $stockLabel = 'In Stock';
@@ -554,60 +435,70 @@
                                     $stockLabel = 'Low Stock';
                                 }
                             @endphp
-                            
-                            @php
-                                $dbImagePath = $resolveInventoryImagePath($inventory);
-                                $productImageUrl = $resolveImageUrl($dbImagePath);
-                            @endphp
-
-                            <div class="inventory-card">
-                                <div class="inventory-card-image">
-                                    @if($productImageUrl)
-                                        <img src="{{ $productImageUrl }}" alt="{{ $inventory->product->name }}">
+                            <tr>
+                                <td>
+                                    <div class="product-name-cell" style="display: flex; align-items: center; gap: 12px;">
+                                        @if($inventory->product->image)
+                                            <img src="{{ asset('storage/' . $inventory->product->image) }}" 
+                                                 alt="{{ $inventory->product->name }}" 
+                                                 class="product-table-image"
+                                                 style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid #e0e0e0;">
+                                        @else
+                                            <div class="product-table-image-placeholder" 
+                                                 style="width: 50px; height: 50px; background: #f0f0f0; border-radius: 6px; border: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: center;">
+                                                <i class="fas fa-image" style="color: #ccc; font-size: 1.5rem;"></i>
+                                            </div>
+                                        @endif
+                                        <span style="font-weight: 500; color: #333;">{{ $inventory->product->name }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span style="color: #999; font-size: 0.85rem;">{{ $inventory->product->sku ?? 'N/A' }}</span>
+                                </td>
+                                <td>
+                                    <span style="color: #666; font-weight: 500;">{{ $inventory->product->category ?? 'N/A' }}</span>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 700; color: #1a6db0; font-size: 1.05rem;">{{ $inventory->quantity_on_hand }}</span>
+                                </td>
+                                <td>
+                                    @if(strtolower($inventory->product->category) === 'tank')
+                                        <span style="font-weight: 700; color: #ff6f00; font-size: 1.05rem;">{{ $inventory->empty_on_hand ?? 0 }}</span>
                                     @else
-                                        <i class="fas fa-box-open" aria-hidden="true"></i>
+                                        <span style="color: #999; font-size: 0.85rem;">—</span>
                                     @endif
-                                </div>
-                                
-                                <div class="inventory-card-content">
-                                    <h3 class="inventory-card-title">{{ $inventory->product->name }}</h3>
-                                    <div class="inventory-card-sku">SKU: {{ $inventory->product->sku ?? 'N/A' }}</div>
-                                    
-                                    <div class="stock-status-badge {{ $stockStatus }}">
+                                </td>
+                                <td>
+                                    <span style="color: #666;">{{ $inventory->reorder_level }}</span>
+                                </td>
+                                <td>
+                                    <span class="stock-status-badge {{ $stockStatus }}">
                                         {{ $stockLabel }}
-                                    </div>
-                                    
-                                    <div class="inventory-card-info">
-                                        <div class="info-item">
-                                            <span class="info-label">Current Stock</span>
-                                            <span class="info-value">{{ $inventory->quantity_on_hand }}</span>
-                                        </div>
-                                        <div class="info-item">
-                                            <span class="info-label">Reorder Level</span>
-                                            <span class="info-value">{{ $inventory->reorder_level }}</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div style="margin-bottom: 12px;">
-                                        <span class="inventory-status-badge status-{{ $inventory->status }}">
-                                            {{ ucfirst($inventory->status) }}
-                                        </span>
-                                    </div>
-                                    
-                                    <div class="inventory-card-actions">
-                                        <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-view">
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 8px;">
+                                        <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-view" style="background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" title="View">
                                             <i class="fas fa-eye me-1"></i>View
                                         </a>
-                                        <a href="{{ route('admin.inventory.edit', $inventory) }}" class="btn btn-edit" title="Edit">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
+                                        <button type="button" class="btn btn-sm adjust-stock-btn" style="background: #4caf50; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" data-bs-toggle="modal" data-bs-target="#adjustStockModal" 
+                                            data-inventory-id="{{ $inventory->id }}" data-product-name="{{ $inventory->product->name }}">
+                                            <i class="fas fa-plus me-1"></i>Add Stock
+                                        </button>
                                     </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            @endforeach
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                                    <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 12px; display: block;"></i>
+                                    No inventory items found
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
 
             <div class="d-flex justify-content-center mt-4 mb-5" id="paginationContainer">
                 {{ $inventories->render() }}
@@ -615,78 +506,62 @@
 
             <!-- Freebies & Rewards Section -->
             @if($freebies && $freebies->count() > 0)
-            <div class="product-category">
-                <div class="category-header freebies">
-                    <i class="fas fa-gift"></i>Freebies & Rewards
+            <div class="inventory-table-wrapper">
+                <div style="background: linear-gradient(135deg, #27ae60 0%, #1f8449 100%); color: white; padding: 14px 20px; font-weight: 700; font-size: 1.05rem;">
+                    <i class="fas fa-gift me-2"></i>Freebies & Rewards
                 </div>
-                <div class="inventory-grid">
-                    @php
-                        $resolveImageUrl = function (?string $path): ?string {
-                            if (! $path) {
-                                return null;
-                            }
-                            $normalized = ltrim($path, '/');
-                            if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
-                                return $path;
-                            }
-                            if (str_starts_with($normalized, 'storage/') || str_starts_with($normalized, 'images/')) {
-                                return asset($normalized);
-                            }
-                            return asset('storage/' . $normalized);
-                        };
-                    @endphp
-                    @foreach($freebies as $freebie)
-                        @php
-                            $stockStatus = 'in-stock';
-                            $stockLabel = 'In Stock';
-                            
-                            if ($freebie->stock == 0) {
-                                $stockStatus = 'out-of-stock';
-                                $stockLabel = 'Out of Stock';
-                            } elseif ($freebie->stock <= 5) {
-                                $stockStatus = 'low-stock';
-                                $stockLabel = 'Low Stock';
-                            }
-                            
-                            $freebieImageUrl = $resolveImageUrl($freebie->image);
-                        @endphp
-                        <div class="inventory-card" style="border-top-color: #27ae60;">
-                            <div class="inventory-card-image" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
-                                @if($freebieImageUrl)
-                                    <img src="{{ $freebieImageUrl }}" alt="{{ $freebie->name }}">
-                                @else
-                                    <i class="fas fa-gift" style="color: #27ae60;"></i>
-                                @endif
-                            </div>
-                            
-                            <div class="inventory-card-content">
-                                <h3 class="inventory-card-title">{{ $freebie->name }}</h3>
-                                <div class="inventory-card-sku">Category: {{ ucfirst($freebie->category ?? 'Reward') }}</div>
+                <table class="table table-hover">
+                    <thead>
+                        <tr style="background: linear-gradient(135deg, #27ae60 0%, #1f8449 100%); color: white;">
+                            <th style="width: 30%;">Name</th>
+                            <th style="width: 20%;">Category</th>
+                            <th style="width: 12%;">Stock</th>
+                            <th style="width: 12%;">Reward Points</th>
+                            <th style="width: 12%;">Status</th>
+                            <th style="width: 14%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($freebies as $freebie)
+                            @php
+                                $stockStatus = 'in-stock';
+                                $stockLabel = 'In Stock';
                                 
-                                <div class="stock-status-badge {{ $stockStatus }}">
-                                    {{ $stockLabel }}
-                                </div>
-                                
-                                <div class="inventory-card-info">
-                                    <div class="info-item">
-                                        <span class="info-label">Stock</span>
-                                        <span class="info-value">{{ $freebie->stock }}</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <span class="info-label">Points</span>
-                                        <span class="info-value">{{ $freebie->reward_points_required ?? 'N/A' }}</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="inventory-card-actions">
-                                    <a href="{{ route('admin.products', ['tab' => 'freebies']) }}" class="btn btn-view" title="Manage">
+                                if ($freebie->stock == 0) {
+                                    $stockStatus = 'out-of-stock';
+                                    $stockLabel = 'Out of Stock';
+                                } elseif ($freebie->stock <= 5) {
+                                    $stockStatus = 'low-stock';
+                                    $stockLabel = 'Low Stock';
+                                }
+                            @endphp
+                            <tr>
+                                <td>
+                                    <div class="product-name-cell">{{ $freebie->name }}</div>
+                                </td>
+                                <td>
+                                    <span style="color: #666; font-weight: 500;">{{ ucfirst($freebie->category ?? 'Reward') }}</span>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 700; color: #27ae60; font-size: 1.05rem;">{{ $freebie->stock }}</span>
+                                </td>
+                                <td>
+                                    <span style="color: #666; font-weight: 600;">{{ $freebie->reward_points_required ?? 'N/A' }}</span>
+                                </td>
+                                <td>
+                                    <span class="stock-status-badge {{ $stockStatus }}">
+                                        {{ $stockLabel }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ route('admin.products', ['tab' => 'freebies']) }}" class="btn btn-sm" style="background: #27ae60; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" title="Manage">
                                         <i class="fas fa-edit me-1"></i>Manage
                                     </a>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
             @endif
         @endif
@@ -773,7 +648,178 @@
     </div>
 </div>
 
+<!-- Add Stock Modal -->
+<div class="modal fade" id="adjustStockModal" tabindex="-1" aria-labelledby="adjustStockModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); color: white;">
+                <h5 class="modal-title" id="adjustStockModalLabel">
+                    <i class="fas fa-plus me-2"></i>Add Stock - <span id="adjustProductName"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: brightness(0) invert(1);"></button>
+            </div>
+            <form id="adjustStockForm" method="POST">
+                @csrf
+                <input type="hidden" name="inventory_id" id="adjustInventoryId">
+                
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Adjustment Type *</label>
+                        <select name="type" class="form-select" id="adjustmentType" required>
+                            <option value="">Select type...</option>
+                            <optgroup label="STOCK IN (Add Inventory)">
+                                <option value="stock_in">Stock In (Restock/Refill)</option>
+                            </optgroup>
+                            <optgroup label="STOCK OUT (Reduce Inventory)">
+                                <option value="stock_out">Stock Out / Correction</option>
+                                <option value="sale">Sale</option>
+                                <option value="damage">Damage / Loss</option>
+                                <option value="return">Customer Return (Empty Tank - LPG Only)</option>
+                            </optgroup>
+                        </select>
+                        @error('type')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label" for="quantityInput">Quantity *</label>
+                        <input type="number" name="quantity_change" class="form-control" id="quantityInput" required 
+                               placeholder="Enter positive number (units)" min="1">
+                        <small class="text-muted" id="quantityHint">Enter quantity to add (Stock In only accepts positive values)</small>
+                        @error('quantity_change')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Movement Date & Time</label>
+                        <input type="datetime-local" name="movement_date" class="form-control" id="movementDateTime" 
+                               value="" data-datetime-placeholder="true">
+                        <small class="text-muted">Leave blank for current date/time</small>
+                        @if ($errors->has('movement_date'))
+                            <small class="text-danger d-block mt-1">{{ $errors->first('movement_date') }}</small>
+                        @endif
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Reference/Notes (Optional)</label>
+                        <textarea name="notes" class="form-control" id="notesInput"
+                               placeholder="e.g., Delivery from supplier, damaged batch, etc." maxlength="255" rows="2"></textarea>
+                        @error('notes')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-gasgo">
+                        <i class="fas fa-save me-2"></i>Add Stock
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
+// Set default datetime to now
+document.addEventListener('DOMContentLoaded', function() {
+    const movementDateInput = document.getElementById('movementDateTime');
+    if (movementDateInput) {
+        movementDateInput.value = new Date().toISOString().slice(0, 16);
+    }
+    
+    // Add event listeners to all Adjust Stock buttons
+    document.querySelectorAll('.adjust-stock-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const inventoryId = this.getAttribute('data-inventory-id');
+            const productName = this.getAttribute('data-product-name');
+            setAdjustInventory(inventoryId, productName);
+        });
+    });
+    
+    // Handle adjustment type change
+    const adjustmentTypeSelect = document.getElementById('adjustmentType');
+    const quantityInput = document.getElementById('quantityInput');
+    const quantityHint = document.getElementById('quantityHint');
+    
+    if (adjustmentTypeSelect) {
+        adjustmentTypeSelect.addEventListener('change', function() {
+            const selectedType = this.value;
+            if (selectedType === 'stock_in') {
+                quantityInput.min = '1';
+                quantityInput.placeholder = 'Enter quantity to add';
+                quantityHint.textContent = 'Stock In always adds to inventory - enter positive quantity only';
+                quantityHint.style.color = '#27ae60';
+            } else if (['stock_out', 'sale', 'damage', 'return'].includes(selectedType)) {
+                quantityInput.min = '1';
+                quantityInput.placeholder = 'Enter quantity to remove';
+                quantityHint.textContent = 'Enter positive quantity - system will subtract from inventory';
+                quantityHint.style.color = '#e74c3c';
+            } else {
+                quantityInput.min = '1';
+                quantityHint.textContent = 'Enter quantity';
+                quantityHint.style.color = '#999';
+            }
+            quantityInput.value = '';
+        });
+    }
+});
+
+// Function to set inventory for adjustment
+function setAdjustInventory(inventoryId, productName) {
+    document.getElementById('adjustInventoryId').value = inventoryId;
+    document.getElementById('adjustProductName').textContent = productName;
+    document.getElementById('adjustmentType').value = '';
+    document.getElementById('quantityInput').value = '';
+    document.getElementById('notesInput').value = '';
+    const movementDateInput = document.getElementById('movementDateTime');
+    if (movementDateInput) {
+        // Start with empty value to indicate "use current time"
+        movementDateInput.value = '';
+        
+        // Set default value when user focuses on the field
+        movementDateInput.addEventListener('focus', function(e) {
+            if (!this.value) {
+                this.value = new Date().toISOString().slice(0, 16);
+            }
+        }, { once: true });
+    }
+}
+
+// Handle adjust stock form submission
+document.getElementById('adjustStockForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const inventoryId = document.getElementById('adjustInventoryId').value;
+    const formData = new FormData(this);
+    
+    // Remove the hidden inventory_id field to avoid duplication
+    formData.delete('inventory_id');
+    
+    fetch(`{{ route('admin.inventory.adjust', ':id') }}`.replace(':id', inventoryId), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('adjustStockModal')).hide();
+            // Reload page to show updated stock
+            window.location.reload();
+        } else {
+            return response.text().then(text => { throw new Error(text); });
+        }
+    })
+    .catch(error => {
+        alert('Error adjusting stock: ' + error.message);
+    });
+});
+
 const searchInput = document.getElementById('searchInput');
 const statusSelect = document.getElementById('statusSelect');
 const sortSelect = document.getElementById('sortSelect');

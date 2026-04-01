@@ -64,44 +64,6 @@
 </section>
 
 <section class="container section-padding" style="position:relative;z-index:2;">
-    @php
-        $freebieNames = $orders
-            ->flatMap(function ($order) {
-                return $order->orderItems
-                    ->where('is_reward', true)
-                    ->pluck('product_name');
-            })
-            ->filter()
-            ->values();
-
-        $freebieImages = \App\Models\Freebie::query()
-            ->when($freebieNames->isNotEmpty(), function ($query) use ($freebieNames) {
-                $query->whereIn('name', $freebieNames->unique());
-            })
-            ->get(['name', 'image'])
-            ->mapWithKeys(function ($freebie) {
-                return [strtolower(trim($freebie->name)) => $freebie->image];
-            });
-
-        $resolveImageFromDb = function ($path) {
-            if (! $path) {
-                return null;
-            }
-
-            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-                return $path;
-            }
-
-            $normalized = ltrim($path, '/');
-
-            if (str_starts_with($normalized, 'storage/') || str_starts_with($normalized, 'images/')) {
-                return asset($normalized);
-            }
-
-            return asset('storage/' . $normalized);
-        };
-    @endphp
-
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert" data-aos="fade-up">
             <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
@@ -152,17 +114,29 @@
             <div class="order-body">
                 @foreach ($order->orderItems as $item)
                 @php
-                    $normalizedRewardName = strtolower(trim((string) preg_replace('/\s*\(freebie\)\s*$/i', '', $item->product_name)));
-                    $freebieImagePath = $freebieImages[$normalizedRewardName] ?? $freebieImages[strtolower(trim($item->product_name))] ?? null;
-                    $itemImage = $item->is_reward
-                        ? ($resolveImageFromDb($freebieImagePath) ?: ($item->product?->resolved_image ?: null))
-                        : ($item->product?->resolved_image ?: null);
+                    // For reward items, use the stored image URL; for regular items, use product image
+                    $itemImage = null;
+                    
+                    if ($item->is_reward) {
+                        // First try the stored reward_image_url
+                        if ($item->reward_image_url) {
+                            $itemImage = $item->reward_image_url;
+                        } else {
+                            // Fallback for legacy: try to get from product relationship
+                            $itemImage = $item->product?->resolved_image;
+                        }
+                    } else {
+                        // For regular items, always use product image
+                        $itemImage = $item->product?->resolved_image;
+                    }
                 @endphp
                 <div class="order-item-row @if($item->is_reward) reward-item @endif">
                     @if($itemImage)
                         <img src="{{ $itemImage }}" alt="{{ $item->product_name }}">
                     @else
-                        <span class="text-muted small">No image available</span>
+                        <div class="text-muted small" style="padding: 8px; background: #f8f9fa; border-radius: 8px; min-width: 60px; display: flex; align-items: center; justify-content: center;">
+                            No image
+                        </div>
                     @endif
                     <div>
                         <div class="item-name">

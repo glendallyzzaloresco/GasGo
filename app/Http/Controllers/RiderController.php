@@ -7,6 +7,8 @@ use App\Models\Rider;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class RiderController extends Controller
 {
@@ -83,17 +85,32 @@ class RiderController extends Controller
             'vehicle_type'   => 'nullable|string|max:255',
             'plate_number'   => 'nullable|string|max:255',
             'license_number' => 'nullable|string|max:255',
-            'availability'   => 'required|in:available,busy,offline',
+            'availability'   => 'required|in:available,busy,returning,offline',
         ]);
 
-        Rider::updateOrCreate(
+        // Store previous availability status
+        $rider = Rider::where('user_id', Auth::id())->first();
+        $previousStatus = $rider?->availability;
+
+        $updated = Rider::updateOrCreate(
             ['user_id' => Auth::id()],
             $validated
         );
 
+        // Log status change
+        if ($validated['availability'] !== $previousStatus) {
+            Log::info('Rider Status Changed', [
+                'rider_id' => Auth::id(),
+                'rider_name' => Auth::user()->name,
+                'from_status' => $previousStatus,
+                'to_status' => $validated['availability'],
+                'timestamp' => now(),
+            ]);
+        }
+
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
-                'message' => 'Profile updated successfully.',
+                'message' => 'Status updated successfully.',
                 'availability' => $validated['availability'],
             ]);
         }
@@ -144,7 +161,7 @@ class RiderController extends Controller
             'name'           => 'required|string|max:255',
             'email'          => 'required|email|max:255|unique:users,email',
             'phone'          => 'required|string|max:20',
-            'password'       => 'required|string|min:6',
+            'password'       => 'required|string|min:6|confirmed',
             'address'        => 'nullable|string|max:500',
             'vehicle_type'   => 'nullable|string|max:255',
             'plate_number'   => 'nullable|string|max:255',
@@ -191,12 +208,82 @@ class RiderController extends Controller
     public function updateAvailability(Request $request, Rider $rider)
     {
         $validated = $request->validate([
-            'availability' => 'required|in:available,busy,offline',
+            'availability' => 'required|in:available,busy,returning,offline',
         ]);
 
         $rider->update(['availability' => $validated['availability']]);
 
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Rider availability updated.']);
+        }
+
         return redirect()->back()->with('success', 'Rider availability updated.');
+    }
+
+    // Admin: get rider stats (for dynamic updates)
+    public function getRiderStats(Rider $rider)
+    {
+        $userId = $rider->user_id;
+
+        // Total deliveries
+        $totalDel = Delivery::where('rider_id', $rider->id)->count();
+
+        // Completed deliveries
+        $completedDel = Delivery::where('rider_id', $rider->id)
+            ->where('status', 'delivered')
+            ->count();
+
+        // Today's deliveries
+        $todayDel = Delivery::where('rider_id', $rider->id)
+            ->whereDate('created_at', today())
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'availability' => $rider->availability,
+            'total_deliveries' => $totalDel,
+            'completed_deliveries' => $completedDel,
+            'today_deliveries' => $todayDel,
+        ]);
+    }
+
+    // Admin: update rider information
+    public function updateRiderInfo(Request $request, Rider $rider)
+    {
+        $user = User::find($rider->user_id);
+        
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Rider not found.'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone' => 'required|string|max:20',
+            'vehicle_type' => 'nullable|string|max:255',
+            'plate_number' => 'nullable|string|max:255',
+            'license_number' => 'nullable|string|max:255',
+        ]);
+
+        // Update user info
+        $user->update([
+            'name' => $validated['name'],
+            'email' => strtolower($validated['email']),
+            'phone' => $validated['phone'],
+        ]);
+
+        // Update rider info
+        $rider->update([
+            'vehicle_type' => $validated['vehicle_type'],
+            'plate_number' => $validated['plate_number'],
+            'license_number' => $validated['license_number'],
+        ]);
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Rider information updated successfully!']);
+        }
+
+        return redirect()->route('admin.riders')->with('success', 'Rider information updated successfully!');
     }
 
     // Admin: delete rider account
@@ -207,7 +294,16 @@ class RiderController extends Controller
         if ($user) {
             $riderName = $user->name;
             $user->delete(); // Will cascade delete the Rider record
+            
+            if (request()->expectsJson() || request()->ajax()) {
+                return response()->json(['success' => true, 'message' => "Rider '$riderName' deleted successfully!"]);
+            }
+            
             return redirect()->route('admin.riders')->with('success', "Rider '$riderName' account deleted successfully!");
+        }
+
+        if (request()->expectsJson() || request()->ajax()) {
+            return response()->json(['success' => false, 'message' => 'Rider not found.'], 404);
         }
 
         return redirect()->route('admin.riders')->with('error', 'Rider not found.');
@@ -241,9 +337,12 @@ class RiderController extends Controller
     public function liveRouteMap()
     {
         $activeDeliveries = Delivery::with('order.user', 'order.orderItems.product')
-            ->where('rider_id', Auth::id())
-            ->whereNotIn('status', ['delivered', 'failed'])
-            ->orderBy('assigned_at', 'asc')
+            ->leftJoin('orders', 'deliveries.order_id', '=', 'orders.id')
+            ->where('deliveries.rider_id', Auth::id())
+            ->whereNotIn('deliveries.status', ['delivered', 'failed'])
+            ->orderBy('orders.is_urgent', 'desc')
+            ->orderBy('deliveries.assigned_at', 'asc')
+            ->select('deliveries.*')
             ->get();
 
         return view('rider.route-map', compact('activeDeliveries'));

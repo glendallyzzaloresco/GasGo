@@ -93,7 +93,7 @@ class OrderController extends Controller
                 return $product;
             });
 
-        $availableFreebies = $tableFreebies
+        $allFreebies = $tableFreebies
             ->concat($productFreebies)
             ->sortBy('name')
             ->values();
@@ -126,6 +126,21 @@ class OrderController extends Controller
             }
         }
 
+        // Calculate total items in this checkout order
+        $totalCheckoutItems = $rewardPreview['total_items'];
+
+        // Separate freebies into unlocked (available) and locked (requires more items)
+        $unlockedFreebies = $allFreebies->filter(function ($freebie) use ($totalCheckoutItems) {
+            return $freebie->reward_points_required <= $totalCheckoutItems;
+        })->values();
+
+        $lockedFreebies = $allFreebies->filter(function ($freebie) use ($totalCheckoutItems) {
+            return $freebie->reward_points_required > $totalCheckoutItems;
+        })->values();
+
+        // Combine: show unlocked first, then locked
+        $availableFreebies = $unlockedFreebies->concat($lockedFreebies)->values();
+
         $homepageSettings = HomepageSetting::singleton();
         
         // Get available vouchers for this user
@@ -135,7 +150,7 @@ class OrderController extends Controller
             ->with('reward')
             ->get();
 
-        return view('customer.checkout', compact('cartItems', 'subtotal', 'rewardPreview', 'availableFreebies', 'homepageSettings', 'availableVouchers'));
+        return view('customer.checkout', compact('cartItems', 'subtotal', 'rewardPreview', 'availableFreebies', 'unlockedFreebies', 'lockedFreebies', 'totalCheckoutItems', 'homepageSettings', 'availableVouchers'));
     }
 
     // Customer: place an order from cart
@@ -150,9 +165,10 @@ class OrderController extends Controller
             'contact_number'   => 'required|string|max:20',
             'payment_method'   => 'required|in:cash,gcash',
             'notes'            => 'nullable|string|max:500',
-            'latitude'         => 'required|numeric',
-            'longitude'        => 'required|numeric',
-            'address_full'     => 'required|string|max:500',
+            'is_urgent'        => 'nullable|boolean',
+            'latitude'         => 'nullable|numeric',
+            'longitude'        => 'nullable|numeric',
+            'address_full'     => 'nullable|string|max:500',
             'selected_freebie_id' => 'nullable|integer',
             'voucher_id' => 'nullable|integer|exists:user_vouchers,id',
             'selected_cart_ids' => 'nullable|string',
@@ -333,13 +349,29 @@ class OrderController extends Controller
 
                 // Small-order freebies are customer-selected.
                 if ($quantity >= 1 && $quantity <= 9 && $selectedFreebieProduct !== null) {
+                    // Resolve freebie image URL - use same logic as checkout page
+                    $freebieImagePath = $selectedFreebie?->image ?? $selectedFreebieProduct?->image;
+                    $freebieImageUrl = null;
+                    
+                    if ($freebieImagePath) {
+                        $normalized = ltrim($freebieImagePath, '/');
+                        if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
+                            $freebieImageUrl = $freebieImagePath;
+                        } elseif (str_starts_with($normalized, 'storage/') || str_starts_with($normalized, 'images/')) {
+                            $freebieImageUrl = asset($normalized);
+                        } else {
+                            $freebieImageUrl = asset('storage/' . $normalized);
+                        }
+                    }
+                    
                     $orderItems[] = [
-                        'product_id'   => $selectedFreebieProduct->id,
-                        'product_name' => $selectedFreebieProduct->name,
-                        'quantity'     => 1,
-                        'price'        => 0,
-                        'subtotal'     => 0,
-                        'is_reward'    => true,
+                        'product_id'      => $selectedFreebieProduct->id,
+                        'product_name'    => $selectedFreebieProduct->name,
+                        'quantity'        => 1,
+                        'price'           => 0,
+                        'subtotal'        => 0,
+                        'is_reward'       => true,
+                        'reward_image_url' => $freebieImageUrl,
                     ];
                     $hasRewardItems = true;
                 }
@@ -390,18 +422,20 @@ class OrderController extends Controller
                 'payment_method'   => $validated['payment_method'],
                 'status'           => 'pending',
                 'notes'            => $validated['notes'] ?? null,
+                'is_urgent'        => $validated['is_urgent'] ?? false,
             ]);
 
             // Create all order items
             foreach ($orderItems as $itemData) {
                 OrderItem::create([
-                    'order_id'     => $order->id,
-                    'product_id'   => $itemData['product_id'],
-                    'product_name' => $itemData['product_name'],
-                    'quantity'     => $itemData['quantity'],
-                    'price'        => $itemData['price'],
-                    'subtotal'     => $itemData['subtotal'],
-                    'is_reward'    => $itemData['is_reward'],
+                    'order_id'          => $order->id,
+                    'product_id'        => $itemData['product_id'],
+                    'product_name'      => $itemData['product_name'],
+                    'quantity'          => $itemData['quantity'],
+                    'price'             => $itemData['price'],
+                    'subtotal'          => $itemData['subtotal'],
+                    'is_reward'         => $itemData['is_reward'],
+                    'reward_image_url'  => $itemData['reward_image_url'] ?? null,
                 ]);
             }
 
@@ -566,11 +600,13 @@ class OrderController extends Controller
     public function adminIndex()
     {
         $orders = Order::with(['user', 'orderItems.product', 'delivery.rider'])
+            ->orderByRaw("CASE WHEN status IN ('pending', 'approved', 'assigned', 'out_for_delivery') THEN 0 ELSE 1 END")
+            ->orderBy('is_urgent', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();
 
         $riders = \App\Models\Rider::with('user')
-            ->where('availability', '!=', 'offline')
+            ->where('availability', 'available')
             ->get();
 
         return view('admin.orders', compact('orders', 'riders'));

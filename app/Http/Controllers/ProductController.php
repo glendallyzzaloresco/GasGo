@@ -82,7 +82,7 @@ class ProductController extends Controller
     {
         $validated = $request->validate([
             'name'        => 'required|string|max:255',
-            'category'    => 'required|in:tank,freebie',
+            'category'    => 'required|in:tank,accessories,appliances,freebie',
             'description' => 'nullable|string',
             'price'       => 'required|numeric|min:0',
             'stock'       => 'nullable|integer|min:0',
@@ -127,7 +127,7 @@ class ProductController extends Controller
     {
         $validated = $request->validate([
             'name'        => 'required|string|max:255',
-            'category'    => 'required|in:tank,freebie',
+            'category'    => 'required|in:tank,accessories,appliances,freebie',
             'description' => 'nullable|string',
             'price'       => 'required|numeric|min:0',
             'stock'       => 'nullable|integer|min:0',

@@ -284,6 +284,12 @@
 
                     <!-- Register Form -->
                     <div id="registerForm" class="auth-pane" @if ($activeTab !== 'register') style="display:none;" @endif>
+                        @if (request()->get('redirect') === 'checkout')
+                            <div class="auth-alert auth-alert-error" style="background: #fff3cd; color: #856404; border-left: 4px solid #ff9800;">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>To complete your purchase:</strong> You need to register or login to checkout your order.
+                            </div>
+                        @endif
                         <h3>Create Account</h3>
                         <p class="sub">Register to start ordering and earn rewards</p>
                         <form action="{{ route('customer.register') }}" method="POST">

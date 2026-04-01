@@ -697,11 +697,13 @@ class DashboardController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone' => 'nullable|string|max:20',
             'password' => ['nullable', 'confirmed', Password::min(8)->letters()->numbers()],
         ]);
 
         $user->name = $validated['name'];
         $user->email = strtolower($validated['email']);
+        $user->phone = $validated['phone'] ?? $user->phone;
 
         if (! empty($validated['password'])) {
             $user->password = $validated['password'];

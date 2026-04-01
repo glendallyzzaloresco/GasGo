@@ -19,6 +19,11 @@ class StockMovement extends Model
         'reference',
         'notes',
         'created_by',
+        'movement_date',
+    ];
+
+    protected $casts = [
+        'movement_date' => 'datetime',
     ];
 
     /**
