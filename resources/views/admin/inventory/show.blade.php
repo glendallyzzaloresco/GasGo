@@ -511,7 +511,9 @@
         </div>
     </div>
 
-    <div class="movements-table mt-4">
+
+
+    <div class="movements-table">
         <div style="padding: 20px; border-bottom: 1px solid #f0f0f0;">
             <h5><i class="fas fa-history me-2"></i>Stock Movement History</h5>
         </div>
@@ -527,8 +529,6 @@
                         <th>Date & Time</th>
                         <th>Type</th>
                         <th class="text-center">Quantity Change</th>
-                        <th>Reference</th>
-                        <th>Notes</th>
                         <th>Created By</th>
                     </tr>
                 </thead>
@@ -548,8 +548,6 @@
                                     {{ $movement->quantity_change > 0 ? '+' : '' }}{{ $movement->quantity_change }}
                                 </span>
                             </td>
-                            <td>{{ $movement->reference ?? '-' }}</td>
-                            <td>{{ $movement->notes ?? '-' }}</td>
                             <td>
                                 <small>{{ $movement->creator->name ?? 'System' }}</small>
                             </td>

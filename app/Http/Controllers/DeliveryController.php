@@ -8,6 +8,7 @@ use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DeliveryController extends Controller
 {
@@ -163,7 +164,7 @@ class DeliveryController extends Controller
                             if ($inventory) {
                                 $inventory->increment('empty_on_hand', $item->quantity);
 
-                                // Log the empty tank collection
+                                // Log the empty tank collection in inventory_movements
                                 \App\Models\InventoryMovement::create([
                                     'product_id'     => $item->product_id,
                                     'movement_date'  => now(),
@@ -174,11 +175,22 @@ class DeliveryController extends Controller
                                     'notes'          => 'Empty tank(s) collected during delivery exchange',
                                     'created_by'     => Auth::id(),
                                 ]);
+
+                                // Log the empty tank collection in stock_movements for History tracking
+                                \App\Models\StockMovement::create([
+                                    'inventory_id'    => $inventory->id,
+                                    'movement_date'   => now(),
+                                    'type'            => 'empty_return',
+                                    'quantity_change' => -$item->quantity,
+                                    'reference'       => $delivery->order->order_number ?? 'ORD-' . $delivery->order_id,
+                                    'notes'           => 'Auto-logged from delivery by ' . (Auth::user()->name ?? 'Rider'),
+                                    'created_by'      => Auth::id(),
+                                ]);
                             }
                         }
                     } catch (\Exception $e) {
                         // Log the error but don't fail the delivery update
-                        \Log::warning(
+                        Log::warning(
                             "Failed to record inventory movement for order {$delivery->order_id}, product {$item->product_id}: " . $e->getMessage()
                         );
                     }

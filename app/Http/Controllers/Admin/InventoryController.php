@@ -22,7 +22,7 @@ class InventoryController extends Controller
         $query = Inventory::with('product');
 
         // Use hardcoded categories
-        $categories = collect(['Tank', 'Freebie']);
+        $categories = collect(['Tank', 'Accessories', 'Appliance', 'Freebie']);
 
         // Filter by stock status (In Stock / Out of Stock)
         if ($request->filled('status')) {
@@ -112,7 +112,49 @@ class InventoryController extends Controller
 
         $freebies = Freebie::where('is_active', true)->get();
 
-        return view('admin.inventory.index', compact('inventories', 'categories', 'freebies'));
+        // Get today's summary data
+        $today = Carbon::now()->startOfDay();
+        $todayEnd = Carbon::now()->endOfDay();
+        
+        // Today's stock received (stock_in movements)
+        $stockReceived = StockMovement::whereIn('type', ['stock_in'])
+        ->whereBetween('movement_date', [$today, $todayEnd])
+        ->with('inventory.product')
+        ->orderBy('movement_date', 'desc')
+        ->get();
+        
+        // Today's total stock received
+        $totalStockReceived = $stockReceived->sum('quantity_change');
+        
+        // Get current empty tanks count for tank products with latest delivery date
+        $deliveryDates = \Illuminate\Support\Facades\DB::table('deliveries')
+            ->join('orders', 'deliveries.order_id', '=', 'orders.id')
+            ->join('order_items', 'orders.id', '=', 'order_items.order_id')
+            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->where('deliveries.status', 'delivered')
+            ->where('products.category', 'Tank')
+            ->selectRaw('products.id as product_id, MAX(deliveries.updated_at) as latest_delivery_date')
+            ->groupBy('products.id')
+            ->pluck('latest_delivery_date', 'product_id');
+        
+        $emptyTanksReturned = Inventory::whereHas('product', function($q) {
+            $q->where('category', 'Tank');
+        })
+        ->where('empty_on_hand', '>', 0)
+        ->with('product')
+        ->orderBy('empty_on_hand', 'desc')
+        ->get();
+        
+        // Attach delivery dates to each inventory record
+        $emptyTanksReturned = $emptyTanksReturned->map(function($inv) use ($deliveryDates) {
+            $inv->delivery_date = $deliveryDates[$inv->product_id] ?? null;
+            return $inv;
+        });
+        
+        // Total empty tanks
+        $totalEmptyReturned = $emptyTanksReturned->sum('empty_on_hand');
+
+        return view('admin.inventory.index', compact('inventories', 'categories', 'freebies', 'emptyTanksReturned', 'stockReceived', 'totalEmptyReturned', 'totalStockReceived'));
     }
 
     /**

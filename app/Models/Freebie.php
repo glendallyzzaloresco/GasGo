@@ -26,4 +26,18 @@ class Freebie extends Model
             'is_active' => 'boolean',
         ];
     }
+
+    /**
+     * Get the full URL for the freebie image.
+     */
+    public function getImageUrlAttribute()
+    {
+        if ($this->image) {
+            if (str_starts_with($this->image, 'http')) {
+                return $this->image;
+            }
+            return asset('storage/' . $this->image);
+        }
+        return asset('images/default-product.png');
+    }
 }

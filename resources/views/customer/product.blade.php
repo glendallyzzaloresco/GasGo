@@ -21,6 +21,7 @@
     .filter-btn {
         padding: 8px 20px; border-radius: 25px; font-weight: 600; font-size: .85rem;
         border: 2px solid #eee; background: white; color: #555; transition: all .25s; cursor: pointer;
+        text-decoration: none; display: inline-block;
     }
     .filter-btn:hover, .filter-btn.active {
         background: var(--gasgo-blue); color: white; border-color: var(--gasgo-blue);
@@ -247,12 +248,12 @@
     <div class="filter-bar" data-aos="fade-up">
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <span class="fw-bold text-muted me-2"><i class="fas fa-filter me-1"></i>Filter:</span>
-            <button class="filter-btn active" data-filter="all">All</button>
-            <button class="filter-btn" data-filter="lpg">LPG Tanks</button>
-            <button class="filter-btn" data-filter="accessories">Accessories</button>
-            <button class="filter-btn" data-filter="appliances">Appliances</button>
+            <a href="{{ route('customer.products') }}" class="filter-btn {{ !request('category') ? 'active' : '' }}">All</a>
+            <a href="{{ route('customer.products', ['category' => 'tank']) }}" class="filter-btn {{ strtolower(request('category')) === 'tank' ? 'active' : '' }}">LPG Tanks</a>
+            <a href="{{ route('customer.products', ['category' => 'accessories']) }}" class="filter-btn {{ strtolower(request('category')) === 'accessories' ? 'active' : '' }}">Accessories</a>
+            <a href="{{ route('customer.products', ['category' => 'appliances']) }}" class="filter-btn {{ strtolower(request('category')) === 'appliances' ? 'active' : '' }}">Appliances</a>
             <div class="ms-auto">
-                <input type="text" class="form-control form-control-gasgo" placeholder="Search products..." id="searchProduct" style="padding:10px 18px;font-size:.9rem;">
+                <input type="text" class="form-control form-control-gasgo" placeholder="Search products..." id="searchProduct" onkeyup="searchProducts(this.value)" style="padding:10px 18px;font-size:.9rem;">
             </div>
         </div>
     </div>
@@ -267,6 +268,8 @@
                 $categoryMap = [
                     'tank' => 'lpg',
                     'lpg' => 'lpg',
+                    'tanks' => 'lpg',
+                    'appliance' => 'appliances',
                     'appliances' => 'appliances',
                     'accessory' => 'accessories',
                     'accessories' => 'accessories',
@@ -397,7 +400,7 @@ function buyNow(productId) {
     if (!button) return;
     
     // Check if user is authenticated
-    const isAuthenticated = @json(Auth::check());
+    const isAuthenticated = {{ Auth::check() ? true : false }};
     
     if (!isAuthenticated) {
         // Redirect to login/register first
@@ -418,28 +421,66 @@ function buyNow(productId) {
 let activeFilter = 'all';
 let searchQuery = '';
 
-function updateProductDisplay() {
-    document.querySelectorAll('.product-item').forEach(item => {
-        const matchesFilter = (activeFilter === 'all' || item.dataset.category === activeFilter);
-        const matchesSearch = item.dataset.name.toLowerCase().includes(searchQuery.toLowerCase());
-        item.style.display = (matchesFilter && matchesSearch) ? '' : 'none';
+function filterProducts(category, buttonElement) {
+    console.log('Filter clicked:', category);
+    
+    // Update active filter
+    activeFilter = category;
+    
+    // Update button states
+    const allButtons = document.querySelectorAll('.filter-btn');
+    allButtons.forEach(btn => {
+        btn.classList.remove('active');
     });
+    
+    // Add active class to clicked button
+    if (buttonElement) {
+        buttonElement.classList.add('active');
+    }
+    
+    // Apply filter
+    console.log('Filtering by:', activeFilter);
+    applyFiltersAndSearch();
 }
 
-// filter buttons
-document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-        activeFilter = this.dataset.filter;
-        updateProductDisplay();
-    });
-});
+function searchProducts(query) {
+    searchQuery = query;
+    console.log('Search query:', query);
+    applyFiltersAndSearch();
+}
 
-// search
-document.getElementById('searchProduct').addEventListener('input', function() {
-    searchQuery = this.value;
+function applyFiltersAndSearch() {
+    const items = document.querySelectorAll('.product-item');
+    console.log('Total items:', items.length, 'Active filter:', activeFilter, 'Search:', searchQuery);
+    
+    let visibleCount = 0;
+    items.forEach(item => {
+        const itemCategory = item.getAttribute('data-category');
+        const itemName = item.getAttribute('data-name') || '';
+        
+        // Check filter
+        const categoryMatch = (activeFilter === 'all' || itemCategory === activeFilter);
+        
+        // Check search
+        const searchMatch = itemName.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        // Show or hide
+        const shouldShow = categoryMatch && searchMatch;
+        item.style.display = shouldShow ? '' : 'none';
+        
+        if (shouldShow) visibleCount++;
+        
+        console.log('  Item:', itemName, '| Category:', itemCategory, '| Match:', shouldShow);
+    });
+    
+    console.log('Visible items:', visibleCount);
+}
+
+// Also try to initialize if DOM is already loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateProductDisplay);
+} else {
     updateProductDisplay();
-});
+}
 </script>
 @endsection

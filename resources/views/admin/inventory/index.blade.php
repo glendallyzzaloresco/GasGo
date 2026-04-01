@@ -220,12 +220,44 @@
         gap: 8px;
     }
 
+    /* Category Badge Styles */
+    [class^="category-badge-"] {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: capitalize;
+    }
+
+    .category-badge-tank {
+        background: #e3f2fd;
+        color: #1565c0;
+    }
+
+    .category-badge-accessories {
+        background: #f3e5f5;
+        color: #6a1b9a;
+    }
+
+    .category-badge-freebie {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .category-badge-stove,
+    .category-badge-burner,
+    .category-badge-appliance {
+        background: #ff6f00;
+        color: white;
+    }
+
     .product-category {
-        display: none;
+        display: block;
     }
 
     .category-header {
-        display: none;
+        display: block;
     }
 
     .empty-inventory {
@@ -343,6 +375,188 @@
         </div>
     </div>
 
+    <!-- Summary Cards Section -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-left-primary shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <div class="text-primary text-uppercase font-weight-bold text-xs mb-1">
+                                <i class="fas fa-undo me-2"></i>Empty Tanks in Hand
+                            </div>
+                            <div class="h3 mb-0 text-gray-800" style="font-weight: 700; color: #1a6db0;">
+                                {{ $totalEmptyReturned }} Units
+                            </div>
+                        </div>
+                        @if($emptyTanksReturned->count() > 0)
+                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#emptyTanksModal">
+                            <i class="fas fa-eye me-1"></i>View
+                        </button>
+                        @endif
+                    </div>
+                    @if($emptyTanksReturned->count() > 0)
+                    <div class="mt-3" style="max-height: 150px; overflow-y: auto;">
+                      
+                        @foreach($emptyTanksReturned->take(3) as $inv)
+                        <div class="mb-1 p-2 bg-light rounded" style="border-left: 3px solid #1a6db0; font-size: 0.85rem;">
+                            <div class="d-flex justify-content-between">
+                                <span style="color: #333;">{{ $inv->product->name }}</span>
+                                <span class="badge bg-info">{{ $inv->empty_on_hand }}</span>
+                            </div>
+                        </div>
+                        @endforeach
+                        @if($emptyTanksReturned->count() > 3)
+                        <small class="text-muted d-block mt-2">+{{ $emptyTanksReturned->count() - 3 }} more...</small>
+                        @endif
+                    </div>
+                    @else
+                    <small class="text-muted d-block mt-2">No empty tanks in hand</small>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card border-left-success shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <div class="text-success text-uppercase font-weight-bold text-xs mb-1">
+                                <i class="fas fa-box me-2"></i>Stock Received (Today)
+                            </div>
+                            <div class="h3 mb-0 text-gray-800" style="font-weight: 700; color: #27ae60;">
+                                {{ $totalStockReceived }} Units
+                            </div>
+                        </div>
+                        @if($stockReceived->count() > 0)
+                        <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#stockReceivedModal">
+                            <i class="fas fa-eye me-1"></i>View
+                        </button>
+                        @endif
+                    </div>
+                    @if($stockReceived->count() > 0)
+                    <div class="mt-3" style="max-height: 150px; overflow-y: auto;">
+                      
+                        @foreach($stockReceived->take(3) as $movement)
+                        <div class="mb-1 p-2 bg-light rounded" style="border-left: 3px solid #27ae60; font-size: 0.85rem;">
+                            <div class="d-flex justify-content-between">
+                                <span style="color: #333;">{{ $movement->inventory->product->name }}</span>
+                                <span class="badge bg-success">{{ $movement->quantity_change }}</span>
+                            </div>
+                            <small class="text-muted">{{ $movement->movement_date->format('h:i A') }}</small>
+                        </div>
+                        @endforeach
+                        @if($stockReceived->count() > 3)
+                        <small class="text-muted d-block mt-2">+{{ $stockReceived->count() - 3 }} more...</small>
+                        @endif
+                    </div>
+                    @else
+                    <small class="text-muted d-block mt-2">No stock received today</small>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty Tanks Modal -->
+    <div class="modal fade" id="emptyTanksModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #1a6db0 0%, #2196f3 100%); color: white;">
+                    <h5 class="modal-title"><i class="fas fa-undo me-2"></i>Empty Tanks in Hand</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-striped table-hover">
+                        <thead style="background: #f8f9fa;">
+                            <tr>
+                                <th>Product Name</th>
+                                <th style="text-align: center;">Empty Tanks</th>
+                                <th>Date Delivered</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($emptyTanksReturned as $inv)
+                            <tr>
+                                <td>
+                                    <strong>{{ $inv->product->name }}</strong>
+                                    <br>
+                                    <small class="text-muted">Regular Stock: {{ $inv->quantity_on_hand }}</small>
+                                </td>
+                                <td style="text-align: center;">
+                                    <span class="badge bg-warning text-dark" style="font-size: 0.95rem; padding: 10px 14px;">
+                                        {{ $inv->empty_on_hand }} Units
+                                    </span>
+                                </td>
+                                <td>
+                                    @if($inv->delivery_date)
+                                        <small class="text-muted">
+                                            {{ \Carbon\Carbon::parse($inv->delivery_date)->format('M d, Y - h:i A') }}
+                                        </small>
+                                    @else
+                                        <small class="text-muted text-secondary">--</small>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <small class="text-muted">Total Empty Tanks: <strong>{{ $totalEmptyReturned }}</strong> Units</small>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Received Modal -->
+    <div class="modal fade" id="stockReceivedModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white;">
+                    <h5 class="modal-title"><i class="fas fa-box me-2"></i>Stock Received Today</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-striped table-hover">
+                        <thead style="background: #f8f9fa;">
+                            <tr>
+                                <th>Product Name</th>
+                                <th>Quantity</th>
+                                <th>Date & Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($stockReceived as $movement)
+                            <tr>
+                                <td>
+                                    <strong>{{ $movement->inventory->product->name }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success" style="font-size: 0.9rem; padding: 8px 12px;">
+                                        {{ $movement->quantity_change }} Units
+                                    </span>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        {{ $movement->movement_date->format('M d, Y - h:i A') }}
+                                    </small>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <small class="text-muted">Total Received: <strong>{{ $totalStockReceived }}</strong> Units</small>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
@@ -388,14 +602,9 @@
                     <option value="">All Categories</option>
                     <option value="Tank" {{ request('category') === 'Tank' ? 'selected' : '' }}>Tank</option>
                     <option value="Accessories" {{ request('category') === 'Accessories' ? 'selected' : '' }}>Accessories</option>
+                    <option value="Appliance" {{ request('category') === 'Appliance' ? 'selected' : '' }}>Appliance</option>
                     <option value="Freebie" {{ request('category') === 'Freebie' ? 'selected' : '' }}>Freebie</option>
                 </select>
-            </div>
-            
-            <div class="col-md-1 d-flex align-items-end gap-2">
-                <button type="button" id="clearFiltersBtn" class="btn btn-outline-secondary flex-grow-1">
-                    <i class="fas fa-redo me-2"></i>Reset
-                </button>
             </div>
         </form>
     </div>
@@ -408,22 +617,33 @@
                 <p>Start adding products to inventory management</p>
             </div>
         @else
+            @php
+                // Separate inventories by category
+                $tankInventories = $inventories->filter(fn($inv) => strtolower($inv->product->category) === 'tank');
+                $accessoriesInventories = $inventories->filter(fn($inv) => strtolower($inv->product->category) === 'accessories');
+                $applianceInventories = $inventories->filter(fn($inv) => in_array(strtolower($inv->product->category), ['stove', 'burner', 'appliance']));
+            @endphp
+
+            <!-- LPG TANKS SECTION -->
+            @if($tankInventories->count() > 0)
             <div class="inventory-table-wrapper">
+                <div style="background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%); color: white; padding: 14px 20px; font-weight: 700; font-size: 1.05rem;">
+                    <i class="fas fa-cube me-2"></i>LPG Tanks
+                </div>
                 <table class="table table-hover">
                     <thead>
                         <tr>
                             <th style="width: 28%;">Product Name</th>
                             <th style="width: 8%;">SKU</th>
                             <th style="width: 10%;">Category</th>
-                            <th style="width: 9%;">Stock on Hand</th>
-                            <th style="width: 9%;">Empty Tanks <span style="font-size: 0.75rem; color: #999;">(LPG Only)</span></th>
-                            <th style="width: 8%;">Reorder Level</th>
-                            <th style="width: 10%;">Status</th>
-                            <th style="width: 18%;">Actions</th>
+                            <th style="width: 12%;">Stock on Hand</th>
+                            <th style="width: 10%;">Reorder Level</th>
+                            <th style="width: 12%;">Status</th>
+                            <th style="width: 20%;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($inventories as $inventory)
+                        @foreach($tankInventories as $inventory)
                             @php
                                 $stockStatus = 'in-stock';
                                 $stockLabel = 'In Stock';
@@ -437,40 +657,23 @@
                             @endphp
                             <tr>
                                 <td>
-                                    <div class="product-name-cell" style="display: flex; align-items: center; gap: 12px;">
-                                        @if($inventory->product->image)
-                                            <img src="{{ asset('storage/' . $inventory->product->image) }}" 
-                                                 alt="{{ $inventory->product->name }}" 
-                                                 class="product-table-image"
-                                                 style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid #e0e0e0;">
-                                        @else
-                                            <div class="product-table-image-placeholder" 
-                                                 style="width: 50px; height: 50px; background: #f0f0f0; border-radius: 6px; border: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: center;">
-                                                <i class="fas fa-image" style="color: #ccc; font-size: 1.5rem;"></i>
-                                            </div>
-                                        @endif
-                                        <span style="font-weight: 500; color: #333;">{{ $inventory->product->name }}</span>
+                                    <div class="product-name-cell">
+                                        <img src="{{ $inventory->product->image_url ?? asset('images/default-product.png') }}" 
+                                             alt="{{ $inventory->product->name }}" 
+                                             class="product-table-image">
+                                        <span>{{ $inventory->product->name }}</span>
                                     </div>
                                 </td>
+                                <td>{{ $inventory->product->sku ?? 'N/A' }}</td>
                                 <td>
-                                    <span style="color: #999; font-size: 0.85rem;">{{ $inventory->product->sku ?? 'N/A' }}</span>
+                                    <span class="badge category-badge-{{ strtolower($inventory->product->category) }}">
+                                        {{ $inventory->product->category }}
+                                    </span>
                                 </td>
-                                <td>
-                                    <span style="color: #666; font-weight: 500;">{{ $inventory->product->category ?? 'N/A' }}</span>
+                                <td class="font-weight-bold stock-on-hand">
+                                    {{ $inventory->quantity_on_hand }}
                                 </td>
-                                <td>
-                                    <span style="font-weight: 700; color: #1a6db0; font-size: 1.05rem;">{{ $inventory->quantity_on_hand }}</span>
-                                </td>
-                                <td>
-                                    @if(strtolower($inventory->product->category) === 'tank')
-                                        <span style="font-weight: 700; color: #ff6f00; font-size: 1.05rem;">{{ $inventory->empty_on_hand ?? 0 }}</span>
-                                    @else
-                                        <span style="color: #999; font-size: 0.85rem;">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <span style="color: #666;">{{ $inventory->reorder_level }}</span>
-                                </td>
+                                <td>{{ $inventory->reorder_level }}</td>
                                 <td>
                                     <span class="stock-status-badge {{ $stockStatus }}">
                                         {{ $stockLabel }}
@@ -488,17 +691,157 @@
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
-                                    <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 12px; display: block;"></i>
-                                    No inventory items found
-                                </td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
+            @endif
+
+            <!-- APPLIANCES SECTION -->
+            @if($applianceInventories->count() > 0)
+            <div class="inventory-table-wrapper">
+                <div style="background: linear-gradient(135deg, #ff6f00 0%, #e55100 100%); color: white; padding: 14px 20px; font-weight: 700; font-size: 1.05rem;">
+                    <i class="fas fa-flame me-2"></i>Appliances
+                </div>
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width: 28%;">Product Name</th>
+                            <th style="width: 8%;">SKU</th>
+                            <th style="width: 10%;">Category</th>
+                            <th style="width: 12%;">Stock on Hand</th>
+                            <th style="width: 10%;">Reorder Level</th>
+                            <th style="width: 12%;">Status</th>
+                            <th style="width: 20%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($applianceInventories as $inventory)
+                            @php
+                                $stockStatus = 'in-stock';
+                                $stockLabel = 'In Stock';
+                                if ($inventory->quantity_on_hand == 0) {
+                                    $stockStatus = 'out-of-stock';
+                                    $stockLabel = 'Out of Stock';
+                                } elseif ($inventory->quantity_on_hand <= $inventory->reorder_level) {
+                                    $stockStatus = 'low-stock';
+                                    $stockLabel = 'Low Stock';
+                                }
+                            @endphp
+                            <tr>
+                                <td>
+                                    <div class="product-name-cell">
+                                        <img src="{{ $inventory->product->image_url ?? asset('images/default-product.png') }}" 
+                                             alt="{{ $inventory->product->name }}" 
+                                             class="product-table-image">
+                                        <span>{{ $inventory->product->name }}</span>
+                                    </div>
+                                </td>
+                                <td>{{ $inventory->product->sku ?? 'N/A' }}</td>
+                                <td>
+                                    <span class="badge category-badge-{{ strtolower($inventory->product->category) }}">
+                                        {{ $inventory->product->category }}
+                                    </span>
+                                </td>
+                                <td class="font-weight-bold stock-on-hand">
+                                    {{ $inventory->quantity_on_hand }}
+                                </td>
+                                <td>{{ $inventory->reorder_level }}</td>
+                                <td>
+                                    <span class="stock-status-badge {{ $stockStatus }}">
+                                        {{ $stockLabel }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 8px;">
+                                        <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-view" style="background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" title="View">
+                                            <i class="fas fa-eye me-1"></i>View
+                                        </a>
+                                        <button type="button" class="btn btn-sm adjust-stock-btn" style="background: #4caf50; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" data-bs-toggle="modal" data-bs-target="#adjustStockModal" 
+                                            data-inventory-id="{{ $inventory->id }}" data-product-name="{{ $inventory->product->name }}">
+                                            <i class="fas fa-plus me-1"></i>Add Stock
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @endif
+
+            <!-- ACCESSORIES SECTION -->
+            @if($accessoriesInventories->count() > 0)
+            <div class="inventory-table-wrapper">
+                <div style="background: linear-gradient(135deg, #7b1fa2 0%, #512da8 100%); color: white; padding: 14px 20px; font-weight: 700; font-size: 1.05rem;">
+                    <i class="fas fa-tools me-2"></i>Accessories
+                </div>
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width: 28%;">Product Name</th>
+                            <th style="width: 8%;">SKU</th>
+                            <th style="width: 10%;">Category</th>
+                            <th style="width: 9%;">Stock on Hand</th>
+                            <th style="width: 8%;">Reorder Level</th>
+                            <th style="width: 10%;">Status</th>
+                            <th style="width: 18%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($accessoriesInventories as $inventory)
+                            @php
+                                $stockStatus = 'in-stock';
+                                $stockLabel = 'In Stock';
+                                if ($inventory->quantity_on_hand == 0) {
+                                    $stockStatus = 'out-of-stock';
+                                    $stockLabel = 'Out of Stock';
+                                } elseif ($inventory->quantity_on_hand <= $inventory->reorder_level) {
+                                    $stockStatus = 'low-stock';
+                                    $stockLabel = 'Low Stock';
+                                }
+                            @endphp
+                            <tr>
+                                <td>
+                                    <div class="product-name-cell">
+                                        <img src="{{ $inventory->product->image_url ?? asset('images/default-product.png') }}" 
+                                             alt="{{ $inventory->product->name }}" 
+                                             class="product-table-image">
+                                        <span>{{ $inventory->product->name }}</span>
+                                    </div>
+                                </td>
+                                <td>{{ $inventory->product->sku ?? 'N/A' }}</td>
+                                <td>
+                                    <span class="badge category-badge-{{ strtolower($inventory->product->category) }}">
+                                        {{ $inventory->product->category }}
+                                    </span>
+                                </td>
+                                <td class="font-weight-bold stock-on-hand">
+                                    {{ $inventory->quantity_on_hand }}
+                                </td>
+                                <td>{{ $inventory->reorder_level }}</td>
+                                <td>
+                                    <span class="stock-status-badge {{ $stockStatus }}">
+                                        {{ $stockLabel }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 8px;">
+                                        <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-view" style="background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" title="View">
+                                            <i class="fas fa-eye me-1"></i>View
+                                        </a>
+                                        <button type="button" class="btn btn-sm adjust-stock-btn" style="background: #4caf50; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" data-bs-toggle="modal" data-bs-target="#adjustStockModal" 
+                                            data-inventory-id="{{ $inventory->id }}" data-product-name="{{ $inventory->product->name }}">
+                                            <i class="fas fa-plus me-1"></i>Add Stock
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @endif
 
             <div class="d-flex justify-content-center mt-4 mb-5" id="paginationContainer">
                 {{ $inventories->render() }}
@@ -537,7 +880,12 @@
                             @endphp
                             <tr>
                                 <td>
-                                    <div class="product-name-cell">{{ $freebie->name }}</div>
+                                    <div class="product-name-cell">
+                                        <img src="{{ $freebie->image_url ?? asset('images/default-product.png') }}" 
+                                             alt="{{ $freebie->name }}" 
+                                             class="product-table-image">
+                                        <span>{{ $freebie->name }}</span>
+                                    </div>
                                 </td>
                                 <td>
                                     <span style="color: #666; font-weight: 500;">{{ ucfirst($freebie->category ?? 'Reward') }}</span>
@@ -695,8 +1043,8 @@
                     <div class="mb-3">
                         <label class="form-label">Movement Date & Time</label>
                         <input type="datetime-local" name="movement_date" class="form-control" id="movementDateTime" 
-                               value="" data-datetime-placeholder="true">
-                        <small class="text-muted">Leave blank for current date/time</small>
+                               value="" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+                        <small class="text-muted">Automatically set to today's date and time</small>
                         @if ($errors->has('movement_date'))
                             <small class="text-danger d-block mt-1">{{ $errors->first('movement_date') }}</small>
                         @endif
@@ -775,17 +1123,25 @@ function setAdjustInventory(inventoryId, productName) {
     document.getElementById('adjustmentType').value = '';
     document.getElementById('quantityInput').value = '';
     document.getElementById('notesInput').value = '';
+    
     const movementDateInput = document.getElementById('movementDateTime');
     if (movementDateInput) {
-        // Start with empty value to indicate "use current time"
-        movementDateInput.value = '';
+        // Set default to today's date and current time in correct format for datetime-local
+        const now = new Date();
+        // Format: YYYY-MM-DDTHH:mm (required format for datetime-local)
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
         
-        // Set default value when user focuses on the field
-        movementDateInput.addEventListener('focus', function(e) {
-            if (!this.value) {
-                this.value = new Date().toISOString().slice(0, 16);
-            }
-        }, { once: true });
+        const localDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+        movementDateInput.value = localDateTime;
+        
+        // Remove readonly to allow value to be set, then add it back
+        movementDateInput.readOnly = false;
+        movementDateInput.value = localDateTime;
+        movementDateInput.readOnly = true;
     }
 }
 
@@ -793,12 +1149,29 @@ function setAdjustInventory(inventoryId, productName) {
 document.getElementById('adjustStockForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const inventoryId = document.getElementById('adjustInventoryId').value;
+    const adjustmentType = document.getElementById('adjustmentType').value;
+    const quantity = document.getElementById('quantityInput').value;
+    
+    // Validation
+    if (!inventoryId) {
+        alert('Error: Inventory ID not found');
+        return;
+    }
+    if (!adjustmentType) {
+        alert('Please select an Adjustment Type');
+        return;
+    }
+    if (!quantity || quantity < 1) {
+        alert('Please enter a valid quantity');
+        return;
+    }
+    
     const formData = new FormData(this);
     
-    // Remove the hidden inventory_id field to avoid duplication
-    formData.delete('inventory_id');
+    // Build the URL with inventory ID
+    const url = `{{ route('admin.inventory.adjust', ':id') }}`.replace(':id', inventoryId);
     
-    fetch(`{{ route('admin.inventory.adjust', ':id') }}`.replace(':id', inventoryId), {
+    fetch(url, {
         method: 'POST',
         body: formData,
         headers: {
@@ -808,14 +1181,23 @@ document.getElementById('adjustStockForm').addEventListener('submit', function(e
     .then(response => {
         if (response.ok) {
             // Close modal
-            bootstrap.Modal.getInstance(document.getElementById('adjustStockModal')).hide();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('adjustStockModal'));
+            if (modal) {
+                modal.hide();
+            }
             // Reload page to show updated stock
-            window.location.reload();
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
         } else {
-            return response.text().then(text => { throw new Error(text); });
+            return response.text().then(text => { 
+                console.error('Error response:', text);
+                alert('Error: ' + (text || response.statusText)); 
+            });
         }
     })
     .catch(error => {
+        console.error('Error:', error);
         alert('Error adjusting stock: ' + error.message);
     });
 });

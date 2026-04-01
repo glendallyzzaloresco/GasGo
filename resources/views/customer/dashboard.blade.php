@@ -107,18 +107,22 @@
         box-shadow: 0 8px 30px rgba(0,0,0,.08);
         transition: transform .35s, box-shadow .35s;
         transform-style: preserve-3d;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
     }
     .product-card:hover {
         transform: translateY(-8px);
         box-shadow: 0 16px 40px rgba(0,0,0,.14);
     }
     .product-card .product-img {
-        height: 200px;
+        height: 160px;
         background: white;
         display: flex; align-items: center; justify-content: center;
         position: relative;
+        flex-shrink: 0;
     }
-    .product-card .product-img img { max-height: 160px; object-fit: contain; }
+    .product-card .product-img img { max-height: 130px; object-fit: contain; }
     .product-badge {
         position: absolute; top: 14px; left: 14px;
         background: var(--gasgo-orange); color: white;
@@ -126,11 +130,87 @@
         text-transform: capitalize;
     }
     .product-badge.accessory { background: var(--gasgo-blue); }
-    .product-card .product-body { padding: 20px; }
-    .product-card .product-body h5 { font-weight: 700; color: #2f2f2f; margin-bottom: 4px; }
+    .product-card .product-body { 
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+    }
+    .product-card .product-body h5 { font-weight: 700; color: #2f2f2f; margin-bottom: 4px; font-size: 1rem; }
+    .product-variant {
+        flex-grow: 1;
+        font-size: .8rem;
+    }
     .product-price { font-size: 1.25rem; font-weight: 700; color: var(--gasgo-orange); }
     .product-stock { font-size: .8rem; color: #27ae60; font-weight: 500; }
     .product-stock.out { color: #e74c3c; }
+
+    /* Product Action Buttons */
+    .product-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+    .product-actions .btn-add {
+        flex: 1;
+        background: var(--gasgo-orange);
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .product-actions .btn-add:hover:not(:disabled) {
+        background: #f07708;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(247, 148, 29, 0.3);
+    }
+
+    .product-actions .btn-add:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .product-actions .btn-buy {
+        flex: 1;
+        background: transparent;
+        color: var(--gasgo-blue);
+        border: 2px solid var(--gasgo-blue);
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .product-actions .btn-buy:hover:not(:disabled) {
+        background: var(--gasgo-blue);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(26, 109, 176, 0.3);
+    }
+
+    .product-actions .btn-buy:disabled {
+        border-color: #ccc;
+        color: #ccc;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
 
     /* ===== HOW IT WORKS ===== */
     .how-it-works { background: white; }
@@ -311,11 +391,17 @@
                             <p class="product-stock {{ $inStock ? '' : 'out' }}">
                                 <i class="fas {{ $inStock ? 'fa-check-circle' : 'fa-times-circle' }} me-1"></i>{{ $inStock ? 'In Stock' : 'Out of Stock' }}
                             </p>
-                            <div class="d-flex justify-content-between align-items-center mt-3">
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center gap-2" style="margin-bottom: 12px;">
                                 <span class="product-price">₱{{ number_format($product->price, 2) }}</span>
-                                <a href="{{ route('customer.product.show', $product->id) }}" class="btn btn-gasgo btn-sm" style="text-decoration:none;">
-                                    <i class="fas fa-eye me-1"></i>View
-                                </a>
+                            </div>
+                            <div class="product-actions" style="flex-direction: column;">
+                                <button class="btn-buy buy-now-btn" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" {{ $inStock ? '' : 'disabled' }} title="Buy Now">
+                                    <i class="fas fa-bolt"></i>Buy Now
+                                </button>
+                                <button class="btn-add add-to-cart-btn" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" data-image="{{ $img }}" {{ $inStock ? '' : 'disabled' }} title="Add to Cart">
+                                    <i class="fas fa-shopping-cart"></i>Add to Cart
+                                </button>
                             </div>
                         </div>
                     </div>

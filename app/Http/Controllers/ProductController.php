@@ -5,21 +5,31 @@ namespace App\Http\Controllers;
 use App\Models\Freebie;
 use App\Models\Inventory;
 use App\Models\Product;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class ProductController extends Controller
 {
-    // Display all active products
-    public function index()
+    // Display all active products with optional category filter
+    public function index(Request $request)
     {
-        $products = Product::with('inventory')
+        $query = Product::with('inventory')
             ->where('is_active', true)
-            ->where('price', '>', 0)
-            ->orderBy('name')
-            ->get();
+            ->where('price', '>', 0);
 
-        return view('customer.product', compact('products'));
+        // Apply category filter if provided (case-insensitive)
+        $category = $request->query('category');
+        if ($category) {
+            $query->whereRaw('LOWER(category) = ?', [strtolower($category)]);
+        }
+
+        $products = $query->orderBy('name')->get();
+        $activeCategory = $category; // Pass active category to view for highlighting
+
+        return view('customer.product', compact('products', 'activeCategory'));
     }
 
     // Show single product details
@@ -157,9 +167,32 @@ class ProductController extends Controller
 
             // Keep inventory and product stock aligned when stock is provided from form.
             if (array_key_exists('stock', $validated)) {
+                $oldStock = $inventory->quantity_on_hand;
+                $newStock = (int) $validated['stock'];
+                $difference = $newStock - $oldStock;
+
                 $inventory->update([
-                    'quantity_on_hand' => (int) $validated['stock'],
+                    'quantity_on_hand' => $newStock,
+                    'last_restocked' => Carbon::now(),
                 ]);
+
+                // Create stock movement record if there's a difference
+                if ($difference != 0) {
+                    $movementType = $difference > 0 ? 'stock_in' : 'stock_out';
+
+                    try {
+                        StockMovement::create([
+                            'inventory_id' => $inventory->id,
+                            'quantity_change' => $difference,
+                            'type' => $movementType,
+                            'notes' => $difference > 0 ? 'Stock adjustment - increased via product edit' : 'Stock adjustment - decreased via product edit',
+                            'movement_date' => now(),
+                            'created_by' => Auth::check() ? Auth::id() : 1,
+                        ]);
+                    } catch (\Exception $e) {
+                        \Log::error('StockMovement creation failed: ' . $e->getMessage());
+                    }
+                }
             }
         });
 

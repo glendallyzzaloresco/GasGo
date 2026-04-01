@@ -21,8 +21,46 @@ class CustomerController extends Controller
             ->with('inventory')
             ->where('is_active', true)
             ->where('price', '>', 0)
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            ->sortByDesc('created_at')
+            ->values();
+
+        // Ensure variety in featured products by grouping by category (show 4 total: 1 tank, 1 accessories, 1 appliances, +1 more)
+        if (count($products) > 0) {
+            // Normalize categories to handle case variations
+            $categoryMap = $products->mapToGroups(function ($item) {
+                $normalized = strtolower(trim($item->category ?? 'uncategorized'));
+                return [$normalized => $item];
+            });
+            
+            $featuredByCategory = [];
+            
+            // Get exactly 1 product from each category first (up to 3 total)
+            foreach ($categoryMap as $normalizedCategory => $categoryProducts) {
+                if (count($featuredByCategory) >= 3) break;
+                $first = $categoryProducts->first();
+                if ($first) {
+                    $featuredByCategory[] = $first;
+                }
+            }
+            
+            // Get 1 more product from any category to reach 4 total
+            if (count($featuredByCategory) < 4) {
+                foreach ($categoryMap as $normalizedCategory => $categoryProducts) {
+                    if (count($featuredByCategory) >= 4) break;
+                    // Skip first product we already took
+                    $remaining = $categoryProducts->skip(1);
+                    foreach ($remaining as $product) {
+                        if (count($featuredByCategory) >= 4) break;
+                        if (!in_array($product->id, array_column($featuredByCategory, 'id'))) {
+                            $featuredByCategory[] = $product;
+                        }
+                    }
+                }
+            }
+            
+            $products = collect($featuredByCategory)->take(4);
+        }
 
         return view('customer.dashboard', compact('products'));
     }

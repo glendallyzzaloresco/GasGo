@@ -102,4 +102,21 @@ class Product extends Model
 
         return asset('storage/' . $normalized);
     }
+
+    /**
+     * Get the full URL for the product image.
+     */
+    public function getImageUrlAttribute()
+    {
+        if ($this->image) {
+            if (str_starts_with($this->image, 'http')) {
+                return $this->image;
+            }
+            if (str_starts_with($this->image, '/')) {
+                return asset($this->image);
+            }
+            return asset('storage/' . $this->image);
+        }
+        return asset('images/default-product.png');
+    }
 }

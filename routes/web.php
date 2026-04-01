@@ -45,12 +45,52 @@ Route::get('/', function () {
     $pendingOrders = \App\Models\Order::where('status', 'pending')->count();
     $totalCustomers = \App\Models\User::where('role', 'customer')->count();
     $activeRiders = \App\Models\Rider::whereIn('availability', ['available', 'busy'])->count();
+    // Fetch products with category diversity for featured section
     $products = \App\Models\Product::query()
         ->with('inventory')
         ->where('is_active', true)
         ->where('price', '>', 0)
-        ->orderBy('created_at', 'desc')
-        ->get();
+        ->get()
+        ->sortByDesc('created_at')
+        ->values();
+    
+    // Ensure variety in featured products by grouping by category
+    if (count($products) > 0) {
+        // Normalize categories to handle case variations
+        $categoryMap = $products->mapToGroups(function ($item) {
+            $normalized = strtolower(trim($item->category ?? 'uncategorized'));
+            return [$normalized => $item];
+        });
+        
+        $featuredByCategory = [];
+        
+        // Distribute products: alternate between categories for better variety
+        // First pass: get 1 from each category
+        foreach ($categoryMap as $normalizedCategory => $categoryProducts) {
+            if (count($featuredByCategory) >= 4) break;
+            $first = $categoryProducts->first();
+            if ($first) {
+                $featuredByCategory[] = $first;
+            }
+        }
+        
+        // Second pass: get additional products from categories if needed (up to 4 total)
+        if (count($featuredByCategory) < 4) {
+            foreach ($categoryMap as $normalizedCategory => $categoryProducts) {
+                if (count($featuredByCategory) >= 4) break;
+                // Skip first product we already took
+                $remaining = $categoryProducts->skip(1);
+                foreach ($remaining as $product) {
+                    if (count($featuredByCategory) >= 4) break;
+                    if (!in_array($product->id, array_column($featuredByCategory, 'id'))) {
+                        $featuredByCategory[] = $product;
+                    }
+                }
+            }
+        }
+        
+        $products = collect($featuredByCategory)->take(4);
+    }
 
     $user = \Illuminate\Support\Facades\Auth::user();
     $role = $user?->role ?? null;

@@ -107,6 +107,9 @@
         box-shadow: 0 8px 30px rgba(0,0,0,.08);
         transition: transform .35s, box-shadow .35s;
         transform-style: preserve-3d;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
     }
     .product-card:hover {
         transform: translateY(-8px);
@@ -117,6 +120,7 @@
         background: white;
         display: flex; align-items: center; justify-content: center;
         position: relative;
+        flex-shrink: 0;
     }
     .product-card .product-img img { max-height: 160px; object-fit: contain; }
     .product-badge {
@@ -126,8 +130,26 @@
         text-transform: capitalize;
     }
     .product-badge.accessory { background: var(--gasgo-blue); }
-    .product-card .product-body { padding: 20px; }
+    .product-card .product-body { 
+        padding: 20px; 
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
     .product-card .product-body h5 { font-weight: 700; color: #2f2f2f; margin-bottom: 4px; }
+    .product-variant { 
+        font-size: 0.85rem !important; 
+        color: #555 !important; 
+        margin-bottom: 8px !important; 
+        font-weight: 500 !important;
+        min-height: 1.5em;
+        max-height: 3em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
     .product-price { font-size: 1.25rem; font-weight: 700; color: var(--gasgo-orange); }
     .product-stock { font-size: .8rem; color: #27ae60; font-weight: 500; }
     .product-stock.out { color: #e74c3c; }
@@ -199,7 +221,8 @@
     .product-actions {
         display: flex;
         gap: 10px;
-        margin-top: 16px;
+        margin-top: auto;
+        margin-bottom: 0;
     }
 
     .product-actions .btn-add {
@@ -389,10 +412,10 @@
                                 </div>
                             @else
                                 <div class="product-actions" style="flex-direction: column;">
-                                    <button class="btn-buy buy-now-btn" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" onclick="buyNowWelcome({{ $product->id }});" {{ $inStock ? '' : 'disabled' }} title="Buy Now">
+                                    <button class="btn-buy buy-now-btn-welcome" data-id="{{ $product->id }}" {{ $inStock ? '' : 'disabled' }} title="Buy Now">
                                         <i class="fas fa-bolt"></i>Buy Now
                                     </button>
-                                    <button class="btn-add add-to-cart-btn" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" data-image="{{ $img }}" onclick="addToCartWelcome({{ $product->id }}, '{{ $product->name }}', {{ $product->price }}, '{{ $img }}');" {{ $inStock ? '' : 'disabled' }} title="Add to Cart">
+                                    <button class="btn-add add-to-cart-btn-welcome" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" data-image="{{ $img }}" {{ $inStock ? '' : 'disabled' }} title="Add to Cart">
                                         <i class="fas fa-shopping-cart"></i>Add to Cart
                                     </button>
                                 </div>
@@ -547,6 +570,26 @@ document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
             parseFloat(this.dataset.price),
             this.dataset.image
         );
+    });
+});
+
+// Event listeners for welcome page buttons
+document.querySelectorAll('.add-to-cart-btn-welcome').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        addToCartWelcome(
+            parseInt(this.dataset.id),
+            this.dataset.name,
+            parseFloat(this.dataset.price),
+            this.dataset.image
+        );
+    });
+});
+
+document.querySelectorAll('.buy-now-btn-welcome').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        buyNowWelcome(parseInt(this.dataset.id));
     });
 });
 
