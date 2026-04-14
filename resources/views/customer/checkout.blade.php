@@ -81,8 +81,6 @@
     }
     .summary-item.total .val { color: var(--gasgo-orange); }
     .order-item-mini { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f8f8f8; align-items: center; }
-    .order-item-mini input[type="checkbox"] { margin-top: 0; cursor: pointer; }
-    .cart-item-indicator { flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
     .order-item-mini img { width: 46px; height: 46px; border-radius: 8px; object-fit: contain; background: #fff; }
     .order-item-mini .name { font-weight: 600; font-size: .85rem; color: #333; }
     .order-item-mini .qty { font-size: .78rem; color: #888; }
@@ -329,7 +327,7 @@
                                         <div>
                                             <div style="font-weight: 700; color: var(--gasgo-blue);">OFF Voucher</div>
                                             <small style="color: #888; font-size: 0.8rem;">
-                                                Expires in <strong>{{ $voucher->isDaysUntilExpiry() }}</strong> day{{ $voucher->isDaysUntilExpiry() === 1 ? '' : 's' }}
+                                                Expires in <strong>{{ (int) $voucher->isDaysUntilExpiry() }}</strong> day{{ (int) $voucher->isDaysUntilExpiry() === 1 ? '' : 's' }}
                                             </small>
                                         </div>
                                     </div>
@@ -353,19 +351,6 @@
 
                 <!-- ===== FREEBIE SECTION ===== -->
                 @if ($availableFreebies->isNotEmpty())
-                    <!-- Freebie Warning (shown when voucher is applied) -->
-                    <div id="freebieDisabledNote" style="display: none; background: rgba(247, 148, 29, 0.1); border-left: 4px solid var(--gasgo-orange); padding: 16px; border-radius: 8px; margin-bottom: 24px;">
-                        <div style="display: flex; gap: 12px; align-items: flex-start;">
-                            <i class="fas fa-info-circle" style="color: var(--gasgo-orange); margin-top: 2px; flex-shrink: 0;"></i>
-                            <div>
-                                <strong style="color: var(--gasgo-blue); display: block; margin-bottom: 4px;">Freebies Not Available</strong>
-                                <p style="margin: 0; font-size: 0.9rem; color: #666;">
-                                    Freebies cannot be combined with vouchers. Your voucher discount will be applied to the order total instead.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
                     <div id="freebiesSection" class="checkout-card">
                         <h5><i class="fas fa-gift"></i>Select Your Freebie</h5>
                         <p class="text-muted mb-3" style="font-size:.88rem;">
@@ -448,25 +433,8 @@
             <div class="col-lg-4">
                 <div class="order-summary">
                     <h5><i class="fas fa-receipt me-2"></i>Order Summary</h5>
-                    <p class="text-muted" style="font-size:.85rem; margin-bottom:12px;">Select items to include in your order:</p>
                     @foreach ($cartItems as $item)
-                    <div class="order-item-mini" data-cart-id="{{ $item->id }}" data-price="{{ $item->product->price * $item->quantity }}" data-is-buy-now="false">
-                        <input 
-                            type="checkbox" 
-                            class="cart-item-checkbox" 
-                            value="{{ $item->id }}" 
-                            data-price="{{ $item->product->price * $item->quantity }}"
-                            style="display: none;"
-                        >
-                        <div class="cart-item-indicator" style="display: flex; align-items: center; justify-content: center; width: 20px; height: 20px;">
-                            <input 
-                                type="checkbox" 
-                                class="cart-item-checkbox-visual" 
-                                value="{{ $item->id }}" 
-                                data-price="{{ $item->product->price * $item->quantity }}"
-                                style="cursor: pointer; width: 18px; height: 18px;"
-                            >
-                        </div>
+                    <div class="order-item-mini" data-cart-id="{{ $item->id }}" data-product-id="{{ $item->product_id }}" data-price="{{ $item->product->price * $item->quantity }}" data-is-buy-now="false">
                         @if($item->product->resolved_image)
                             <img src="{{ $item->product->resolved_image }}" alt="{{ $item->product->name }}">
                         @else
@@ -1024,16 +992,18 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     });
 
-    // Cart item selection handling
+    // Cart item selection handling - now includes all items by default (no checkbox selection)
     function updateSelectedItems() {
-        const checkboxes = document.querySelectorAll('.cart-item-checkbox:checked');
-        const selectedIds = Array.from(checkboxes).map(cb => cb.value).join(',');
+        // Get all cart items
+        const allItems = document.querySelectorAll('.order-item-mini');
+        const selectedIds = Array.from(allItems).map(item => item.dataset.cartId).join(',');
         document.getElementById('selectedCartIds').value = selectedIds;
 
-        // Update totals
+        // Update totals - sum all items
         let selectedSubtotal = 0;
-        checkboxes.forEach(cb => {
-            selectedSubtotal += parseFloat(cb.dataset.price) || 0;
+        allItems.forEach(item => {
+            const priceText = item.dataset.price || '0';
+            selectedSubtotal += parseFloat(priceText);
         });
 
         document.getElementById('summarySubtotal').textContent = '₱' + selectedSubtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -1041,56 +1011,19 @@ document.addEventListener('DOMContentLoaded', async function () {
         document.getElementById('summaryTotal').textContent = '₱' + total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 
-    document.querySelectorAll('.cart-item-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', updateSelectedItems);
-    });
-
-    // Sync visual checkboxes with hidden checkboxes
-    document.querySelectorAll('.cart-item-checkbox-visual').forEach(visualCheckbox => {
-        visualCheckbox.addEventListener('change', function() {
-            const cartItem = this.closest('.order-item-mini');
-            const hiddenCheckbox = cartItem.querySelector('.cart-item-checkbox');
-            hiddenCheckbox.checked = this.checked;
-            updateSelectedItems();
-        });
-    });
-
-    // Handle selected_items parameter from URL (Buy Now flow)
-    const urlParams = new URLSearchParams(window.location.search);
-    const selectedItemsParam = urlParams.get('selected_items');
-    
-    if (selectedItemsParam) {
-        const selectedIds = selectedItemsParam.split(',').map(id => id.trim());
-        document.querySelectorAll('.order-item-mini').forEach(itemDiv => {
-            const checkbox = itemDiv.querySelector('.cart-item-checkbox');
-            const visualCheckbox = itemDiv.querySelector('.cart-item-checkbox-visual');
-            const indicator = itemDiv.querySelector('.cart-item-indicator');
-            
-            if (selectedIds.includes(checkbox.value)) {
-                // This is a "Buy Now" item - mark it and hide the checkbox
-                checkbox.checked = true;
-                itemDiv.setAttribute('data-is-buy-now', 'true');
-                
-                // Hide the visual checkbox and show a checkmark icon instead
-                visualCheckbox.style.display = 'none';
-                indicator.innerHTML = '<i class="fas fa-check-circle" style="color: var(--gasgo-orange); font-size: 1.1rem;"></i>';
-            }
-        });
-    }
-
     // Initialize selected items
     updateSelectedItems();
 
-    // Prevent form submission if no items selected
+    // Prevent form submission if no items in cart
     document.getElementById('checkoutForm').addEventListener('submit', function (e) {
         const selectedCartIds = document.getElementById('selectedCartIds').value;
         const paymentMethod = document.getElementById('paymentMethod').value;
         const proofInput = document.getElementById('proofOfPayment');
 
-        // Check if items are selected
+        // Check if items exist
         if (!selectedCartIds) {
             e.preventDefault();
-            alert('Please select at least one item to checkout.');
+            alert('Your cart is empty.');
             return false;
         }
 
@@ -1172,14 +1105,8 @@ document.addEventListener('DOMContentLoaded', async function () {
             }
         }
         
-        // Hide freebies section
-        hideFreebiesSection();
-        
         // Update order summary with discount
         updateOrderSummaryWithDiscount(discountAmount);
-        
-        // Clear selected freebie
-        clearSelectedFreebie();
         
         console.log('Voucher applied: ID=' + voucherId + ', Discount=₱' + discountAmount);
     };
@@ -1202,9 +1129,6 @@ document.addEventListener('DOMContentLoaded', async function () {
                 btn.style.background = 'var(--gasgo-orange)';
             }
         });
-        
-        // Show freebies section again
-        showFreebiesSection();
         
         // Remove discount from order summary
         updateOrderSummaryWithDiscount(0);

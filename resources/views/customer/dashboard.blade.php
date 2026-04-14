@@ -538,9 +538,36 @@ function applyStaggerReveal() {
 }
 
 function addToCart(id, name, price, image) {
-    addToCartAjax(id, 1).catch(error => {
-        console.error('Add to cart error:', error);
-    });
+    addToCartAjax(id, 1)
+        .then(() => {
+            // Show modal pop-up with product details
+            showAddToCartModal(name, price, image);
+            // Show success notification with View Cart button
+            showNotificationWithAction(`✓ ${name} added to cart!`, 'success', 5000);
+        })
+        .catch(error => {
+            console.error('Add to cart error:', error);
+            showNotificationWithAction('Failed to add item to cart', 'error', 3000);
+        });
+}
+
+function showAddToCartModal(productName, productPrice, productImage) {
+    const modal = document.getElementById('addToCartModal');
+    const modalImage = document.getElementById('modalProductImage');
+    const modalName = document.getElementById('modalProductName');
+    const modalPrice = document.getElementById('modalProductPrice');
+    
+    if (modalImage) modalImage.src = productImage || '';
+    if (modalName) modalName.textContent = productName;
+    if (modalPrice) modalPrice.textContent = '₱' + parseFloat(productPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    
+    if (modal) {
+        modal.classList.add('show');
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            modal.classList.add('visible');
+        }, 10);
+    }
 }
 
 document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
@@ -555,9 +582,247 @@ document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
     });
 });
 
+function snapshotActionButtonState() {
+    document.querySelectorAll('.buy-now-btn, .add-to-cart-btn').forEach(btn => {
+        if (!btn.dataset.defaultHtml) {
+            btn.dataset.defaultHtml = btn.innerHTML;
+            btn.dataset.initialDisabled = btn.disabled ? '1' : '0';
+        }
+    });
+}
+
+function restoreActionButtonState() {
+    document.querySelectorAll('.buy-now-btn, .add-to-cart-btn').forEach(btn => {
+        if (btn.dataset.defaultHtml) {
+            btn.innerHTML = btn.dataset.defaultHtml;
+            btn.disabled = btn.dataset.initialDisabled === '1';
+        }
+    });
+
+    buyNowInProgress = false;
+}
+
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        restoreActionButtonState();
+    }
+});
+
+document.querySelectorAll('.buy-now-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        buyNow(parseInt(this.dataset.id));
+    });
+});
+
+let buyNowInProgress = false;
+
+function buyNow(productId) {
+    if (buyNowInProgress) return;
+
+    const button = document.querySelector(`.buy-now-btn[data-id="${productId}"]`);
+    if (!button) return;
+
+    buyNowInProgress = true;
+    const originalHtml = button.innerHTML;
+    const timeoutMs = 10000;
+    const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), timeoutMs);
+    });
+
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>Loading...';
+
+    Promise.race([addToCartAjax(productId, 1), timeoutPromise])
+        .then(() => {
+            window.location.href = "{{ route('customer.checkout') }}" + '?selected_items=' + productId;
+        })
+        .catch(error => {
+            console.error('Buy Now error:', error);
+            button.disabled = false;
+            button.innerHTML = originalHtml;
+            alert('Unable to process Buy Now. Please try again.');
+        })
+        .finally(() => {
+            buyNowInProgress = false;
+        });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     applyTiltEffect();
     applyStaggerReveal();
+    snapshotActionButtonState();
+    
+    // Add to Cart Modal Close Handlers
+    const modal = document.getElementById('addToCartModal');
+    const closeBtn = document.querySelector('.add-to-cart-modal-close');
+    const viewCartBtn = document.getElementById('viewCartBtn');
+    const continuShoppingBtn = document.getElementById('continueShoppingBtn');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            closeAddToCartModal();
+        });
+    }
+    
+    if (viewCartBtn) {
+        viewCartBtn.addEventListener('click', function() {
+            window.location.href = '{{ route("customer.cart") }}';
+        });
+    }
+    
+    if (continuShoppingBtn) {
+        continuShoppingBtn.addEventListener('click', function() {
+            closeAddToCartModal();
+        });
+    }
+    
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAddToCartModal();
+            }
+        });
+    }
 });
+
+function closeAddToCartModal() {
+    const modal = document.getElementById('addToCartModal');
+    if (modal) {
+        modal.classList.remove('visible');
+        setTimeout(() => {
+            modal.classList.remove('show');
+            modal.style.display = 'none';
+        }, 300);
+    }
+}
 </script>
+
+<!-- Add to Cart Modal -->
+<div id="addToCartModal" class="add-to-cart-modal">
+    <div class="add-to-cart-modal-content">
+        <button class="add-to-cart-modal-close">×</button>
+        
+        <div class="modal-header text-center mb-4">
+            <h4 style="color: var(--gasgo-blue); font-weight: 700;">Added to Cart!</h4>
+        </div>
+        
+        <div class="modal-body text-center mb-4">
+            <img id="modalProductImage" src="" alt="Product" class="modal-product-image" style="border-radius: 12px; object-fit: cover;">
+            <h5 id="modalProductName" style="color: var(--gasgo-blue); margin-top: 16px; font-weight: 600;"></h5>
+            <p id="modalProductPrice" style="color: var(--gasgo-orange); font-size: 1.4rem; font-weight: 700; margin-top: 8px;"></p>
+        </div>
+        
+        <p style="text-align: center; color: #666; font-size: 0.9rem; margin-bottom: 20px;">
+            <i class="fas fa-check-circle" style="color: #27ae60; font-size: 1.3rem;"></i><br>
+            Item successfully added to your cart!
+        </p>
+        
+        <div class="modal-footer">
+            <button id="continueShoppingBtn" class="btn" style="background: white; color: var(--gasgo-orange); border: 2px solid var(--gasgo-orange); padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; flex: 1; margin-right: 8px;">
+                Continue Shopping
+            </button>
+            <button id="viewCartBtn" class="btn" style="background: linear-gradient(135deg, var(--gasgo-orange), #ff6b35); color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; flex: 1;">
+                View Cart
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.add-to-cart-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.add-to-cart-modal.show {
+    display: flex;
+}
+
+.add-to-cart-modal.visible {
+    opacity: 1;
+}
+
+.add-to-cart-modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 380px;
+    width: 90%;
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.15);
+    animation: slideUpModal 0.3s ease;
+    position: relative;
+}
+
+.add-to-cart-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #999;
+    cursor: pointer;
+    transition: color 0.2s;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.add-to-cart-modal-close:hover {
+    color: #333;
+}
+
+.modal-product-image {
+    width: 180px;
+    height: 180px;
+    margin: 0 auto;
+    display: block;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 12px;
+}
+
+@keyframes slideUpModal {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 576px) {
+    .add-to-cart-modal-content {
+        padding: 24px;
+        max-width: 95%;
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+    }
+    
+    .modal-footer button {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+}
+</style>
 @endsection

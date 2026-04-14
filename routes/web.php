@@ -186,6 +186,7 @@ Route::middleware(['auth', 'verified'])->prefix('customer')->group(function () {
 
     // Loyalty
     Route::post('/loyalty/redeem', [LoyaltyController::class, 'redeem'])->name('customer.loyalty.redeem');
+    Route::post('/loyalty/claim-voucher', [LoyaltyController::class, 'claimVoucher'])->name('customer.loyalty.claimVoucher');
 });
 
 // ===== ADMIN ROUTES =====
@@ -248,6 +249,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
 
     // Deliveries
     Route::get('/deliveries', [DeliveryController::class, 'index'])->name('admin.deliveries');
+    Route::get('/deliveries/api/list', [DeliveryController::class, 'apiIndex'])->name('admin.deliveries.api');
     Route::post('/deliveries', [DeliveryController::class, 'store'])->name('admin.deliveries.store');
     Route::put('/deliveries/{delivery}/status', [DeliveryController::class, 'updateStatus'])->name('admin.deliveries.status');
 

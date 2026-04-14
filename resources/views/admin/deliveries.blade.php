@@ -512,6 +512,112 @@
 
         updateDeliveryCounts();
         filterDeliveries();
+
+        // Start automatic refresh for real-time updates
+        startDeliveryPolling();
     });
+
+    // Automatic polling to refresh deliveries every 5 seconds
+    let pollingInterval = null;
+    function startDeliveryPolling() {
+        // Poll every 5 seconds for real-time delivery updates
+        pollingInterval = setInterval(() => {
+            refreshDeliveriesData();
+        }, 5000);
+    }
+
+    function stopDeliveryPolling() {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+    }
+
+    async function refreshDeliveriesData() {
+        try {
+            const response = await fetch('{{ route("admin.deliveries.api") }}', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) return;
+
+            const data = await response.json();
+            const deliveries = data.deliveries || [];
+
+            // Update each delivery card
+            deliveries.forEach(delivery => {
+                const card = document.querySelector(`.delivery-card[data-id="${delivery.id}"]`);
+                if (card) {
+                    const currentStatus = card.dataset.status;
+                    
+                    // If status has changed, update the card
+                    if (currentStatus !== delivery.status) {
+                        card.dataset.status = delivery.status;
+                        
+                        // Update status badge
+                        const statusMap = {
+                            'out_for_delivery': 'Out for Delivery',
+                            'delivered': 'Order Delivered',
+                            'returning': 'Returning to Store',
+                            'standby': 'Rider Stand By',
+                            'failed': 'Failed'
+                        };
+                        
+                        const badge = card.querySelector('.badge');
+                        if (badge) {
+                            badge.textContent = statusMap[delivery.status] || delivery.status;
+                            // Update badge class
+                            badge.className = 'badge badge-' + delivery.status.replace('_', '-');
+                        }
+                        
+                        // Update timeline
+                        const steps = card.querySelectorAll('.step');
+                        const statusOrder = ['out_for_delivery', 'delivered', 'returning', 'standby'];
+                        const currentIndex = statusOrder.indexOf(delivery.status);
+                        
+                        steps.forEach((step, i) => {
+                            step.classList.remove('done', 'current');
+                            if (i < currentIndex) step.classList.add('done');
+                            else if (i === currentIndex) step.classList.add('current');
+                        });
+                        
+                        // Move card to appropriate section if status is delivered/failed
+                        if (delivery.status === 'delivered' || delivery.status === 'failed') {
+                            const wasInActive = card.parentElement.id === 'activeDeliveriesList';
+                            if (wasInActive) {
+                                // Move to completed list
+                                const completedList = document.getElementById('completedDeliveriesList');
+                                card.style.animation = 'slideOut 0.3s ease-out';
+                                setTimeout(() => {
+                                    card.remove();
+                                    completedList.insertAdjacentElement('afterbegin', card);
+                                    card.dataset.group = 'completed';
+                                    filterDeliveries();
+                                    updateDeliveryCounts();
+                                }, 300);
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error refreshing deliveries:', error);
+        }
+    }
+
+    // Add slide out animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideOut {
+            0% { opacity: 1; transform: translateX(0); }
+            100% { opacity: 0; transform: translateX(-100%); }
+        }
+    `;
+    document.head.appendChild(style);
+
 </script>
 @endsection

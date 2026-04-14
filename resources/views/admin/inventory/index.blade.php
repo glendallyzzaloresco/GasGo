@@ -86,6 +86,16 @@
         box-shadow: 0 6px 16px rgba(26, 109, 176, 0.4);
     }
 
+    .filter-section .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(39, 174, 96, 0.4) !important;
+    }
+
+    .filter-section .btn-primary {
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+    }
+
     /* Table Layout */
     .inventory-table-wrapper {
         background: white;
@@ -93,6 +103,90 @@
         box-shadow: 0 2px 12px rgba(0,0,0,0.08);
         overflow: hidden;
         margin-bottom: 30px;
+    }
+
+    .inventory-section {
+        margin-bottom: 18px;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        background: #fff;
+        transition: all 0.3s ease;
+    }
+
+    .inventory-section:hover {
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+    }
+
+    .inventory-section summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 14px 20px;
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.02rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        user-select: none;
+        transition: all 0.3s ease;
+    }
+
+    .inventory-section summary:hover {
+        filter: brightness(1.08);
+        padding-left: 24px;
+    }
+
+    .inventory-section summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .section-summary-left {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .section-summary-right {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.82rem;
+        opacity: 0.95;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .section-chevron {
+        transition: transform 0.3s ease;
+    }
+
+    details[open] .section-chevron {
+        transform: rotate(180deg);
+    }
+
+    .section-body {
+        background: #fff;
+        animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .history-scroll-wrap {
+        max-height: 280px;
+        overflow-y: auto;
     }
 
     .table {
@@ -247,7 +341,8 @@
 
     .category-badge-stove,
     .category-badge-burner,
-    .category-badge-appliance {
+    .category-badge-appliance,
+    .category-badge-appliances {
         background: #ff6f00;
         color: white;
     }
@@ -342,15 +437,7 @@
         box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4) !important;
     }
 
-    .adjust-stock-btn {
-        transition: all 0.2s ease !important;
-    }
 
-    .adjust-stock-btn:hover {
-        background: #45a049 !important;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4) !important;
-    }
 
     .btn-edit {
         transition: all 0.2s ease !important;
@@ -378,26 +465,31 @@
     <!-- Summary Cards Section -->
     <div class="row mb-4">
         <div class="col-md-6">
-            <div class="card border-left-primary shadow">
+            <div class="card border-left-primary shadow" id="emptyTanksCard">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
                             <div class="text-primary text-uppercase font-weight-bold text-xs mb-1">
                                 <i class="fas fa-undo me-2"></i>Empty Tanks in Hand
                             </div>
-                            <div class="h3 mb-0 text-gray-800" style="font-weight: 700; color: #1a6db0;">
+                            <div class="h3 mb-0 text-gray-800" id="emptyTanksTotalUnits" style="font-weight: 700; color: #1a6db0;">
                                 {{ $totalEmptyReturned }} Units
                             </div>
                         </div>
                         @if($emptyTanksReturned->count() > 0)
-                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#emptyTanksModal">
+                        <button type="button" class="btn btn-sm btn-primary" id="emptyTanksViewBtn" data-bs-toggle="modal" data-bs-target="#emptyTanksModal">
+                            <i class="fas fa-eye me-1"></i>View
+                        </button>
+                        @else
+                        <button type="button" class="btn btn-sm btn-primary d-none" id="emptyTanksViewBtn" data-bs-toggle="modal" data-bs-target="#emptyTanksModal">
                             <i class="fas fa-eye me-1"></i>View
                         </button>
                         @endif
                     </div>
                     @if($emptyTanksReturned->count() > 0)
-                    <div class="mt-3" style="max-height: 150px; overflow-y: auto;">
+                    <div class="mt-3" id="emptyTanksPreviewWrap" style="max-height: 150px; overflow-y: auto;">
                       
+                        <div id="emptyTanksPreviewList">
                         @foreach($emptyTanksReturned->take(3) as $inv)
                         <div class="mb-1 p-2 bg-light rounded" style="border-left: 3px solid #1a6db0; font-size: 0.85rem;">
                             <div class="d-flex justify-content-between">
@@ -406,12 +498,15 @@
                             </div>
                         </div>
                         @endforeach
-                        @if($emptyTanksReturned->count() > 3)
-                        <small class="text-muted d-block mt-2">+{{ $emptyTanksReturned->count() - 3 }} more...</small>
-                        @endif
+                        </div>
+                        <small id="emptyTanksPreviewMore" class="text-muted d-block mt-2 @if($emptyTanksReturned->count() <= 3) d-none @endif">+{{ max($emptyTanksReturned->count() - 3, 0) }} more...</small>
                     </div>
                     @else
-                    <small class="text-muted d-block mt-2">No empty tanks in hand</small>
+                    <div class="mt-3 d-none" id="emptyTanksPreviewWrap" style="max-height: 150px; overflow-y: auto;">
+                        <div id="emptyTanksPreviewList"></div>
+                        <small id="emptyTanksPreviewMore" class="text-muted d-block mt-2 d-none"></small>
+                    </div>
+                    <small class="text-muted d-block mt-2" id="emptyTanksEmptyText">No empty tanks in hand</small>
                     @endif
                 </div>
             </div>
@@ -459,6 +554,87 @@
         </div>
     </div>
 
+    <!-- Recent Stock Movement History -->
+    <details class="inventory-section">
+        <summary style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);">
+            <span class="section-summary-left">
+                <i class="fas fa-history"></i>Recent Stock Movement History
+            </span>
+            <span class="section-summary-right">
+                <span>{{ ($recentStockMovements ?? collect())->count() }} records</span>
+                <a href="{{ route('admin.inventory.movements') }}" class="btn btn-sm" style="background: rgba(255,255,255,0.18); color: white; border: 1px solid rgba(255,255,255,0.35); font-weight: 600;" onclick="event.stopPropagation();">
+                    <i class="fas fa-external-link-alt me-1"></i>View Full History
+                </a>
+                <i class="fas fa-chevron-down section-chevron"></i>
+            </span>
+        </summary>
+
+        <div class="section-body">
+        @if(($recentStockMovements ?? collect())->isEmpty())
+            <div class="p-4 text-center text-muted">
+                <i class="fas fa-inbox me-2"></i>No stock movement history yet.
+            </div>
+        @else
+            <div class="table-responsive history-scroll-wrap">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">Product</th>
+                            <th style="width: 12%;">Type</th>
+                            <th style="width: 10%;">Quantity</th>
+                            <th style="width: 18%;">Date & Time</th>
+                            <th style="width: 23%;">Notes</th>
+                            <th style="width: 12%;">By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($recentStockMovements as $movement)
+                            @php
+                                $movementType = strtolower((string) $movement->type);
+                                $movementDate = $movement->movement_date ?? $movement->created_at;
+                                $quantityValue = (int) $movement->quantity_change;
+                                $badgeClass = 'bg-secondary';
+                                $qtyClass = 'text-success';
+
+                                if ($movementType === 'stock_in' || $movementType === 'purchase' || $quantityValue > 0) {
+                                    $badgeClass = 'bg-success';
+                                } elseif ($movementType === 'stock_out' || $movementType === 'sale' || $movementType === 'damage' || $quantityValue < 0) {
+                                    $badgeClass = 'bg-danger';
+                                    $qtyClass = 'text-danger';
+                                }
+                            @endphp
+                            <tr>
+                                <td>
+                                    <strong>{{ $movement->inventory->product->name ?? 'Unknown Product' }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge {{ $badgeClass }}" style="text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.3px;">
+                                        {{ str_replace('_', ' ', $movement->type) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="{{ $qtyClass }}" style="font-weight: 700;">
+                                        {{ $quantityValue > 0 ? '+' : '' }}{{ $quantityValue }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>{{ $movementDate ? $movementDate->format('M d, Y - h:i A') : 'N/A' }}</small>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ $movement->notes ?: 'No notes' }}</small>
+                                </td>
+                                <td>
+                                    <small>{{ $movement->creator->name ?? 'System' }}</small>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+        </div>
+    </details>
+
     <!-- Empty Tanks Modal -->
     <div class="modal fade" id="emptyTanksModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
@@ -468,6 +644,37 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <form id="emptyTanksFilterForm" method="GET" action="{{ route('admin.inventory.index') }}" class="row g-2 align-items-end mb-3">
+                        @foreach(request()->except('empty_date') as $key => $value)
+                            @if(!is_array($value) && $value !== null && $value !== '')
+                                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                            @endif
+                        @endforeach
+                        <div class="col-md-5">
+                            <label for="emptyDateFilter" class="form-label mb-1">Filter by Date</label>
+                            <input type="date" id="emptyDateFilter" name="empty_date" class="form-control" value="{{ $selectedEmptyDate }}">
+                        </div>
+                        <div class="col-md-7 d-flex gap-2">
+                            <button id="emptyDateApplyBtn" type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter me-1"></i>Apply Date
+                            </button>
+                            <button id="emptyDateClearBtn" type="button" class="btn btn-outline-secondary">
+                                <i class="fas fa-eraser me-1"></i>Clear
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="mb-2" id="emptyTanksFilterSummary">
+                        <small class="text-muted">
+                            @if($selectedEmptyDate)
+                                Showing empty tank returns for <strong>{{ \Carbon\Carbon::parse($selectedEmptyDate)->format('M d, Y') }}</strong>
+                            @else
+                                Showing empty tank returns for all dates
+                            @endif
+                            : <strong>{{ $totalEmptyReturnedByDate ?? 0 }}</strong> unit(s)
+                        </small>
+                    </div>
+
                     <table class="table table-striped table-hover">
                         <thead style="background: #f8f9fa;">
                             <tr>
@@ -476,35 +683,39 @@
                                 <th>Date Delivered</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @foreach($emptyTanksReturned as $inv)
-                            <tr>
-                                <td>
-                                    <strong>{{ $inv->product->name }}</strong>
-                                    <br>
-                                    <small class="text-muted">Regular Stock: {{ $inv->quantity_on_hand }}</small>
-                                </td>
-                                <td style="text-align: center;">
-                                    <span class="badge bg-warning text-dark" style="font-size: 0.95rem; padding: 10px 14px;">
-                                        {{ $inv->empty_on_hand }} Units
-                                    </span>
-                                </td>
-                                <td>
-                                    @if($inv->delivery_date)
-                                        <small class="text-muted">
-                                            {{ \Carbon\Carbon::parse($inv->delivery_date)->format('M d, Y - h:i A') }}
-                                        </small>
-                                    @else
-                                        <small class="text-muted text-secondary">--</small>
-                                    @endif
-                                </td>
-                            </tr>
-                            @endforeach
+                        <tbody id="emptyTanksTableBody">
+                            @forelse($emptyTankReturnsByDate as $item)
+                                <tr>
+                                    <td>
+                                        <strong>{{ $item->product_name }}</strong>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <span class="badge bg-warning text-dark" style="font-size: 0.95rem; padding: 10px 14px;">
+                                            {{ (int) $item->returned_qty }} Units
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if($item->latest_delivery_date)
+                                            <small class="text-muted">
+                                                {{ \Carbon\Carbon::parse($item->latest_delivery_date)->format('M d, Y - h:i A') }}
+                                            </small>
+                                        @else
+                                            <small class="text-muted text-secondary">--</small>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">
+                                        No empty tank returns found for the selected date.
+                                    </td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
                 <div class="modal-footer">
-                    <small class="text-muted">Total Empty Tanks: <strong>{{ $totalEmptyReturned }}</strong> Units</small>
+                    <small class="text-muted" id="emptyTanksTotalReturned">Total Returned: <strong>{{ $totalEmptyReturnedByDate ?? 0 }}</strong> Units</small>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
@@ -516,10 +727,36 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white;">
-                    <h5 class="modal-title"><i class="fas fa-box me-2"></i>Stock Received Today</h5>
+                    <h5 class="modal-title"><i class="fas fa-box me-2"></i>Stock Received</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <form id="stockReceivedFilterForm" class="row g-2 align-items-end mb-3">
+                        @foreach(request()->except('stock_date') as $key => $value)
+                            @if(!is_array($value) && $value !== null && $value !== '')
+                                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                            @endif
+                        @endforeach
+                        <div class="col-md-5">
+                            <label for="stockDateFilter" class="form-label mb-1">Filter by Date</label>
+                            <input type="date" id="stockDateFilter" name="stock_date" class="form-control">
+                        </div>
+                        <div class="col-md-7 d-flex gap-2">
+                            <button id="stockDateApplyBtn" type="submit" class="btn btn-success">
+                                <i class="fas fa-filter me-1"></i>Apply Date
+                            </button>
+                            <button id="stockDateClearBtn" type="button" class="btn btn-outline-secondary">
+                                <i class="fas fa-eraser me-1"></i>Clear
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="mb-2" id="stockReceivedFilterSummary">
+                        <small class="text-muted">
+                            Showing stock received for all dates : <strong>{{ count($stockReceived) }}</strong> deliveries
+                        </small>
+                    </div>
+
                     <table class="table table-striped table-hover">
                         <thead style="background: #f8f9fa;">
                             <tr>
@@ -529,7 +766,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($stockReceived as $movement)
+                            @forelse($stockReceived as $movement)
                             <tr>
                                 <td>
                                     <strong>{{ $movement->inventory->product->name }}</strong>
@@ -545,12 +782,18 @@
                                     </small>
                                 </td>
                             </tr>
-                            @endforeach
+                            @empty
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-4">
+                                    No stock received found for the selected date.
+                                </td>
+                            </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
                 <div class="modal-footer">
-                    <small class="text-muted">Total Received: <strong>{{ $totalStockReceived }}</strong> Units</small>
+                    <small class="text-muted" id="stockReceivedTotal">Total Received: <strong>{{ $totalStockReceived ?? count($stockReceived) }}</strong> Units</small>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
@@ -565,7 +808,7 @@
     @endif
 
     <div class="filter-section">
-        <form id="filterForm" class="row g-3">
+        <div class="row g-3 mb-3">
             <div class="col-md-3">
                 <label class="form-label"><i class="fas fa-search me-2"></i>Search Product</label>
                 <input type="text" id="searchInput" name="search" class="form-control" placeholder="Enter product name..." 
@@ -600,13 +843,19 @@
                 <label class="form-label"><i class="fas fa-tags me-2"></i>Category</label>
                 <select id="categorySelect" name="category" class="form-select">
                     <option value="">All Categories</option>
-                    <option value="Tank" {{ request('category') === 'Tank' ? 'selected' : '' }}>Tank</option>
-                    <option value="Accessories" {{ request('category') === 'Accessories' ? 'selected' : '' }}>Accessories</option>
-                    <option value="Appliance" {{ request('category') === 'Appliance' ? 'selected' : '' }}>Appliance</option>
-                    <option value="Freebie" {{ request('category') === 'Freebie' ? 'selected' : '' }}>Freebie</option>
+                    <option value="tank" {{ strtolower((string) request('category')) === 'tank' ? 'selected' : '' }}>Tank</option>
+                    <option value="accessories" {{ strtolower((string) request('category')) === 'accessories' ? 'selected' : '' }}>Accessories</option>
+                    <option value="appliances" {{ in_array(strtolower((string) request('category')), ['appliance', 'appliances'], true) ? 'selected' : '' }}>Appliances</option>
+                    <option value="freebie" {{ strtolower((string) request('category')) === 'freebie' ? 'selected' : '' }}>Freebie</option>
                 </select>
             </div>
-        </form>
+
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#bulkAddStockModal" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%); border: none; font-weight: 600; padding: 10px 20px; border-radius: 6px;">
+                    <i class="fas fa-plus-circle me-2"></i>Add Stock
+                </button>
+            </div>
+        </div>
     </div>
 
     <div id="inventoryResults">
@@ -621,15 +870,17 @@
                 // Separate inventories by category
                 $tankInventories = $inventories->filter(fn($inv) => strtolower($inv->product->category) === 'tank');
                 $accessoriesInventories = $inventories->filter(fn($inv) => strtolower($inv->product->category) === 'accessories');
-                $applianceInventories = $inventories->filter(fn($inv) => in_array(strtolower($inv->product->category), ['stove', 'burner', 'appliance']));
+                $applianceInventories = $inventories->filter(fn($inv) => in_array(strtolower($inv->product->category), ['stove', 'burner', 'appliance', 'appliances'], true));
             @endphp
 
             <!-- LPG TANKS SECTION -->
             @if($tankInventories->count() > 0)
-            <div class="inventory-table-wrapper">
-                <div style="background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%); color: white; padding: 14px 20px; font-weight: 700; font-size: 1.05rem;">
-                    <i class="fas fa-cube me-2"></i>LPG Tanks
-                </div>
+            <details class="inventory-section" open>
+                <summary style="background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);">
+                    <span class="section-summary-left"><i class="fas fa-cube"></i>LPG Tanks</span>
+                    <span class="section-summary-right">{{ $tankInventories->count() }} items <i class="fas fa-chevron-down section-chevron"></i></span>
+                </summary>
+                <div class="section-body">
                 <table class="table table-hover">
                     <thead>
                         <tr>
@@ -680,29 +931,26 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <div style="display: flex; gap: 8px;">
-                                        <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-view" style="background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" title="View">
-                                            <i class="fas fa-eye me-1"></i>View
-                                        </a>
-                                        <button type="button" class="btn btn-sm adjust-stock-btn" style="background: #4caf50; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" data-bs-toggle="modal" data-bs-target="#adjustStockModal" 
-                                            data-inventory-id="{{ $inventory->id }}" data-product-name="{{ $inventory->product->name }}">
-                                            <i class="fas fa-plus me-1"></i>Add Stock
-                                        </button>
-                                    </div>
+                                    <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-view" style="background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" title="View">
+                                        <i class="fas fa-eye me-1"></i>View
+                                    </a>
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
-            </div>
+                </div>
+            </details>
             @endif
 
             <!-- APPLIANCES SECTION -->
             @if($applianceInventories->count() > 0)
-            <div class="inventory-table-wrapper">
-                <div style="background: linear-gradient(135deg, #ff6f00 0%, #e55100 100%); color: white; padding: 14px 20px; font-weight: 700; font-size: 1.05rem;">
-                    <i class="fas fa-flame me-2"></i>Appliances
-                </div>
+            <details class="inventory-section" open>
+                <summary style="background: linear-gradient(135deg, #ff6f00 0%, #e55100 100%);">
+                    <span class="section-summary-left"><i class="fas fa-flame"></i>Appliances</span>
+                    <span class="section-summary-right">{{ $applianceInventories->count() }} items <i class="fas fa-chevron-down section-chevron"></i></span>
+                </summary>
+                <div class="section-body">
                 <table class="table table-hover">
                     <thead>
                         <tr>
@@ -753,29 +1001,26 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <div style="display: flex; gap: 8px;">
-                                        <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-view" style="background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" title="View">
-                                            <i class="fas fa-eye me-1"></i>View
-                                        </a>
-                                        <button type="button" class="btn btn-sm adjust-stock-btn" style="background: #4caf50; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" data-bs-toggle="modal" data-bs-target="#adjustStockModal" 
-                                            data-inventory-id="{{ $inventory->id }}" data-product-name="{{ $inventory->product->name }}">
-                                            <i class="fas fa-plus me-1"></i>Add Stock
-                                        </button>
-                                    </div>
+                                    <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-view" style="background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" title="View">
+                                        <i class="fas fa-eye me-1"></i>View
+                                    </a>
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
-            </div>
+                </div>
+            </details>
             @endif
 
             <!-- ACCESSORIES SECTION -->
             @if($accessoriesInventories->count() > 0)
-            <div class="inventory-table-wrapper">
-                <div style="background: linear-gradient(135deg, #7b1fa2 0%, #512da8 100%); color: white; padding: 14px 20px; font-weight: 700; font-size: 1.05rem;">
-                    <i class="fas fa-tools me-2"></i>Accessories
-                </div>
+            <details class="inventory-section">
+                <summary style="background: linear-gradient(135deg, #7b1fa2 0%, #512da8 100%);">
+                    <span class="section-summary-left"><i class="fas fa-tools"></i>Accessories</span>
+                    <span class="section-summary-right">{{ $accessoriesInventories->count() }} items <i class="fas fa-chevron-down section-chevron"></i></span>
+                </summary>
+                <div class="section-body">
                 <table class="table table-hover">
                     <thead>
                         <tr>
@@ -826,21 +1071,16 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <div style="display: flex; gap: 8px;">
-                                        <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-view" style="background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" title="View">
-                                            <i class="fas fa-eye me-1"></i>View
-                                        </a>
-                                        <button type="button" class="btn btn-sm adjust-stock-btn" style="background: #4caf50; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" data-bs-toggle="modal" data-bs-target="#adjustStockModal" 
-                                            data-inventory-id="{{ $inventory->id }}" data-product-name="{{ $inventory->product->name }}">
-                                            <i class="fas fa-plus me-1"></i>Add Stock
-                                        </button>
-                                    </div>
+                                    <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-view" style="background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" title="View">
+                                        <i class="fas fa-eye me-1"></i>View
+                                    </a>
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
-            </div>
+                </div>
+            </details>
             @endif
 
             <div class="d-flex justify-content-center mt-4 mb-5" id="paginationContainer">
@@ -849,10 +1089,12 @@
 
             <!-- Freebies & Rewards Section -->
             @if($freebies && $freebies->count() > 0)
-            <div class="inventory-table-wrapper">
-                <div style="background: linear-gradient(135deg, #27ae60 0%, #1f8449 100%); color: white; padding: 14px 20px; font-weight: 700; font-size: 1.05rem;">
-                    <i class="fas fa-gift me-2"></i>Freebies & Rewards
-                </div>
+            <details class="inventory-section">
+                <summary style="background: linear-gradient(135deg, #27ae60 0%, #1f8449 100%);">
+                    <span class="section-summary-left"><i class="fas fa-gift"></i>Freebies & Rewards</span>
+                    <span class="section-summary-right">{{ $freebies->count() }} items <i class="fas fa-chevron-down section-chevron"></i></span>
+                </summary>
+                <div class="section-body">
                 <table class="table table-hover">
                     <thead>
                         <tr style="background: linear-gradient(135deg, #27ae60 0%, #1f8449 100%); color: white;">
@@ -910,7 +1152,8 @@
                         @endforeach
                     </tbody>
                 </table>
-            </div>
+                </div>
+            </details>
             @endif
         @endif
     </div>
@@ -951,16 +1194,17 @@
                     <div class="mb-3">
                         <label class="form-label">Adjustment Type</label>
                         <select name="type" class="form-select" required>
-                            <option value="purchase">Purchase</option>
+                            <option value="stock_in">Stock In (Restock/Refill)</option>
+                            <option value="stock_out">Stock Out / Correction</option>
                             <option value="sale">Sale</option>
-                            <option value="adjustment">Correction</option>
+                            <option value="damage">Damage / Loss</option>
                             <option value="return">Return from Customer</option>
                         </select>
                     </div>
                     
                     <div class="mb-3">
                         <label class="form-label">Quantity</label>
-                        <input type="number" name="quantity" class="form-control" min="1" required placeholder="Enter quantity...">
+                        <input type="number" name="quantity_change" class="form-control" min="1" required placeholder="Enter quantity...">
                     </div>
                     
                     <div class="mb-3">
@@ -1071,22 +1315,220 @@
     </div>
 </div>
 
+<!-- Bulk Add Stock Modal -->
+<div class="modal fade" id="bulkAddStockModal" tabindex="-1" aria-labelledby="bulkAddStockModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white;">
+                <h5 class="modal-title" id="bulkAddStockModalLabel">
+                    <i class="fas fa-plus-circle me-2"></i>Add Stock to Inventory
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: brightness(0) invert(1);"></button>
+            </div>
+            <form id="bulkAddStockForm" method="POST">
+                @csrf
+                
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select Product *</label>
+                        <select name="inventory_id" class="form-select" id="bulkProductSelect" required>
+                            <option value="">-- Choose a product --</option>
+                            @php
+                                $allInventories = $inventories ?? collect();
+                                // Group by category for better organization
+                                $grouped = [
+                                    'Tank' => $allInventories->filter(fn($inv) => strtolower($inv->product->category) === 'tank'),
+                                    'Appliances' => $allInventories->filter(fn($inv) => in_array(strtolower($inv->product->category), ['stove', 'burner', 'appliance', 'appliances'], true)),
+                                    'Accessories' => $allInventories->filter(fn($inv) => strtolower($inv->product->category) === 'accessories'),
+                                ];
+                            @endphp
+                            @foreach($grouped as $category => $items)
+                                @if($items->count() > 0)
+                                    <optgroup label="{{ $category }}">
+                                        @foreach($items as $inventory)
+                                            <option value="{{ $inventory->id }}" data-stock="{{ $inventory->quantity_on_hand }}" data-name="{{ $inventory->product->name }}">
+                                                {{ $inventory->product->name }} (Stock: {{ $inventory->quantity_on_hand }})
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                            @endforeach
+                        </select>
+                        <small class="text-muted d-block mt-2">
+                            <strong id="selectedProductInfo"></strong>
+                        </small>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Adjustment Type *</label>
+                            <select name="type" class="form-select" id="bulkAdjustmentType" required>
+                                <option value="">Select type...</option>
+                                <optgroup label="STOCK IN (Add Inventory)">
+                                    <option value="stock_in">Stock In (Restock/Refill)</option>
+                                </optgroup>
+                                <optgroup label="STOCK OUT (Reduce Inventory)">
+                                    <option value="stock_out">Stock Out / Correction</option>
+                                    <option value="sale">Sale</option>
+                                    <option value="damage">Damage / Loss</option>
+                                    <option value="return">Customer Return (Empty Tank - LPG Only)</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="bulkQuantityInput">Quantity *</label>
+                            <input type="number" name="quantity_change" class="form-control" id="bulkQuantityInput" required 
+                                   placeholder="Enter quantity" min="1">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Movement Date & Time</label>
+                        <input type="datetime-local" name="movement_date" class="form-control" id="bulkMovementDateTime" 
+                               readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+                        <small class="text-muted">Automatically set to today's date and time</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Reference/Notes (Optional)</label>
+                        <textarea name="notes" class="form-control" id="bulkNotesInput"
+                               placeholder="e.g., Delivery from supplier, damaged batch, etc." maxlength="255" rows="2"></textarea>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>Add Stock
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
-// Set default datetime to now
+// ===== BULK ADD STOCK MODAL FUNCTIONALITY =====
 document.addEventListener('DOMContentLoaded', function() {
-    const movementDateInput = document.getElementById('movementDateTime');
-    if (movementDateInput) {
-        movementDateInput.value = new Date().toISOString().slice(0, 16);
+    // Initialize bulk add stock modal datetime
+    const bulkMovementDateInput = document.getElementById('bulkMovementDateTime');
+    if (bulkMovementDateInput) {
+        bulkMovementDateInput.value = new Date().toISOString().slice(0, 16);
     }
+
+    // Handle bulk product selection
+    const bulkProductSelect = document.getElementById('bulkProductSelect');
+    const selectedProductInfo = document.getElementById('selectedProductInfo');
     
-    // Add event listeners to all Adjust Stock buttons
-    document.querySelectorAll('.adjust-stock-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const inventoryId = this.getAttribute('data-inventory-id');
-            const productName = this.getAttribute('data-product-name');
-            setAdjustInventory(inventoryId, productName);
+    if (bulkProductSelect) {
+        bulkProductSelect.addEventListener('change', function() {
+            if (this.value) {
+                const selectedOption = this.options[this.selectedIndex];
+                const productName = selectedOption.getAttribute('data-name');
+                const currentStock = selectedOption.getAttribute('data-stock');
+                selectedProductInfo.textContent = `${productName} - Current Stock: ${currentStock} units`;
+            } else {
+                selectedProductInfo.textContent = '';
+            }
         });
-    });
+    }
+
+    // Handle bulk adjustment type change
+    const bulkAdjustmentType = document.getElementById('bulkAdjustmentType');
+    const bulkQuantityInput = document.getElementById('bulkQuantityInput');
+    
+    if (bulkAdjustmentType) {
+        bulkAdjustmentType.addEventListener('change', function() {
+            const selectedType = this.value;
+            if (selectedType === 'stock_in') {
+                bulkQuantityInput.placeholder = 'Enter quantity to add';
+                bulkQuantityInput.style.borderColor = '#27ae60';
+            } else if (['stock_out', 'sale', 'damage', 'return'].includes(selectedType)) {
+                bulkQuantityInput.placeholder = 'Enter quantity to remove';
+                bulkQuantityInput.style.borderColor = '#e74c3c';
+            } else {
+                bulkQuantityInput.placeholder = 'Enter quantity';
+                bulkQuantityInput.style.borderColor = '';
+            }
+        });
+    }
+
+    // Handle bulk add stock form submission
+    const bulkAddStockForm = document.getElementById('bulkAddStockForm');
+    if (bulkAddStockForm) {
+        bulkAddStockForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const inventoryId = document.getElementById('bulkProductSelect').value;
+            const adjustmentType = document.getElementById('bulkAdjustmentType').value;
+            const quantity = document.getElementById('bulkQuantityInput').value;
+            
+            // Validation
+            if (!inventoryId) {
+                alert('Please select a product');
+                return;
+            }
+            if (!adjustmentType) {
+                alert('Please select an Adjustment Type');
+                return;
+            }
+            if (!quantity || quantity < 1) {
+                alert('Please enter a valid quantity');
+                return;
+            }
+            
+            const formData = new FormData(this);
+            
+            // Build the URL with inventory ID
+            const url = `{{ route('admin.inventory.adjust', ':id') }}`.replace(':id', inventoryId);
+            
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('bulkAddStockModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    // Reload page to show updated stock
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                } else {
+                    return response.text().then(text => { 
+                        console.error('Error response:', text);
+                        alert('Error: ' + (text || response.statusText)); 
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error adding stock: ' + error.message);
+            });
+        });
+    }
+
+    // Reset form when modal is closed
+    const bulkAddStockModal = document.getElementById('bulkAddStockModal');
+    if (bulkAddStockModal) {
+        bulkAddStockModal.addEventListener('hide.bs.modal', function() {
+            document.getElementById('bulkProductSelect').value = '';
+            document.getElementById('bulkAdjustmentType').value = '';
+            document.getElementById('bulkQuantityInput').value = '';
+            document.getElementById('bulkNotesInput').value = '';
+            document.getElementById('selectedProductInfo').textContent = '';
+        });
+    }
+
+    // ===== EXISTING FUNCTIONALITY BELOW =====
+    
+
     
     // Handle adjustment type change
     const adjustmentTypeSelect = document.getElementById('adjustmentType');
@@ -1210,7 +1652,241 @@ const clearFiltersBtn = document.getElementById('clearFiltersBtn');
 const inventoryResults = document.getElementById('inventoryResults');
 const loadingSpinner = document.getElementById('loadingSpinner');
 const loadingOverlay = document.getElementById('loadingOverlay');
+const emptyTanksFilterForm = document.getElementById('emptyTanksFilterForm');
+const emptyDateFilterInput = document.getElementById('emptyDateFilter');
+const emptyDateApplyBtn = document.getElementById('emptyDateApplyBtn');
+const emptyDateClearBtn = document.getElementById('emptyDateClearBtn');
+const emptyTanksTotalUnits = document.getElementById('emptyTanksTotalUnits');
+const emptyTanksPreviewList = document.getElementById('emptyTanksPreviewList');
+const emptyTanksPreviewWrap = document.getElementById('emptyTanksPreviewWrap');
+const emptyTanksPreviewMore = document.getElementById('emptyTanksPreviewMore');
+const emptyTanksEmptyText = document.getElementById('emptyTanksEmptyText');
+const emptyTanksViewBtn = document.getElementById('emptyTanksViewBtn');
+let emptyTanksPollTimer = null;
 let filterTimeout;
+
+function refreshEmptyTanksCard() {
+    fetch(`{{ route('admin.inventory.index') }}?${new URLSearchParams(window.location.search).toString()}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        const freshTotal = doc.getElementById('emptyTanksTotalUnits');
+        const freshList = doc.getElementById('emptyTanksPreviewList');
+        const freshWrap = doc.getElementById('emptyTanksPreviewWrap');
+        const freshMore = doc.getElementById('emptyTanksPreviewMore');
+        const freshEmptyText = doc.getElementById('emptyTanksEmptyText');
+        const freshViewBtn = doc.getElementById('emptyTanksViewBtn');
+
+        if (freshTotal && emptyTanksTotalUnits) {
+            emptyTanksTotalUnits.innerHTML = freshTotal.innerHTML;
+        }
+        if (freshList && emptyTanksPreviewList) {
+            emptyTanksPreviewList.innerHTML = freshList.innerHTML;
+        }
+        if (freshWrap && emptyTanksPreviewWrap) {
+            emptyTanksPreviewWrap.className = freshWrap.className;
+        }
+        if (freshMore && emptyTanksPreviewMore) {
+            emptyTanksPreviewMore.className = freshMore.className;
+            emptyTanksPreviewMore.innerHTML = freshMore.innerHTML;
+        }
+        if (emptyTanksEmptyText) {
+            if (freshEmptyText) {
+                emptyTanksEmptyText.className = freshEmptyText.className;
+                emptyTanksEmptyText.innerHTML = freshEmptyText.innerHTML;
+            } else {
+                emptyTanksEmptyText.classList.add('d-none');
+            }
+        }
+        if (emptyTanksViewBtn) {
+            if (freshViewBtn) {
+                emptyTanksViewBtn.className = freshViewBtn.className;
+            } else {
+                emptyTanksViewBtn.classList.add('d-none');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Empty tanks card refresh error:', error);
+    });
+}
+
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+        refreshEmptyTanksCard();
+    }
+});
+
+emptyTanksPollTimer = setInterval(refreshEmptyTanksCard, 10000);
+
+function applyEmptyTankDateFilter(dateValue = null) {
+    if (!emptyTanksFilterForm) return;
+
+    if (dateValue !== null && emptyDateFilterInput) {
+        emptyDateFilterInput.value = dateValue;
+    }
+
+    const params = new URLSearchParams(new FormData(emptyTanksFilterForm));
+
+    if (!emptyDateFilterInput?.value) {
+        params.delete('empty_date');
+    }
+
+    if (emptyDateApplyBtn) {
+        emptyDateApplyBtn.disabled = true;
+        emptyDateApplyBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
+    }
+
+    fetch(`${emptyTanksFilterForm.action}?${params.toString()}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        const newSummary = doc.getElementById('emptyTanksFilterSummary');
+        const newBody = doc.getElementById('emptyTanksTableBody');
+        const newTotal = doc.getElementById('emptyTanksTotalReturned');
+
+        if (newSummary) {
+            document.getElementById('emptyTanksFilterSummary').innerHTML = newSummary.innerHTML;
+        }
+        if (newBody) {
+            document.getElementById('emptyTanksTableBody').innerHTML = newBody.innerHTML;
+        }
+        if (newTotal) {
+            document.getElementById('emptyTanksTotalReturned').innerHTML = newTotal.innerHTML;
+        }
+    })
+    .catch(error => {
+        console.error('Empty tanks date filter error:', error);
+        alert('Unable to filter empty tanks right now. Please try again.');
+    })
+    .finally(() => {
+        if (emptyDateApplyBtn) {
+            emptyDateApplyBtn.disabled = false;
+            emptyDateApplyBtn.innerHTML = '<i class="fas fa-filter me-1"></i>Apply Date';
+        }
+    });
+}
+
+if (emptyTanksFilterForm) {
+    emptyTanksFilterForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        applyEmptyTankDateFilter();
+    });
+}
+
+if (emptyDateClearBtn) {
+    emptyDateClearBtn.addEventListener('click', function() {
+        applyEmptyTankDateFilter('');
+    });
+}
+
+// Stock Received date filter
+const stockDateFilterForm = document.getElementById('stockReceivedFilterForm');
+const stockDateFilter = document.getElementById('stockDateFilter');
+const stockDateClearBtn = document.getElementById('stockDateClearBtn');
+let allStockReceivedData = [];
+
+// Store all stock received data when modal loads
+const stockReceivedModal = document.getElementById('stockReceivedModal');
+if (stockReceivedModal) {
+    stockReceivedModal.addEventListener('show.bs.modal', function() {
+        // Store initial data
+        const rows = document.querySelectorAll('#stockReceivedModal tbody tr:not(:has(*:only-child))');
+        allStockReceivedData = Array.from(rows).map(row => ({
+            html: row.innerHTML,
+            date: row.querySelector('td:last-child small')?.textContent || ''
+        }));
+    });
+}
+
+if (stockDateFilterForm) {
+    stockDateFilterForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const selectedDate = stockDateFilter.value;
+        
+        if (!selectedDate) {
+            // Show all data
+            const tbody = document.querySelector('#stockReceivedModal tbody');
+            tbody.innerHTML = allStockReceivedData.map(item => `<tr>${item.html}</tr>`).join('');
+            
+            const summaryEl = document.getElementById('stockReceivedFilterSummary');
+            if (summaryEl) {
+                summaryEl.innerHTML = '<small class="text-muted">Showing stock received for all dates : <strong>' + allStockReceivedData.length + '</strong> deliveries</small>';
+            }
+        } else {
+            // Filter by date
+            const selectedDateObj = new Date(selectedDate);
+            const filteredData = allStockReceivedData.filter(item => {
+                const itemDate = item.date.split(' - ')[0]; // Get the date part
+                const itemDateObj = new Date(itemDate);
+                return itemDateObj.toLocaleDateString() === selectedDateObj.toLocaleDateString();
+            });
+            
+            const tbody = document.querySelector('#stockReceivedModal tbody');
+            if (filteredData.length > 0) {
+                tbody.innerHTML = filteredData.map(item => `<tr>${item.html}</tr>`).join('');
+                
+                const summaryEl = document.getElementById('stockReceivedFilterSummary');
+                if (summaryEl) {
+                    summaryEl.innerHTML = '<small class="text-muted">Showing stock received for <strong>' + selectedDateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) + '</strong> : <strong>' + filteredData.length + '</strong> deliveries</small>';
+                }
+            } else {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">No stock received found for the selected date.</td></tr>';
+                
+                const summaryEl = document.getElementById('stockReceivedFilterSummary');
+                if (summaryEl) {
+                    summaryEl.innerHTML = '<small class="text-muted">Showing stock received for <strong>' + selectedDateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) + '</strong> : <strong>0</strong> deliveries</small>';
+                }
+            }
+        }
+    });
+}
+
+if (stockDateClearBtn) {
+    stockDateClearBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        stockDateFilter.value = '';
+        
+        // Show all data
+        const tbody = document.querySelector('#stockReceivedModal tbody');
+        tbody.innerHTML = allStockReceivedData.map(item => `<tr>${item.html}</tr>`).join('');
+        
+        const summaryEl = document.getElementById('stockReceivedFilterSummary');
+        if (summaryEl) {
+            summaryEl.innerHTML = '<small class="text-muted">Showing stock received for all dates : <strong>' + allStockReceivedData.length + '</strong> deliveries</small>';
+        }
+    });
+}
+
+// Interactive hover-to-expand functionality for inventory sections
+document.addEventListener('DOMContentLoaded', function() {
+    const sections = document.querySelectorAll('.inventory-section');
+    
+    sections.forEach(section => {
+        section.addEventListener('mouseenter', function() {
+            // Open the details element on hover
+            this.setAttribute('open', '');
+        });
+        
+        section.addEventListener('mouseleave', function() {
+            // Keep it open if user explicitly opened it, close on mouse leave
+            // Optional: Remove this if you want sections to stay open after hover
+            // this.removeAttribute('open');
+        });
+    });
+});
 
 // Real-time filtering function
 function applyFilters() {
@@ -1291,14 +1967,22 @@ document.getElementById('quickAddForm').addEventListener('submit', function(e) {
             'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(response => response.text())
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                throw new Error(text || `Request failed with status ${response.status}`);
+            });
+        }
+        return response.text();
+    })
     .then(() => {
         // Close modal and reload inventory
         bootstrap.Modal.getInstance(document.getElementById('quickAddModal')).hide();
         applyFilters();
     })
     .catch(error => {
-        alert('Error adding stock: ' + error);
+        console.error('Quick add stock error:', error);
+        alert('Error adding stock. Please check your input and try again.');
     });
 });
 

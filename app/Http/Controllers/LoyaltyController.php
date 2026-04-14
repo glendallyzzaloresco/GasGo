@@ -85,9 +85,18 @@ class LoyaltyController extends Controller
                 ->orderBy('expires_at', 'asc')
                 ->get();
 
+            // Get SUCCESSFULLY USED vouchers by this user (is_used = true)
+            // Only these show as "Claimed" - cancelled orders don't count
+            $usedVoucherNames = UserVoucher::where('user_id', $userId)
+                ->where('is_used', true)
+                ->pluck('voucher_name')
+                ->toArray();
+
             // Mark which vouchers are unlocked based on completed orders
-            $unlockedVouchers = $allVouchers->map(function ($voucher) use ($completedOrders) {
+            $unlockedVouchers = $allVouchers->map(function ($voucher) use ($completedOrders, $usedVoucherNames) {
                 $voucher->isUnlocked = $completedOrders >= $voucher->reward_points_required;
+                // Mark as claimed ONLY if successfully used (is_used = true)
+                $voucher->isClaimed = in_array($voucher->name, $usedVoucherNames);
                 return $voucher;
             });
         }
@@ -240,6 +249,77 @@ class LoyaltyController extends Controller
         });
 
         return redirect()->route('customer.loyalty')->with('success', $validated['points'] . ' points redeemed successfully.');
+    }
+
+    // Customer: claim an unlocked voucher
+    public function claimVoucher(Request $request)
+    {
+        $userId = Auth::id();
+
+        if (!$userId) {
+            return redirect()->route('customer.login')
+                ->with('error', 'Please log in to claim vouchers.');
+        }
+
+        $validated = $request->validate([
+            'voucher_id' => 'required|integer|exists:vouchers,id',
+        ]);
+
+        $userId = Auth::id();
+        $voucher = \App\Models\Voucher::find($validated['voucher_id']);
+
+        // Check if voucher exists
+        if (!$voucher || !$voucher->is_active) {
+            return redirect()->route('customer.loyalty')
+                ->with('error', 'This voucher is no longer available.');
+        }
+
+        // Check if user has successfully used this voucher (is_used = true)
+        // Allow reclaiming if:
+        // 1. No claim exists yet, OR
+        // 2. Only unused claims exist (is_used = false means cancelled/failed order)
+        // Block only if: User has a claim with is_used = true (successfully used)
+        $successfullyUsedClaim = UserVoucher::where('user_id', $userId)
+            ->where('voucher_name', $voucher->name)
+            ->where('is_used', true)
+            ->first();
+
+        if ($successfullyUsedClaim) {
+            return redirect()->route('customer.loyalty')
+                ->with('info', 'You have already used this voucher. Each voucher can only be used once.');
+        }
+
+        // Clean up any old unused claims (from cancelled orders)
+        UserVoucher::where('user_id', $userId)
+            ->where('voucher_name', $voucher->name)
+            ->where('is_used', false)
+            ->delete();
+
+        // Get user's completed orders
+        $completedOrders = \App\Models\Order::where('user_id', $userId)
+            ->where('status', 'delivered')
+            ->where('created_at', '>=', now()->subYear())
+            ->count();
+
+        // Check if user has unlocked this voucher
+        if ($completedOrders < $voucher->reward_points_required) {
+            return redirect()->route('customer.loyalty')
+                ->with('error', 'You have not yet unlocked this voucher. Complete more orders to unlock it!');
+        }
+
+        // Add voucher to user_vouchers
+        UserVoucher::create([
+            'user_id' => $userId,
+            'voucher_name' => $voucher->name,
+            'discount_amount' => $voucher->discount_amount,
+            'description' => $voucher->description,
+            'unlocked_at' => now(),
+            'expires_at' => now()->addDays(30),
+            'is_used' => false,
+        ]);
+
+        return redirect()->route('customer.loyalty')
+            ->with('success', 'Voucher claimed successfully! Head to checkout to use it.');
     }
 
     // Admin: view all loyalty transactions

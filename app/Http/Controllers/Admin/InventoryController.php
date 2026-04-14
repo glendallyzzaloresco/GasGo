@@ -21,8 +21,8 @@ class InventoryController extends Controller
     {
         $query = Inventory::with('product');
 
-        // Use hardcoded categories
-        $categories = collect(['Tank', 'Accessories', 'Appliance', 'Freebie']);
+        // Use normalized categories for filtering/display controls
+        $categories = collect(['tank', 'accessories', 'appliances', 'freebie']);
 
         // Filter by stock status (In Stock / Out of Stock)
         if ($request->filled('status')) {
@@ -40,10 +40,17 @@ class InventoryController extends Controller
             });
         }
 
-        // Filter by product category from DB
+        // Filter by product category from DB (normalized, with appliance aliases)
         if ($request->filled('category')) {
-            $query = $query->whereHas('product', function ($q) use ($request) {
-                $q->where('category', $request->category);
+            $normalizedCategory = strtolower(trim((string) $request->category));
+
+            $query = $query->whereHas('product', function ($q) use ($normalizedCategory) {
+                if ($normalizedCategory === 'appliances' || $normalizedCategory === 'appliance') {
+                    $q->whereRaw('LOWER(category) IN (?, ?, ?, ?)', ['appliances', 'appliance', 'stove', 'burner']);
+                    return;
+                }
+
+                $q->whereRaw('LOWER(category) = ?', [$normalizedCategory]);
             });
         }
 
@@ -116,15 +123,24 @@ class InventoryController extends Controller
         $today = Carbon::now()->startOfDay();
         $todayEnd = Carbon::now()->endOfDay();
         
-        // Today's stock received (stock_in movements)
-        $stockReceived = StockMovement::whereIn('type', ['stock_in'])
-        ->whereBetween('movement_date', [$today, $todayEnd])
-        ->with('inventory.product')
-        ->orderBy('movement_date', 'desc')
-        ->get();
+        // Today's stock received (include historical purchase aliases; fallback to created_at if movement_date is missing)
+        $stockReceived = StockMovement::whereIn('type', ['stock_in', 'purchase'])
+            ->whereBetween(
+                \Illuminate\Support\Facades\DB::raw('COALESCE(movement_date, created_at)'),
+                [$today, $todayEnd]
+            )
+            ->with('inventory.product')
+            ->orderByRaw('COALESCE(movement_date, created_at) DESC')
+            ->get();
         
         // Today's total stock received
         $totalStockReceived = $stockReceived->sum('quantity_change');
+
+        // Recent stock movement history across all products (for inventory page overview)
+        $recentStockMovements = StockMovement::with(['inventory.product', 'creator'])
+            ->orderByRaw('COALESCE(movement_date, created_at) DESC')
+            ->limit(20)
+            ->get();
         
         // Get current empty tanks count for tank products with latest delivery date
         $deliveryDates = \Illuminate\Support\Facades\DB::table('deliveries')
@@ -154,7 +170,64 @@ class InventoryController extends Controller
         // Total empty tanks
         $totalEmptyReturned = $emptyTanksReturned->sum('empty_on_hand');
 
-        return view('admin.inventory.index', compact('inventories', 'categories', 'freebies', 'emptyTanksReturned', 'stockReceived', 'totalEmptyReturned', 'totalStockReceived'));
+        // Date filter for empty tank returns (show actual inventory.empty_on_hand)
+        $selectedEmptyDate = $request->input('empty_date');
+        
+        $emptyTankReturnsQuery = Inventory::with('product')
+            ->whereHas('product', function($q) {
+                $q->where('category', 'Tank');
+            })
+            ->where('empty_on_hand', '>', 0);
+
+        if (!empty($selectedEmptyDate)) {
+            try {
+                $normalizedDate = Carbon::parse($selectedEmptyDate)->toDateString();
+                $selectedEmptyDate = $normalizedDate;
+                
+                // Filter by deliveries that were updated on the selected date
+                $emptyTankReturnsQuery->whereHas('product.orders', function($q) use ($normalizedDate) {
+                    $q->whereHas('delivery', function($dq) use ($normalizedDate) {
+                        $dq->where('status', 'delivered')
+                           ->whereDate('updated_at', $normalizedDate);
+                    });
+                });
+            } catch (\Exception $e) {
+                $selectedEmptyDate = null;
+            }
+        }
+
+        $emptyTankReturnsByDate = $emptyTankReturnsQuery
+            ->orderBy('empty_on_hand', 'desc')
+            ->get()
+            ->map(function($inv) {
+                return (object) [
+                    'product_id' => $inv->product_id,
+                    'product_name' => $inv->product->name,
+                    'returned_qty' => $inv->empty_on_hand,  // Use actual empty_on_hand count
+                    'latest_delivery_date' => $inv->delivery_date ?? \Illuminate\Support\Facades\DB::table('deliveries')
+                        ->join('orders', 'deliveries.order_id', '=', 'orders.id')
+                        ->join('order_items', 'orders.id', '=', 'order_items.order_id')
+                        ->where('deliveries.status', 'delivered')
+                        ->where('order_items.product_id', $inv->product_id)
+                        ->max('deliveries.updated_at'),
+                ];
+            });
+
+        $totalEmptyReturnedByDate = (int) $emptyTankReturnsByDate->sum('returned_qty');
+
+        return view('admin.inventory.index', compact(
+            'inventories',
+            'categories',
+            'freebies',
+            'emptyTanksReturned',
+            'stockReceived',
+            'recentStockMovements',
+            'emptyTankReturnsByDate',
+            'selectedEmptyDate',
+            'totalEmptyReturnedByDate',
+            'totalEmptyReturned',
+            'totalStockReceived'
+        ));
     }
 
     /**
@@ -163,10 +236,8 @@ class InventoryController extends Controller
     public function show(Inventory $inventory)
     {
         $inventory->load('product', 'movements.creator');
-        // Sort by movement_date (DESC) instead of created_at for accurate audit trail
-        $movements = $inventory->movements()->orderBy('movement_date', 'desc')->paginate(15);
 
-        return view('admin.inventory.show', compact('inventory', 'movements'));
+        return view('admin.inventory.show', compact('inventory'));
     }
 
     /**

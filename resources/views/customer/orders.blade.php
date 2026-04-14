@@ -176,7 +176,7 @@
                                 ->where('is_reward', false)
                                 ->map(function($i) {
                                     return [
-                                        'id' => $i->product_id,
+                                        'product_id' => $i->product_id,
                                         'name' => $i->product_name,
                                         'price' => (float)$i->price,
                                         'image' => $i->product?->resolved_image ?? '',
@@ -227,8 +227,18 @@ function reorder(items) {
         return;
     }
 
-    syncCartAjax(items).catch(error => {
-        // Error already shown in toast
+    // Store item IDs in session storage to auto-select them on cart page
+    const itemIds = items.map(item => String(item.product_id));
+    sessionStorage.setItem('reorderedItems', JSON.stringify(itemIds));
+
+    syncCartAjax(items).then(() => {
+        // Redirect to cart page after a short delay to show success message
+        setTimeout(() => {
+            window.location.href = '{{ route("customer.cart") }}';
+        }, 1000);
+    }).catch(error => {
+        // Error already shown in toast, clear session storage
+        sessionStorage.removeItem('reorderedItems');
     });
 }
 

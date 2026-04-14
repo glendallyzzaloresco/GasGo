@@ -189,7 +189,7 @@
                     </div>
 
                     @foreach($cartItems as $item)
-                        <div class="cart-item" data-product-id="{{ $item->product_id ?? $item->product->id }}" data-quantity="{{ $item->quantity }}" data-unit-price="{{ $item->product->price }}">
+                        <div class="cart-item" data-product-id="{{ $item->product_id ?? $item->product->id }}" data-quantity="{{ $item->quantity }}" data-unit-price="{{ $item->product->price }}" data-max-stock="{{ $item->product->quantity_on_hand }}" data-product-name="{{ $item->product->name }}">
                             <input type="checkbox" class="item-checkbox" value="{{ $item->product_id ?? $item->product->id }}">
                             @if($item->product->resolved_image)
                                 <img src="{{ $item->product->resolved_image }}" alt="{{ $item->product->name }}">
@@ -199,6 +199,10 @@
                             <div class="item-details">
                                 <div class="item-name">{{ $item->product->name }}</div>
                                 <div class="item-price" data-unit-price="{{ $item->product->price }}">₱{{ number_format($item->product->price, 2) }}</div>
+                                <small style="color: #888; font-size: 0.8rem;">
+                                    <i class="fas fa-box me-1"></i>
+                                    Stock: <strong>{{ $item->product->quantity_on_hand }}</strong> available
+                                </small>
                             </div>
 
                             <div class="qty-control">
@@ -206,7 +210,7 @@
                                     <i class="fas fa-minus" style="font-size:.7rem;"></i>
                                 </button>
                                 <span class="item-quantity">{{ $item->quantity }}</span>
-                                <button class="qty-btn-plus" data-product-id="{{ $item->product_id ?? $item->product->id }}" data-quantity="{{ $item->quantity + 1 }}">
+                                <button class="qty-btn-plus" data-product-id="{{ $item->product_id ?? $item->product->id }}" data-quantity="{{ $item->quantity + 1 }}" {{ $item->quantity >= $item->product->quantity_on_hand ? 'disabled' : '' }} title="{{ $item->quantity >= $item->product->quantity_on_hand ? 'Maximum stock exceeded' : '' }}">
                                     <i class="fas fa-plus" style="font-size:.7rem;"></i>
                                 </button>
                             </div>
@@ -297,6 +301,45 @@ function initQuantityState() {
     });
 }
 
+function validateCartStock() {
+    let hasOverstocked = false;
+    const overstockedItems = [];
+    
+    document.querySelectorAll('.cart-item').forEach(item => {
+        const productId = item.dataset.productId;
+        const quantitySpan = item.querySelector('.item-quantity');
+        const quantity = parseInt(item.dataset.quantity || '1', 10);
+        const maxStock = parseInt(item.dataset.maxStock || '0', 10);
+        const productName = item.dataset.productName || 'Product';
+        
+        if (quantity > maxStock) {
+            hasOverstocked = true;
+            overstockedItems.push(`${productName}: Quantity reduced from ${quantity} to ${maxStock}`);
+            
+            // Auto-reduce to max stock
+            item.dataset.quantity = maxStock;
+            if (quantitySpan) {
+                quantitySpan.textContent = maxStock;
+            }
+            
+            // Update quantity state
+            const key = String(productId);
+            if (quantityState.has(key)) {
+                quantityState.get(key).desired = maxStock;
+                quantityState.get(key).confirmed = maxStock;
+            }
+        }
+    });
+    
+    if (hasOverstocked) {
+        const message = overstockedItems.join('\n');
+        showNotification('Stock Alert!', `Your quantities exceeded available stock:\n${message}`, 'warning');
+        updateCartTotal(); // Recalculate total
+    }
+    
+    return !hasOverstocked;
+}
+
 function syncQuantityUi(productId, quantity) {
     const cartItem = document.querySelector(`.cart-item[data-product-id="${productId}"]`);
     if (!cartItem) {
@@ -334,7 +377,19 @@ function queueQuantityDelta(productId, delta) {
         return;
     }
 
-    current.desired = Math.max(1, current.desired + delta);
+    // Get max stock for this product from the cart item data
+    const cartItem = document.querySelector(`[data-product-id="${productId}"]`);
+    const maxStock = cartItem ? parseInt(cartItem.dataset.maxStock) || 999 : 999;
+    const productName = cartItem ? cartItem.dataset.productName : 'Product';
+
+    // Check if trying to exceed stock
+    const newDesired = Math.max(1, current.desired + delta);
+    if (newDesired > maxStock) {
+        showNotification('Stock Limit Reached', `${productName} has only ${maxStock} available in stock.`, 'warning');
+        return;
+    }
+
+    current.desired = newDesired;
     syncQuantityUi(productId, current.desired);
 
     processQuantityQueue(productId);
@@ -437,6 +492,27 @@ function proceedCheckout(event) {
         return;
     }
     
+    // Validate that selected items don't exceed stock
+    let hasOverstocked = false;
+    document.querySelectorAll('.cart-item').forEach(item => {
+        const productId = parseInt(item.dataset.productId);
+        // Only check selected items
+        if (selectedIds.includes(productId)) {
+            const quantity = parseInt(item.dataset.quantity || '1', 10);
+            const maxStock = parseInt(item.dataset.maxStock || '0', 10);
+            const productName = item.dataset.productName || 'Product';
+            
+            if (quantity > maxStock) {
+                hasOverstocked = true;
+                showNotification('Stock Exceeded!', `${productName}: You have ${quantity} but only ${maxStock} available. Please reduce quantity.`, 'error');
+            }
+        }
+    });
+    
+    if (hasOverstocked) {
+        return; // Prevent checkout
+    }
+    
     // Create a hidden form to POST selected items
     const form = document.createElement('form');
     form.method = 'POST';
@@ -525,7 +601,35 @@ document.querySelectorAll('.item-checkbox').forEach(cb => {
 // Initialize total to 0 on page load (since no items are checked by default)
 window.addEventListener('load', function() {
     initQuantityState();
+    validateCartStock(); // Check for overstocked items on load
     updateCartTotal();
+    
+    // Auto-select reordered items if they exist in sessionStorage
+    const reorderedItems = sessionStorage.getItem('reorderedItems');
+    if (reorderedItems) {
+        try {
+            const itemIds = JSON.parse(reorderedItems);
+            
+            // Auto-select checkboxes for reordered items
+            document.querySelectorAll('.item-checkbox').forEach(cb => {
+                if (itemIds.includes(String(cb.value))) {
+                    cb.checked = true;
+                }
+            });
+            
+            // Update cart total and button state
+            updateCartTotal();
+            updateSelectAllBtn();
+            
+            // Show success notification
+            showNotification('Reorder Successful!', `${itemIds.length} item(s) added to your cart and selected for checkout.`, 'success');
+            
+            // Clear sessionStorage
+            sessionStorage.removeItem('reorderedItems');
+        } catch (error) {
+            console.error('Error processing reordered items:', error);
+        }
+    }
     
     // Setup Select All button
     const selectAllBtn = document.getElementById('select-all-btn');

@@ -305,10 +305,6 @@
                     <span class="text-muted">Subtotal</span>
                     <span>₱{{ number_format($order->subtotal, 2) }}</span>
                 </div>
-                <div class="d-flex justify-content-between">
-                    <span class="text-muted">Delivery Fee</span>
-                    <span>₱{{ number_format($order->delivery_fee, 2) }}</span>
-                </div>
                 @if ((float) $order->discount > 0)
                 <div class="d-flex justify-content-between">
                     <span class="text-muted">Reward Discount</span>

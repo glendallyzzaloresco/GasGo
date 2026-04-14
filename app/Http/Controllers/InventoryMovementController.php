@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\InventoryMovement;
+use App\Models\StockMovement;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -14,14 +14,17 @@ class InventoryMovementController extends Controller
      */
     public function index(Request $request)
     {
-        $query = InventoryMovement::with('product', 'creator');
+        $query = StockMovement::with('inventory.product', 'creator');
 
         // Filter by product
         if ($request->filled('product_id')) {
-            $query->where('product_id', $request->product_id);
+            $productId = (int) $request->product_id;
+            $query->whereHas('inventory', function ($q) use ($productId) {
+                $q->where('product_id', $productId);
+            });
         }
 
-        // Filter by type (IN, OUT, ADJUSTMENT)
+        // Filter by movement type
         if ($request->filled('type')) {
             $query->where('type', $request->type);
         }
@@ -37,13 +40,8 @@ class InventoryMovementController extends Controller
             $query->where('movement_date', '<=', $dateTo);
         }
 
-        // Filter by reference type
-        if ($request->filled('reference_type')) {
-            $query->where('reference_type', $request->reference_type);
-        }
-
         // Order by movement_date DESC (most recent first)
-        $movements = $query->orderByDesc('movement_date')
+        $movements = $query->orderByRaw('COALESCE(movement_date, created_at) DESC')
             ->paginate(50);
 
         // Get products for filter dropdown
@@ -51,11 +49,8 @@ class InventoryMovementController extends Controller
             ->orderBy('name')
             ->pluck('name', 'id');
 
-        // Get unique reference types
-        $referenceTypes = InventoryMovement::distinct('reference_type')
-            ->whereNotNull('reference_type')
-            ->pluck('reference_type')
-            ->sort();
+        // StockMovement does not use reference_type; keep empty collection for backward-compatible view data
+        $referenceTypes = collect();
 
         return view('admin.inventory.movements', compact(
             'movements',
@@ -69,11 +64,14 @@ class InventoryMovementController extends Controller
      */
     public function export(Request $request)
     {
-        $query = InventoryMovement::with('product', 'creator');
+        $query = StockMovement::with('inventory.product', 'creator');
 
         // Apply same filters as index
         if ($request->filled('product_id')) {
-            $query->where('product_id', $request->product_id);
+            $productId = (int) $request->product_id;
+            $query->whereHas('inventory', function ($q) use ($productId) {
+                $q->where('product_id', $productId);
+            });
         }
 
         if ($request->filled('type')) {
@@ -90,11 +88,7 @@ class InventoryMovementController extends Controller
             $query->where('movement_date', '<=', $dateTo);
         }
 
-        if ($request->filled('reference_type')) {
-            $query->where('reference_type', $request->reference_type);
-        }
-
-        $movements = $query->orderByDesc('movement_date')->get();
+        $movements = $query->orderByRaw('COALESCE(movement_date, created_at) DESC')->get();
 
         // Generate CSV
         $fileName = 'inventory_movements_' . now()->format('Y-m-d_H-i-s') . '.csv';
@@ -121,13 +115,14 @@ class InventoryMovementController extends Controller
 
             // Data
             foreach ($movements as $movement) {
+                $movementDate = $movement->movement_date ?? $movement->created_at;
                 fputcsv($file, [
-                    $movement->movement_date->format('Y-m-d H:i:s'),
-                    $movement->product->name,
+                    $movementDate?->format('Y-m-d H:i:s'),
+                    $movement->inventory->product->name ?? '-',
                     $movement->type,
-                    $movement->quantity,
-                    $movement->reference_type ?? '-',
-                    $movement->reference_id ?? '-',
+                    $movement->quantity_change,
+                    '-',
+                    '-',
                     $movement->notes ?? '-',
                     $movement->creator?->name ?? '-',
                 ]);

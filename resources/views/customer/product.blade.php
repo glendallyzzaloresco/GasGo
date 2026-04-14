@@ -385,6 +385,32 @@ document.querySelectorAll('.add-to-cart-btn').forEach(function(btn) {
     });
 });
 
+function snapshotActionButtonState() {
+    document.querySelectorAll('.buy-now-btn, .add-to-cart-btn').forEach(btn => {
+        if (!btn.dataset.defaultHtml) {
+            btn.dataset.defaultHtml = btn.innerHTML;
+            btn.dataset.initialDisabled = btn.disabled ? '1' : '0';
+        }
+    });
+}
+
+function restoreActionButtonState() {
+    document.querySelectorAll('.buy-now-btn, .add-to-cart-btn').forEach(btn => {
+        if (btn.dataset.defaultHtml) {
+            btn.innerHTML = btn.dataset.defaultHtml;
+            btn.disabled = btn.dataset.initialDisabled === '1';
+        }
+    });
+
+    buyNowInProgress = false;
+}
+
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        restoreActionButtonState();
+    }
+});
+
 // Buy Now button event listener
 document.querySelectorAll('.buy-now-btn').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
@@ -395,26 +421,40 @@ document.querySelectorAll('.buy-now-btn').forEach(function(btn) {
 });
 
 // Buy Now function - adds product and redirects to checkout
+let buyNowInProgress = false;
+
 function buyNow(productId) {
+    if (buyNowInProgress) return;
+
     const button = document.querySelector(`.buy-now-btn[data-id="${productId}"]`);
     if (!button) return;
-    
-    // Check if user is authenticated
-    const isAuthenticated = {{ Auth::check() ? true : false }};
-    
-    if (!isAuthenticated) {
-        // Redirect to login/register first
-        window.location.href = "{{ url('/customer/loginRegistration?tab=register&redirect=checkout') }}";
-        return;
-    }
+
+    buyNowInProgress = true;
+    const originalHtml = button.innerHTML;
+    const timeoutMs = 10000;
+    const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), timeoutMs);
+    });
     
     // Disable button during loading
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
     
-    // Direct redirect to checkout without adding to cart
-    const checkoutUrl = "{{ route('customer.checkout') }}" + '?selected_items=' + productId;
-    window.location.href = checkoutUrl;
+    // Add selected item first so checkout can load it, then redirect directly to checkout
+    Promise.race([addToCartAjax(productId, 1), timeoutPromise])
+        .then(() => {
+            const checkoutUrl = "{{ route('customer.checkout') }}" + '?selected_items=' + productId;
+            window.location.href = checkoutUrl;
+        })
+        .catch(error => {
+            console.error('Buy Now error:', error);
+            button.disabled = false;
+            button.innerHTML = originalHtml;
+            showNotificationWithAction('Failed to process Buy Now', 'error', 3000);
+        })
+        .finally(() => {
+            buyNowInProgress = false;
+        });
 }
 
 // Combined filter and search logic
@@ -482,5 +522,6 @@ if (document.readyState === 'loading') {
 } else {
     updateProductDisplay();
 }
+snapshotActionButtonState();
 </script>
 @endsection

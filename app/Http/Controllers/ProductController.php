@@ -113,7 +113,7 @@ class ProductController extends Controller
             $product = Product::create($validated);
 
             // Keep inventory synced with product stock on creation.
-            Inventory::updateOrCreate(
+            $inventory = Inventory::updateOrCreate(
                 ['product_id' => $product->id],
                 [
                     'quantity_on_hand' => (int) $validated['stock'],
@@ -121,6 +121,22 @@ class ProductController extends Controller
                     'status' => 'active',
                 ]
             );
+
+            // Create stock movement record if initial stock is added
+            if ((int) $validated['stock'] > 0) {
+                try {
+                    StockMovement::create([
+                        'inventory_id' => $inventory->id,
+                        'quantity_change' => (int) $validated['stock'],
+                        'type' => 'stock_in',
+                        'notes' => 'Initial stock - product created',
+                        'movement_date' => now(),
+                        'created_by' => Auth::check() ? Auth::id() : 1,
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('StockMovement creation failed: ' . $e->getMessage());
+                }
+            }
         });
 
         $message = 'Product created successfully.';

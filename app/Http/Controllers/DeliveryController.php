@@ -155,9 +155,10 @@ class DeliveryController extends Controller
                             userId: Auth::id()
                         );
 
-                        // Increment empty tanks collected (exchange-only) - LPG TANKS ONLY
+                        // Increment empty tanks collected (exchange-only) for tank-like categories.
                         $product = $item->product;
-                        if (strtolower($product->category) === 'tank') {
+                        $category = strtolower((string) ($product->category ?? ''));
+                        if ($category !== '' && str_contains($category, 'tank')) {
                             $inventory = \App\Models\Inventory::where('product_id', $item->product_id)
                                 ->lockForUpdate()
                                 ->first();
@@ -196,6 +197,11 @@ class DeliveryController extends Controller
                     }
                 }
             });
+        }
+
+        if ($validated['status'] === 'failed') {
+            // Update order status to cancelled when delivery fails
+            $delivery->order->update(['status' => 'cancelled']);
         }
 
         $delivery->update($updateData);
@@ -305,5 +311,28 @@ class DeliveryController extends Controller
             ->get();
 
         return view('rider.history', compact('deliveries'));
+    }
+
+    // API: get all deliveries as JSON for real-time updates
+    public function apiIndex()
+    {
+        $deliveries = Delivery::with(['order.user', 'rider'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($delivery) {
+                return [
+                    'id' => $delivery->id,
+                    'order_id' => $delivery->order_id,
+                    'rider_id' => $delivery->rider_id,
+                    'status' => $delivery->status,
+                    'created_at' => $delivery->created_at,
+                    'updated_at' => $delivery->updated_at,
+                ];
+            });
+
+        return response()->json([
+            'deliveries' => $deliveries,
+            'count' => $deliveries->count(),
+        ]);
     }
 }

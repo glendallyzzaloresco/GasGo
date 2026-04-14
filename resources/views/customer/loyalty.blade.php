@@ -738,9 +738,19 @@ Generate the corrected controller/service logic and the template updates.S =====
                         <small style="color: #999;">Discount Value</small>
                     </div>
 
-                    <button class="btn" style="width: 100%; background: linear-gradient(135deg, var(--gasgo-orange), #ff6b35); color: white; border: none; padding: 10px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease; cursor: pointer;">
-                        <i class="fas fa-arrow-right me-1"></i> Claim & Use at Checkout
+                    @if($voucher->isClaimed)
+                    <button type="button" class="btn" disabled style="width: 100%; background: #28a745; color: white; border: none; padding: 10px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; cursor: not-allowed; opacity: 0.7;">
+                        <i class="fas fa-check me-1"></i> Claimed
                     </button>
+                    @else
+                    <form action="{{ route('customer.loyalty.claimVoucher') }}" method="POST" style="display: inline-width: 100%;">
+                        @csrf
+                        <input type="hidden" name="voucher_id" value="{{ $voucher->id }}">
+                        <button type="submit" class="btn" style="width: 100%; background: linear-gradient(135deg, var(--gasgo-orange), #ff6b35); color: white; border: none; padding: 10px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease; cursor: pointer;">
+                            <i class="fas fa-arrow-right me-1"></i> Claim & Use at Checkout
+                        </button>
+                    </form>
+                    @endif
                 </div>
             </div>
             @empty

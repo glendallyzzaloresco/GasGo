@@ -520,6 +520,7 @@
 <script>
 const cartStoreUrl = '{{ route("customer.cart.store") }}';
 const csrfToken = '{{ csrf_token() }}';
+
 const isAuthenticatedUser = {{ Auth::check() ? 'true' : 'false' }};
 
 // Give cards a light 3D tilt for a more interactive home screen.

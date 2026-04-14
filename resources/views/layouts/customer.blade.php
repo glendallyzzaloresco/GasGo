@@ -887,9 +887,12 @@
                                     <i class="fas fa-user-circle"></i>Profile Settings
                                 </a>
                                 <div class="dropdown-divider"></div>
-                                <button class="dropdown-item account-logout-btn" onclick="logoutAjax()" style="border:none;background:none;cursor:pointer;width:100%;text-align:left;">
-                                    <i class="fas fa-sign-out-alt"></i>Logout
-                                </button>
+                                <form action="{{ route('customer.logout') }}" method="POST" style="margin: 0;">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item account-logout-btn" style="border:none;background:none;cursor:pointer;width:100%;text-align:left;">
+                                        <i class="fas fa-sign-out-alt"></i>Logout
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     @else

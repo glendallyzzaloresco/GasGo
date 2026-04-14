@@ -59,8 +59,12 @@ class OrderController extends Controller
             return redirect()->route('customer.cart')->with('error', 'Your cart is empty.');
         }
 
-        // Filter cart items by selected items from cart page
+        // Filter cart items by selected product IDs from cart page / Buy Now flow
         $selectedIds = $request->input('selected_items', []);
+        $selectedIds = is_array($selectedIds)
+            ? array_filter(array_map('intval', $selectedIds))
+            : array_filter(array_map('intval', explode(',', (string) $selectedIds)));
+
         if (!empty($selectedIds)) {
             $cartItems = $cartItems->whereIn('product_id', $selectedIds);
         }
@@ -68,6 +72,11 @@ class OrderController extends Controller
         if ($cartItems->isEmpty()) {
             return redirect()->route('customer.cart')->with('error', 'No items selected for checkout.');
         }
+
+        // Check if order contains any tank products
+        $hasTankProducts = $cartItems->contains(function ($item) {
+            return $item->product && strtolower($item->product->category) === 'tank';
+        });
 
         $subtotal = $cartItems->sum(fn ($item) => $item->product->price * $item->quantity);
         $productFreebieOffset = 1000000;
@@ -130,11 +139,20 @@ class OrderController extends Controller
         $totalCheckoutItems = $rewardPreview['total_items'];
 
         // Separate freebies into unlocked (available) and locked (requires more items)
-        $unlockedFreebies = $allFreebies->filter(function ($freebie) use ($totalCheckoutItems) {
+        // Only show freebies with required points if order contains tanks
+        $unlockedFreebies = $allFreebies->filter(function ($freebie) use ($totalCheckoutItems, $hasTankProducts) {
+            // If freebie has required points and order has no tanks, exclude it
+            if ($freebie->reward_points_required > 0 && !$hasTankProducts) {
+                return false;
+            }
             return $freebie->reward_points_required <= $totalCheckoutItems;
         })->values();
 
-        $lockedFreebies = $allFreebies->filter(function ($freebie) use ($totalCheckoutItems) {
+        $lockedFreebies = $allFreebies->filter(function ($freebie) use ($totalCheckoutItems, $hasTankProducts) {
+            // If freebie has required points and order has no tanks, exclude it
+            if ($freebie->reward_points_required > 0 && !$hasTankProducts) {
+                return false;
+            }
             return $freebie->reward_points_required > $totalCheckoutItems;
         })->values();
 
@@ -143,11 +161,23 @@ class OrderController extends Controller
 
         $homepageSettings = HomepageSetting::singleton();
         
-        // Get available vouchers for this user
+        // Get available voucher (only one - the one expiring soonest)
+        // Only show vouchers that are:
+        // 1. Not used (is_used = false)
+        // 2. Not tied to any pending/active order (order_id = null or order is cancelled/delivered)
+        // 3. Not expired
         $availableVouchers = \App\Models\UserVoucher::where('user_id', Auth::id())
             ->where('is_used', false)
+            ->where(function ($query) {
+                // Either no order is tied to it, or the order is already completed/cancelled
+                $query->whereNull('order_id')
+                      ->orWhereHas('order', function ($q) {
+                          $q->whereIn('status', ['delivered', 'cancelled']);
+                      });
+            })
             ->where('expires_at', '>', now())
-            ->with('reward')
+            ->orderBy('expires_at', 'asc')
+            ->take(1)
             ->get();
 
         return view('customer.checkout', compact('cartItems', 'subtotal', 'rewardPreview', 'availableFreebies', 'unlockedFreebies', 'lockedFreebies', 'totalCheckoutItems', 'homepageSettings', 'availableVouchers'));
@@ -195,11 +225,52 @@ class OrderController extends Controller
             }
         }
 
-        $smallRewardCount = 0;
+        // Check if all items have sufficient stock
+        foreach ($cartItems as $item) {
+            $product = $item->product;
+            $requestedQty = (int) $item->quantity;
+            $availableStock = $product->quantity_on_hand ?? 0;
+            
+            if ($requestedQty > $availableStock) {
+                return redirect()->route('customer.checkout')->with(
+                    'error', 
+                    "Insufficient stock for {$product->name}. Only {$availableStock} available, but you requested {$requestedQty}."
+                );
+            }
+        }
+
+        $smallRewardCount = 0;  // For freebies with required points (qty of tank products 1-9)
+        $freeRewardQuantity = 0; // For freebies with no required points (total quantity)
+        $hasTankInOrder = false;
         foreach ($cartItems as $item) {
             $quantity = (int) $item->quantity;
-            if ($quantity >= 1 && $quantity <= 9) {
+            $totalQuantity = $quantity;
+            $freeRewardQuantity += $totalQuantity; // Count all quantities for no-point freebies
+            
+            // Only count tank products with qty 1-9 for freebie qualification
+            if ($item->product && strtolower($item->product->category) === 'tank' && $quantity >= 1 && $quantity <= 9) {
                 $smallRewardCount++;
+                $hasTankInOrder = true;
+            }
+        }
+        
+        // Check if selected freebie requires points - only clear if it DOES have required points and no tanks
+        $selectedFreebieId = isset($validated['selected_freebie_id']) ? (int) $validated['selected_freebie_id'] : null;
+        if ($selectedFreebieId !== null && !$hasTankInOrder) {
+            $productFreebieOffset = 1000000;
+            $isProductFreebie = $selectedFreebieId >= $productFreebieOffset;
+            
+            if ($isProductFreebie) {
+                // Product freebie - check from products (assume no required points)
+                // Product freebies have no required points, so don't clear them
+            } else {
+                // Table freebie - check required points
+                $freebieCheck = Freebie::find($selectedFreebieId);
+                if ($freebieCheck && $freebieCheck->reward_points_required > 0) {
+                    // Has required points and no tanks - clear it
+                    $validated['selected_freebie_id'] = null;
+                }
+                // If no required points, keep it selected
             }
         }
 
@@ -207,10 +278,18 @@ class OrderController extends Controller
         $selectedFreebieId = isset($validated['selected_freebie_id']) ? (int) $validated['selected_freebie_id'] : null;
         $selectedVoucherId = isset($validated['voucher_id']) ? (int) $validated['voucher_id'] : null;
         
-        // If voucher is selected, clear freebie (mutually exclusive)
+        // Validate voucher is still available (not used, not expired, belongs to user)
         if ($selectedVoucherId !== null) {
-            $selectedFreebieId = null;
-            $validated['selected_freebie_id'] = null;
+            $voucherCheck = \App\Models\UserVoucher::where('id', $selectedVoucherId)
+                ->where('user_id', Auth::id())
+                ->where('is_used', false)
+                ->where('expires_at', '>', now())
+                ->first();
+            
+            if (!$voucherCheck) {
+                return redirect()->route('customer.checkout')
+                    ->with('error', 'The selected voucher is no longer available, has already been used, or has expired.');
+            }
         }
         
         $isProductFreebieSelection = $selectedFreebieId !== null && $selectedFreebieId >= $productFreebieOffset;
@@ -218,13 +297,22 @@ class OrderController extends Controller
             ? (int) ($selectedFreebieId - $productFreebieOffset)
             : null;
 
+        // Determine if selected freebie requires points
+        $freebieRequiresPoints = false;
+        if ($selectedFreebieId !== null && !$isProductFreebieSelection) {
+            $freebieCheck = Freebie::find($selectedFreebieId);
+            if ($freebieCheck) {
+                $freebieRequiresPoints = $freebieCheck->reward_points_required > 0;
+            }
+        }
+
         // Get selected cart IDs for deletion after order is placed
         $selectedCartIds = [];
         if (!empty($validated['selected_cart_ids'])) {
             $selectedCartIds = array_filter(array_map('intval', explode(',', $validated['selected_cart_ids'])));
         }
 
-        $order = DB::transaction(function () use ($validated, $cartItems, $smallRewardCount, $selectedFreebieId, $isProductFreebieSelection, $selectedProductFreebieId, $selectedCartIds, $selectedVoucherId, $request) {
+        $order = DB::transaction(function () use ($validated, $cartItems, $smallRewardCount, $freeRewardQuantity, $selectedFreebieId, $isProductFreebieSelection, $selectedProductFreebieId, $selectedCartIds, $selectedVoucherId, $hasTankInOrder, $freebieRequiresPoints, $request) {
             $subtotal = 0;
             $deliveryFee = 50.00;
             $orderItems = [];
@@ -233,7 +321,32 @@ class OrderController extends Controller
             $selectedFreebieProduct = null;
             $selectedFreebieInventory = null;
 
-            if ($smallRewardCount > 0 && $selectedFreebieId !== null) {
+            // Check if freebie should be processed
+            $shouldProcessFreebie = false;
+            $freebieRequiresPoints = false;
+            
+            if ($selectedFreebieId !== null) {
+                if ($isProductFreebieSelection) {
+                    // Product freebies don't have required points, always allow
+                    $shouldProcessFreebie = true;
+                } else {
+                    // Check table freebie's required points
+                    $freebieCheck = Freebie::find($selectedFreebieId);
+                    if ($freebieCheck) {
+                        $freebieRequiresPoints = $freebieCheck->reward_points_required > 0;
+                        
+                        if ($freebieRequiresPoints) {
+                            // Requires points - must have tanks
+                            $shouldProcessFreebie = $hasTankInOrder && $smallRewardCount > 0;
+                        } else {
+                            // No required points - always allow
+                            $shouldProcessFreebie = true;
+                        }
+                    }
+                }
+            }
+
+            if ($shouldProcessFreebie && $selectedFreebieId !== null) {
                 if ($isProductFreebieSelection) {
                     $selectedFreebieProduct = Product::query()
                         ->whereKey($selectedProductFreebieId)
@@ -259,7 +372,8 @@ class OrderController extends Controller
                         ]);
                     }
 
-                    if ((int) $selectedFreebieInventory->quantity_on_hand < $smallRewardCount) {
+                    $requiredQuantity = $freebieRequiresPoints ? $smallRewardCount : $freeRewardQuantity;
+                    if ((int) $selectedFreebieInventory->quantity_on_hand < $requiredQuantity) {
                         throw ValidationException::withMessages([
                             'selected_freebie_id' => 'Selected freebie has insufficient stock for this checkout.',
                         ]);
@@ -277,7 +391,8 @@ class OrderController extends Controller
                         ]);
                     }
 
-                    if ((int) $selectedFreebie->stock < $smallRewardCount) {
+                    $requiredQuantity = $freebieRequiresPoints ? $smallRewardCount : $freeRewardQuantity;
+                    if ((int) $selectedFreebie->stock < $requiredQuantity) {
                         throw ValidationException::withMessages([
                             'selected_freebie_id' => 'Selected freebie has insufficient stock for this checkout.',
                         ]);
@@ -301,6 +416,9 @@ class OrderController extends Controller
                     }
                 }
             }
+
+            // Track if freebie has been added (only add once)
+            $freebieAdded = false;
 
             foreach ($cartItems as $item) {
                 $product = Product::query()
@@ -347,8 +465,28 @@ class OrderController extends Controller
                     'is_reward'    => false,
                 ];
 
-                // Small-order freebies are customer-selected.
-                if ($quantity >= 1 && $quantity <= 9 && $selectedFreebieProduct !== null) {
+                // Add freebie: 
+                // - If no required points: quantity = total quantity ordered
+                // - If has required points: quantity = 1 per tank product (1-9)
+                $isTankProduct = $product && strtolower($product->category) === 'tank';
+                $shouldAddFreebie = false;
+                $freebieQuantityToAdd = 0;
+                
+                if ($selectedFreebieProduct !== null && !$freebieAdded) {
+                    if ($freebieRequiresPoints) {
+                        // Requires points - only add on tank products with qty 1-9
+                        if ($isTankProduct && $quantity >= 1 && $quantity <= 9) {
+                            $shouldAddFreebie = true;
+                            $freebieQuantityToAdd = 1; // One freebie per qualifying item count
+                        }
+                    } else {
+                        // No required points - add on first iteration with total quantity
+                        $shouldAddFreebie = true;
+                        $freebieQuantityToAdd = $freeRewardQuantity; // All ordered quantities
+                    }
+                }
+                
+                if ($shouldAddFreebie) {
                     // Resolve freebie image URL - use same logic as checkout page
                     $freebieImagePath = $selectedFreebie?->image ?? $selectedFreebieProduct?->image;
                     $freebieImageUrl = null;
@@ -367,26 +505,29 @@ class OrderController extends Controller
                     $orderItems[] = [
                         'product_id'      => $selectedFreebieProduct->id,
                         'product_name'    => $selectedFreebieProduct->name,
-                        'quantity'        => 1,
+                        'quantity'        => $freebieQuantityToAdd,
                         'price'           => 0,
                         'subtotal'        => 0,
                         'is_reward'       => true,
                         'reward_image_url' => $freebieImageUrl,
                     ];
                     $hasRewardItems = true;
+                    $freebieAdded = true; // Mark that freebie has been added
                 }
 
                 // Deduct stock only for regular items
                 $inventory->decrement('quantity_on_hand', $quantity);
             }
 
-            if ($smallRewardCount > 0) {
+            // Deduct freebie stock based on quantity given
+            if ($freebieAdded) {
+                $deductQuantity = $freebieRequiresPoints ? $smallRewardCount : $freeRewardQuantity;
                 if ($selectedFreebie) {
-                    $selectedFreebie->decrement('stock', $smallRewardCount);
+                    $selectedFreebie->decrement('stock', $deductQuantity);
                 }
 
                 if ($selectedFreebieInventory) {
-                    $selectedFreebieInventory->decrement('quantity_on_hand', $smallRewardCount);
+                    $selectedFreebieInventory->decrement('quantity_on_hand', $deductQuantity);
                 }
             }
 
@@ -441,7 +582,11 @@ class OrderController extends Controller
 
             // Mark voucher as used if one was selected
             if ($selectedVoucher) {
-                $selectedVoucher->update(['is_used' => true]);
+                $selectedVoucher->update([
+                    'is_used' => true,
+                    'order_id' => $order->id,
+                    'applied_at' => now(),
+                ]);
             }
 
             // Create Payment record
@@ -589,7 +734,19 @@ class OrderController extends Controller
                 }
             }
 
+            // Revert any used vouchers back to unused state
+            \App\Models\UserVoucher::where('order_id', $order->id)
+                ->where('is_used', true)
+                ->update([
+                    'is_used' => false,
+                    'order_id' => null,
+                    'applied_at' => null,
+                ]);
+
             $order->update(['status' => 'cancelled']);
+
+            // Update payment status to failed when order is cancelled
+            Payment::where('order_id', $order->id)->update(['status' => 'failed']);
         });
 
         return redirect()->route('customer.orders')
@@ -627,11 +784,32 @@ class OrderController extends Controller
             'status' => 'required|in:pending,approved,assigned,out_for_delivery,delivered,cancelled',
         ]);
 
-        $order->update(['status' => $validated['status']]);
+        DB::transaction(function () use ($order, $validated) {
+            // If order is being cancelled, revert any used vouchers and update payment status to failed
+            if ($validated['status'] === 'cancelled') {
+                \App\Models\UserVoucher::where('order_id', $order->id)
+                    ->where('is_used', true)
+                    ->update([
+                        'is_used' => false,
+                        'order_id' => null,
+                        'applied_at' => null,
+                    ]);
 
-        if ($validated['status'] === 'delivered') {
-            $order->update(['delivered_at' => now()]);
-        }
+                // Update payment status to failed when order is cancelled
+                Payment::where('order_id', $order->id)->update(['status' => 'failed']);
+            }
+
+            $order->update(['status' => $validated['status']]);
+
+            if ($validated['status'] === 'delivered') {
+                $order->update(['delivered_at' => now()]);
+                // Update payment status to paid when order is delivered
+                Payment::where('order_id', $order->id)->update([
+                    'status' => 'paid',
+                    'paid_at' => now(),
+                ]);
+            }
+        });
 
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([

@@ -37,9 +37,12 @@
                     <label for="type" class="form-label">Type</label>
                     <select name="type" id="type" class="form-select">
                         <option value="">All Types</option>
-                        <option value="IN" {{ request('type') === 'IN' ? 'selected' : '' }}>IN</option>
-                        <option value="OUT" {{ request('type') === 'OUT' ? 'selected' : '' }}>OUT</option>
-                        <option value="ADJUSTMENT" {{ request('type') === 'ADJUSTMENT' ? 'selected' : '' }}>ADJUSTMENT</option>
+                        <option value="stock_in" {{ request('type') === 'stock_in' ? 'selected' : '' }}>STOCK IN</option>
+                        <option value="stock_out" {{ request('type') === 'stock_out' ? 'selected' : '' }}>STOCK OUT</option>
+                        <option value="sale" {{ request('type') === 'sale' ? 'selected' : '' }}>SALE</option>
+                        <option value="damage" {{ request('type') === 'damage' ? 'selected' : '' }}>DAMAGE</option>
+                        <option value="return" {{ request('type') === 'return' ? 'selected' : '' }}>RETURN</option>
+                        <option value="purchase" {{ request('type') === 'purchase' ? 'selected' : '' }}>PURCHASE</option>
                     </select>
                 </div>
 
@@ -104,25 +107,32 @@
                     @forelse($movements as $movement)
                         <tr>
                             <td>
+                                @php $movementDate = $movement->movement_date ?? $movement->created_at; @endphp
                                 <small class="text-muted d-block">
-                                    {{ $movement->movement_date->format('M d, Y') }}
+                                    {{ $movementDate ? $movementDate->format('M d, Y') : '-' }}
                                 </small>
-                                <small>{{ $movement->movement_date->format('H:i A') }}</small>
+                                <small>{{ $movementDate ? $movementDate->format('H:i A') : '-' }}</small>
                             </td>
                             <td>
-                                <strong>{{ $movement->product->name }}</strong>
+                                <strong>{{ $movement->inventory->product->name ?? '-' }}</strong>
                             </td>
                             <td>
-                                @if($movement->type === 'IN')
-                                    <span class="badge bg-success">IN</span>
-                                @elseif($movement->type === 'OUT')
-                                    <span class="badge bg-danger">OUT</span>
-                                @else
-                                    <span class="badge bg-warning">ADJUSTMENT</span>
-                                @endif
+                                @php
+                                    $movementType = strtolower((string) $movement->type);
+                                    $typeClass = 'bg-secondary';
+                                    if (in_array($movementType, ['stock_in', 'purchase'], true)) {
+                                        $typeClass = 'bg-success';
+                                    } elseif (in_array($movementType, ['stock_out', 'sale', 'damage'], true)) {
+                                        $typeClass = 'bg-danger';
+                                    } elseif ($movementType === 'return') {
+                                        $typeClass = 'bg-warning text-dark';
+                                    }
+                                @endphp
+                                <span class="badge {{ $typeClass }}">{{ strtoupper(str_replace('_', ' ', (string) $movement->type)) }}</span>
                             </td>
                             <td class="text-center">
-                                <strong>{{ $movement->quantity }}</strong>
+                                @php $qty = (int) $movement->quantity_change; @endphp
+                                <strong class="{{ $qty >= 0 ? 'text-success' : 'text-danger' }}">{{ $qty > 0 ? '+' : '' }}{{ $qty }}</strong>
                             </td>
                             <td>
                                 @if($movement->reference_type)

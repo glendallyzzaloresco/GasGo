@@ -40,7 +40,7 @@ class UserVoucher extends Model
 
     public function order()
     {
-        return $this->belongsTo(Order::class)->nullable();
+        return $this->belongsTo(Order::class);
     }
 
     // ── Scopes ──

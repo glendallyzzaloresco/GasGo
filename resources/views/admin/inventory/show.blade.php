@@ -143,32 +143,6 @@
 
 
 
-    .movements-table {
-        background: #fff;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
-        border: 1px solid #edf2f7;
-    }
-
-    .movements-table .table th {
-        background: #f3f8ff;
-        color: #1a4f7d;
-        border: none;
-        padding: 13px !important;
-        font-size: 0.85rem;
-    }
-
-    .movements-table .table td {
-        padding: 13px !important;
-        vertical-align: middle;
-        border-top: 1px solid #eef3f8;
-    }
-
-    .movements-table .table tbody tr:hover {
-        background: #f8fbff;
-    }
-
     .status-chip {
         display: inline-block;
         padding: 4px 10px;
@@ -243,13 +217,13 @@
             <img src="{{ $productImageUrl }}" alt="{{ $inventory->product->name }}" style="height:70px;width:70px;object-fit:contain;background:#fff;padding:8px;border-radius:8px;">
             <div>
                 <h1 class="mb-2">{{ $inventory->product->name }}</h1>
-                <p class="mb-0">Inventory details and stock movements</p>
+                <p class="mb-0">Inventory details and settings</p>
             </div>
         </div>
         @else
         <div>
             <h1 class="mb-2">{{ $inventory->product->name }}</h1>
-            <p class="mb-0">Inventory details and stock movements</p>
+            <p class="mb-0">Inventory details and settings</p>
         </div>
         @endif
         <div>
@@ -371,22 +345,6 @@
                 </div>
                 
                 <div class="detail-row">
-                    <span class="detail-label">Expiry Date</span>
-                    <span class="detail-value">
-                        @if($inventory->expiry_date)
-                            {{ $inventory->expiry_date->format('M d, Y') }}
-                            @if($inventory->expiry_date->isPast())
-                                <span class="badge bg-danger ms-2">EXPIRED</span>
-                            @elseif($inventory->expiry_date->diffInDays() <= 30)
-                                <span class="badge bg-warning ms-2">EXPIRING SOON</span>
-                            @endif
-                        @else
-                            <span class="text-muted">-</span>
-                        @endif
-                    </span>
-                </div>
-                
-                <div class="detail-row">
                     <span class="detail-label">Last Restocked</span>
                     <span class="detail-value">{{ $inventory->last_restocked?->format('M d, Y H:i') ?? 'Never' }}</span>
                 </div>
@@ -484,20 +442,6 @@
                         </div>
                     </div>
                     
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label"><i class="fas fa-calendar me-2"></i>Expiry Date</label>
-                                <input type="date" name="expiry_date" class="form-control @error('expiry_date') is-invalid @enderror"
-                                       value="{{ old('expiry_date', $inventory->expiry_date?->format('Y-m-d')) }}">
-                                <small class="form-text text-muted">Optional: Expiration date</small>
-                                @error('expiry_date')
-                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                    </div>
-                    
                     <div class="d-flex gap-2 justify-content-end mt-3">
                         <button type="reset" class="btn btn-secondary">
                             <i class="fas fa-undo me-2"></i>Reset
@@ -511,55 +455,5 @@
         </div>
     </div>
 
-
-
-    <div class="movements-table">
-        <div style="padding: 20px; border-bottom: 1px solid #f0f0f0;">
-            <h5><i class="fas fa-history me-2"></i>Stock Movement History</h5>
-        </div>
-        
-        @if($movements->isEmpty())
-            <div class="text-center py-5">
-                <p class="text-muted">No stock movements recorded yet</p>
-            </div>
-        @else
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>Date & Time</th>
-                        <th>Type</th>
-                        <th class="text-center">Quantity Change</th>
-                        <th>Created By</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($movements as $movement)
-                        <tr>
-                            <td>
-                                <small>{{ $movement->movement_date->format('M d, Y H:i') ?? $movement->created_at->format('M d, Y H:i') }}</small>
-                            </td>
-                            <td>
-                                <span class="type-badge type-{{ $movement->type }}">
-                                    {{ ucfirst(str_replace('_', ' ', $movement->type)) }}
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                <span class="{{ $movement->quantity_change > 0 ? 'qty-positive' : 'qty-negative' }}">
-                                    {{ $movement->quantity_change > 0 ? '+' : '' }}{{ $movement->quantity_change }}
-                                </span>
-                            </td>
-                            <td>
-                                <small>{{ $movement->creator->name ?? 'System' }}</small>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            
-            <div class="d-flex justify-content-center p-3" style="border-top: 1px solid #f0f0f0;">
-                {{ $movements->links() }}
-            </div>
-        @endif
-    </div>
 </div>
 @endsection

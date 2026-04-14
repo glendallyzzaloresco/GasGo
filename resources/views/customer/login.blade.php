@@ -259,20 +259,26 @@
                             <input type="hidden" name="auth_tab" value="login">
                             <div class="form-floating-gasgo">
                                 <label>Email Address</label>
-                                <input type="email" name="email" placeholder="you@email.com" autocomplete="off" required>
+                                <input type="email" name="email" placeholder="you@email.com" autocomplete="username" value="{{ old('email') }}" class="@error('email') is-invalid @enderror" required>
+                                @error('email')
+                                    <div class="field-error">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="form-floating-gasgo">
                                 <label>Password</label>
                                 <div class="password-field-wrapper">
-                                    <input type="password" name="password" placeholder="Enter password" class="password-input" autocomplete="off" required>
+                                    <input type="password" name="password" placeholder="Enter password" class="password-input @error('password') is-invalid @enderror" autocomplete="current-password" required>
                                     <button type="button" class="password-toggle-btn" onclick="togglePassword(this)">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                 </div>
+                                @error('password')
+                                    <div class="field-error">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <label style="font-size:.85rem;color:#888;cursor:pointer;">
-                                    <input type="checkbox" name="remember" style="margin-right:6px;">Remember me
+                                    <input type="checkbox" name="remember" style="margin-right:6px;" {{ old('remember') ? 'checked' : '' }}>Remember me
                                 </label>
                                 <a href="#" style="font-size:.85rem;color:var(--gasgo-orange);font-weight:600;text-decoration:none;">Forgot Password?</a>
                             </div>
@@ -297,28 +303,28 @@
                             <input type="hidden" name="auth_tab" value="register">
                             <div class="form-floating-gasgo">
                                 <label>Full Name</label>
-                                <input type="text" name="name" value="{{ old('name') }}" placeholder="Juan Dela Cruz" class="@error('name') is-invalid @enderror" required>
+                                <input type="text" name="name" value="{{ old('name') }}" placeholder="Juan Dela Cruz" class="@error('name') is-invalid @enderror" minlength="2" required>
                                 @error('name')
                                     <div class="field-error">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="form-floating-gasgo">
                                 <label>Email Address</label>
-                                <input type="email" name="email" value="{{ old('email') }}" placeholder="you@email.com" class="@error('email') is-invalid @enderror" required>
+                                <input type="email" name="email" value="{{ old('email') }}" placeholder="you@email.com" class="@error('email') is-invalid @enderror" autocomplete="email" required>
                                 @error('email')
                                     <div class="field-error">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="form-floating-gasgo">
                                 <label>Phone Number</label>
-                                <input type="text" name="phone" value="{{ old('phone') }}" placeholder="09XX XXX XXXX" class="@error('phone') is-invalid @enderror" required>
+                                <input type="text" name="phone" value="{{ old('phone') }}" placeholder="09XX XXX XXXX" class="@error('phone') is-invalid @enderror" autocomplete="tel" required>
                                 @error('phone')
                                     <div class="field-error">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="form-floating-gasgo">
                                 <label>Address</label>
-                                <input type="text" name="address" value="{{ old('address') }}" placeholder="Complete delivery address" class="@error('address') is-invalid @enderror">
+                                <input type="text" name="address" value="{{ old('address') }}" placeholder="Complete delivery address" class="@error('address') is-invalid @enderror" autocomplete="street-address">
                                 @error('address')
                                     <div class="field-error">{{ $message }}</div>
                                 @enderror
@@ -326,7 +332,7 @@
                             <div class="form-floating-gasgo">
                                 <label>Password</label>
                                 <div class="password-field-wrapper">
-                                    <input type="password" name="password" placeholder="Create a password" class="password-input @error('password') is-invalid @enderror" required>
+                                    <input type="password" name="password" placeholder="Create a password" class="password-input @error('password') is-invalid @enderror" minlength="8" autocomplete="new-password" required>
                                     <button type="button" class="password-toggle-btn" onclick="togglePassword(this)">
                                         <i class="fas fa-eye"></i>
                                     </button>
@@ -338,11 +344,14 @@
                             <div class="form-floating-gasgo">
                                 <label>Confirm Password</label>
                                 <div class="password-field-wrapper">
-                                    <input type="password" name="password_confirmation" placeholder="Confirm your password" class="password-input" required>
+                                    <input type="password" name="password_confirmation" placeholder="Confirm your password" class="password-input" minlength="8" autocomplete="new-password" required>
                                     <button type="button" class="password-toggle-btn" onclick="togglePassword(this)">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                 </div>
+                                @error('password_confirmation')
+                                    <div class="field-error">{{ $message }}</div>
+                                @enderror
                             </div>
                             <button type="submit" class="btn-auth"><i class="fas fa-user-plus me-2"></i>Register</button>
                         </form>
