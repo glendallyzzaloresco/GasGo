@@ -153,40 +153,6 @@
     $freebiesInStock = $freebieCatalog
         ->filter(fn ($row) => (int) ($row['stock'] ?? 0) > 0)
         ->values();
-
-    $outOfStockProducts = $saleProducts
-        ->filter(fn ($p) => (int) ($p->quantity_on_hand ?? 0) <= 0)
-        ->map(function ($p) {
-            return [
-                'kind' => 'product',
-                'item' => $p,
-                'name' => $p->name,
-                'description' => $p->description,
-                'stock' => (int) ($p->quantity_on_hand ?? 0),
-                'price' => (float) ($p->price ?? 0),
-                'image' => $p->image,
-            ];
-        });
-
-    $outOfStockFreebies = $freebieCatalog
-        ->filter(fn ($row) => (int) ($row['stock'] ?? 0) <= 0)
-        ->map(function ($row) {
-            $item = $row['item'];
-            return [
-                'kind' => $row['source'] === 'product' ? 'product-freebie' : 'freebie',
-                'item' => $item,
-                'name' => $row['name'],
-                'description' => $row['description'],
-                'stock' => (int) ($row['stock'] ?? 0),
-                'price' => $row['source'] === 'product' ? (float) ($item->price ?? 0) : 0,
-                'image' => $row['image'],
-            ];
-        });
-
-    $outOfStockItems = $outOfStockProducts
-        ->concat($outOfStockFreebies)
-        ->sortBy(fn ($row) => strtolower((string) ($row['name'] ?? '')))
-        ->values();
 @endphp
 
 <!-- Section Tabs -->
@@ -196,9 +162,6 @@
     </button>
     <button class="section-tab" data-section="freebies" onclick="switchSection('freebies', this)">
         <i class="fas fa-gift me-2"></i>Freebies
-    </button>
-    <button class="section-tab" data-section="outOfStock" onclick="switchSection('outOfStock', this)">
-        <i class="fas fa-box-open me-2"></i>Out of Stock
     </button>
 </div>
 
@@ -265,7 +228,8 @@
                         data-name="{{ $product->name }}"
                         data-category="{{ $product->category ?? 'tank' }}"
                         data-description="{{ $product->description }}"
-                        data-price="{{ $product->price }}"
+                        data-cost-price="{{ $product->cost_price ?? 0 }}"
+                        data-selling-price="{{ $product->selling_price ?? $product->price ?? 0 }}"
                         data-stock="{{ $qty }}"
                         data-weight="{{ $product->weight }}"
                         data-is-active="{{ $product->is_active ? '1' : '0' }}"
@@ -331,7 +295,8 @@
                         data-name="{{ $product->name }}"
                         data-category="{{ $product->category ?? 'tank' }}"
                         data-description="{{ $product->description }}"
-                        data-price="{{ $product->price }}"
+                        data-cost-price="{{ $product->cost_price ?? 0 }}"
+                        data-selling-price="{{ $product->selling_price ?? $product->price ?? 0 }}"
                         data-stock="{{ $qty }}"
                         data-weight="{{ $product->weight }}"
                         data-is-active="{{ $product->is_active ? '1' : '0' }}"
@@ -397,7 +362,8 @@
                         data-name="{{ $product->name }}"
                         data-category="{{ $product->category ?? 'tank' }}"
                         data-description="{{ $product->description }}"
-                        data-price="{{ $product->price }}"
+                        data-cost-price="{{ $product->cost_price ?? 0 }}"
+                        data-selling-price="{{ $product->selling_price ?? $product->price ?? 0 }}"
                         data-stock="{{ $qty }}"
                         data-weight="{{ $product->weight }}"
                         data-is-active="{{ $product->is_active ? '1' : '0' }}"
@@ -530,100 +496,7 @@
     </div>
 </div>
 
-<!-- Out Of Stock Section -->
-<div id="outOfStockSection" class="section-content" style="display:none;">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-        <div>
-            <h5 class="fw-bold" style="color:#dc3545;margin-bottom:10px;"><i class="fas fa-box-open me-2"></i>Out of Stock Items</h5>
-            <p class="text-muted mb-0" style="font-size:.88rem;">Products and freebies that currently have zero stock</p>
-        </div>
-    </div>
 
-    <div class="row g-4" id="outOfStockGrid">
-        @forelse($outOfStockItems as $row)
-        @php
-            $item = $row['item'];
-            $itemImageUrl = $resolveImageUrl($row['image']);
-            $isProductLike = in_array($row['kind'], ['product', 'product-freebie'], true);
-        @endphp
-        <div class="col-lg-3 col-md-4 col-sm-6 out-of-stock-item">
-            <div class="product-card" style="position:relative;border:2px solid #f8d7da;">
-                <span class="freebie-badge" style="background:#dc3545;color:#fff;"><i class="fas fa-times-circle me-1"></i>OUT</span>
-                @if($itemImageUrl)
-                    <img src="{{ $itemImageUrl }}" alt="{{ $row['name'] }}" style="height:240px;">
-                @else
-                    <div style="width:100%;height:240px;background:linear-gradient(135deg,#fbe9eb,#fff);display:flex;align-items:center;justify-content:center;">
-                        <i class="fas fa-box-open" style="font-size:3rem;color:#dc3545;opacity:.55;"></i>
-                    </div>
-                @endif
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="mb-0">{{ $row['name'] }}</h6>
-                        <span class="badge bg-danger stock-badge">Out</span>
-                    </div>
-                    <p class="text-muted mb-2" style="font-size:.82rem;">{{ $row['description'] ?? 'No description' }}</p>
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span class="price">{{ $isProductLike ? ('₱' . number_format((float) ($row['price'] ?? 0), 2)) : 'FREE' }}</span>
-                        <span class="text-muted" style="font-size:.82rem;">Stock: <strong class="text-danger">0</strong></span>
-                    </div>
-                    <div class="d-flex gap-2">
-                        @if($isProductLike)
-                            @php $qty = (int) ($item->quantity_on_hand ?? 0); @endphp
-                            <button
-                                class="btn btn-sm flex-grow-1"
-                                style="background:var(--gasgo-blue);color:#fff;border-radius:8px;font-weight:600;"
-                                data-bs-toggle="modal"
-                                data-bs-target="#productModal"
-                                onclick="openEditProduct(this)"
-                                data-id="{{ $item->id }}"
-                                data-name="{{ $item->name }}"
-                                data-category="{{ $item->category ?? 'tank' }}"
-                                data-description="{{ $item->description }}"
-                                data-price="{{ $item->price }}"
-                                data-stock="{{ $qty }}"
-                                data-weight="{{ $item->weight }}"
-                                data-is-active="{{ $item->is_active ? '1' : '0' }}"
-                                data-update-url="{{ route('admin.products.update', $item) }}"
-                            ><i class="fas fa-edit me-1"></i>Restock</button>
-                            <form action="{{ route('admin.products.destroy', $item) }}" method="POST" onsubmit="return confirm('Delete this item?');">
-                                @csrf
-                                @method('DELETE')
-                                <button class="btn btn-sm" type="submit" style="background:#f8d7da;color:#dc3545;border-radius:8px;" title="Delete"><i class="fas fa-trash"></i></button>
-                            </form>
-                        @else
-                            <button
-                                class="btn btn-sm flex-grow-1"
-                                style="background:var(--gasgo-blue);color:#fff;border-radius:8px;font-weight:600;"
-                                data-bs-toggle="modal"
-                                data-bs-target="#freebieModal"
-                                onclick="openEditFreebie(this)"
-                                data-id="{{ $item->id }}"
-                                data-name="{{ $item->name }}"
-                                data-description="{{ $item->description }}"
-                                data-stock="{{ $item->stock }}"
-                                data-category="{{ $item->category }}"
-                                data-reward-points="{{ $item->reward_points_required }}"
-                                data-redemption-type="{{ $item->redemption_type }}"
-                                data-is-active="{{ $item->is_active ? '1' : '0' }}"
-                                data-update-url="{{ route('admin.freebies.update', $item) }}"
-                            ><i class="fas fa-edit me-1"></i>Restock</button>
-                            <form action="{{ route('admin.freebies.destroy', $item) }}" method="POST" onsubmit="return confirm('Delete this freebie?');">
-                                @csrf
-                                @method('DELETE')
-                                <button class="btn btn-sm" type="submit" style="background:#f8d7da;color:#dc3545;border-radius:8px;" title="Delete"><i class="fas fa-trash"></i></button>
-                            </form>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-        @empty
-        <div class="col-12">
-            <p class="text-muted text-center py-5">No out-of-stock items found.</p>
-        </div>
-        @endforelse
-    </div>
-</div>
 
 <!-- Add/Edit Product Modal -->
 <div class="modal fade" id="productModal" tabindex="-1">
@@ -643,10 +516,18 @@
                             <input type="text" class="form-control" name="name" id="productName" placeholder="e.g. Solane 11kg" required>
                         </div>
                         <div class="col-md-3">
-                            <label class="mb-1">Price (₱)</label>
-                            <input type="number" class="form-control" name="price" id="productPrice" placeholder="0.00" min="0" step="0.01" required>
+                            <label class="mb-1">Cost Price (₱)</label>
+                            <input type="number" class="form-control" name="cost_price" id="productCostPrice" placeholder="0.00" min="0" step="0.01" required>
                         </div>
                         <div class="col-md-3">
+                            <label class="mb-1">Selling Price (₱)</label>
+                            <input type="number" class="form-control" name="selling_price" id="productSellingPrice" placeholder="0.00" min="0" step="0.01" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="mb-1">Weight (kg)</label>
+                            <input type="text" class="form-control" name="weight" id="productWeight" placeholder="e.g. 11kg">
+                        </div>
+                        <div class="col-md-6">
                             <label class="mb-1">Category</label>
                             <select class="form-select" name="category" id="productCategory" required>
                                 <option value="tank">Tank</option>
@@ -654,14 +535,6 @@
                                 <option value="appliances">Appliances</option>
                                 <option value="freebie">Freebie</option>
                             </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="mb-1">Weight (kg)</label>
-                            <input type="text" class="form-control" name="weight" id="productWeight" placeholder="e.g. 11kg">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="mb-1">Stock Quantity</label>
-                            <input type="number" class="form-control" name="stock" id="productStock" placeholder="0" min="0" required>
                         </div>
                         <div class="col-12">
                             <label class="mb-1">Description</label>
@@ -714,10 +587,6 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="mb-1">Stock Quantity</label>
-                            <input type="number" class="form-control" name="stock" id="freebieStock" placeholder="0" min="0" required>
-                        </div>
-                        <div class="col-md-6">
                             <label class="mb-1">Reward Points Required</label>
                             <input type="number" class="form-control" name="reward_points_required" id="freebieRewardPoints" placeholder="e.g. 50 points" min="0">
                         </div>
@@ -764,7 +633,6 @@
         // Hide all sections
         document.getElementById('productsSection').style.display = 'none';
         document.getElementById('freebiesSection').style.display = 'none';
-        document.getElementById('outOfStockSection').style.display = 'none';
         
         // Show selected section
         document.getElementById(section + 'Section').style.display = 'block';
@@ -788,7 +656,7 @@
     }
 
     function getActiveSection() {
-        const visibleSection = ['products', 'freebies', 'outOfStock'].find((section) => {
+        const visibleSection = ['products', 'freebies'].find((section) => {
             const el = document.getElementById(section + 'Section');
             return el && el.style.display !== 'none';
         });
@@ -827,7 +695,7 @@
         const parser = new DOMParser();
         const nextDoc = parser.parseFromString(html, 'text/html');
 
-        ['productsSection', 'freebiesSection', 'outOfStockSection'].forEach((sectionId) => {
+        ['productsSection', 'freebiesSection'].forEach((sectionId) => {
             const currentSection = document.getElementById(sectionId);
             const nextSection = nextDoc.getElementById(sectionId);
             if (currentSection && nextSection) {
@@ -845,8 +713,8 @@
         const defaultCategoryOption = document.querySelector('#productCategory option');
         document.getElementById('productCategory').value = defaultCategoryOption ? defaultCategoryOption.value : '';
         document.getElementById('productDescription').value = '';
-        document.getElementById('productPrice').value = '';
-        document.getElementById('productStock').value = '0';
+        document.getElementById('productCostPrice').value = '';
+        document.getElementById('productSellingPrice').value = '';
         document.getElementById('productWeight').value = '';
         document.getElementById('prodActive').checked = true;
     }
@@ -858,8 +726,8 @@
         document.getElementById('productName').value = button.dataset.name || '';
         document.getElementById('productCategory').value = button.dataset.category || 'tank';
         document.getElementById('productDescription').value = button.dataset.description || '';
-        document.getElementById('productPrice').value = button.dataset.price || '';
-        document.getElementById('productStock').value = button.dataset.stock || '0';
+        document.getElementById('productCostPrice').value = button.dataset.costPrice || '';
+        document.getElementById('productSellingPrice').value = button.dataset.sellingPrice || '';
         document.getElementById('productWeight').value = button.dataset.weight || '';
         document.getElementById('prodActive').checked = (button.dataset.isActive === '1');
     }
@@ -881,7 +749,6 @@
         document.getElementById('freebieFormMethod').value = 'POST';
         document.getElementById('freebieName').value = '';
         document.getElementById('freebieDescription').value = '';
-        document.getElementById('freebieStock').value = '';
         document.getElementById('freebieRewardPoints').value = '0';
         document.getElementById('freebieCategory').value = 'Promotional Gifts';
         document.getElementById('freebieRedemptionType').value = 'promotional';
@@ -894,7 +761,6 @@
         document.getElementById('freebieFormMethod').value = 'PUT';
         document.getElementById('freebieName').value = button.dataset.name || '';
         document.getElementById('freebieDescription').value = button.dataset.description || '';
-        document.getElementById('freebieStock').value = button.dataset.stock || '';
         document.getElementById('freebieRewardPoints').value = button.dataset.rewardPoints || '0';
         document.getElementById('freebieCategory').value = button.dataset.category || 'Promotional Gifts';
         document.getElementById('freebieRedemptionType').value = button.dataset.redemptionType || 'promotional';
@@ -964,8 +830,7 @@
 
             showProductsAlert('success', payload.message || (isUpdate ? 'Freebie updated successfully.' : 'Freebie created successfully.'));
 
-            const sectionToShow = activeSectionBeforeSubmit === 'outOfStock' ? 'outOfStock' : 'freebies';
-            switchSection(sectionToShow);
+            switchSection('freebies');
         } catch (error) {
             showProductsAlert('danger', 'Network error while saving freebie. Please try again.');
         } finally {
@@ -1031,8 +896,7 @@
 
             showProductsAlert('success', payload.message || (isUpdate ? 'Product updated successfully.' : 'Product created successfully.'));
 
-            const sectionToShow = activeSectionBeforeSubmit === 'outOfStock' ? 'outOfStock' : 'products';
-            switchSection(sectionToShow);
+            switchSection('products');
         } catch (error) {
             showProductsAlert('danger', 'Network error while saving product. Please try again.');
         } finally {

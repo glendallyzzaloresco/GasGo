@@ -448,6 +448,7 @@
                     </div>
                     @endforeach
                     <div class="summary-item mt-3"><span>Subtotal</span><span id="summarySubtotal">₱{{ number_format($subtotal, 2) }}</span></div>
+                    <div class="summary-item"><span>Delivery Fee</span><span id="summaryDeliveryFee">₱{{ number_format($deliveryFee, 2) }}</span></div>
                     
                     <!-- NEW: Voucher Discount Line Item (shown conditionally) -->
                     <div id="discountSummaryRow" class="summary-item" style="display: none; color: #27ae60;">
@@ -455,7 +456,7 @@
                         <span id="discountAmount" style="font-weight: 700; color: #27ae60; font-size: 1rem;">-₱0.00</span>
                     </div>
                     
-                    <div class="summary-item total"><span>Total</span><span class="val" id="summaryTotal">₱{{ number_format($subtotal, 2) }}</span></div>
+                    <div class="summary-item total"><span>Total</span><span class="val" id="summaryTotal">₱{{ number_format($subtotal + $deliveryFee, 2) }}</span></div>
                     
                     <input type="hidden" id="selectedCartIds" name="selected_cart_ids" value="">
                     
@@ -950,6 +951,9 @@ async function geocodeDefaultAddress() {
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
+    // Define delivery fee at the start
+    const deliveryFee = {{ $deliveryFee }};
+    
     initMap();
     
     // Wait a bit for map to fully render, then geocode customer's default address
@@ -1007,7 +1011,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
 
         document.getElementById('summarySubtotal').textContent = '₱' + selectedSubtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        const total = selectedSubtotal;
+        const total = selectedSubtotal + deliveryFee;
         document.getElementById('summaryTotal').textContent = '₱' + total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 
@@ -1166,7 +1170,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         const subtotalText = document.getElementById('summarySubtotal').textContent;
         const subtotal = parseFloat(subtotalText.replace('₱', '').replace(/,/g, ''));
         
-        const total = subtotal - discountAmount;
+        const total = subtotal + deliveryFee - discountAmount;
         
         const discountRow = document.getElementById('discountSummaryRow');
         

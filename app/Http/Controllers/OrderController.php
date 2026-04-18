@@ -79,6 +79,7 @@ class OrderController extends Controller
         });
 
         $subtotal = $cartItems->sum(fn ($item) => $item->product->price * $item->quantity);
+        $deliveryFee = 50.00;
         $productFreebieOffset = 1000000;
 
         $tableFreebies = Freebie::query()
@@ -180,7 +181,7 @@ class OrderController extends Controller
             ->take(1)
             ->get();
 
-        return view('customer.checkout', compact('cartItems', 'subtotal', 'rewardPreview', 'availableFreebies', 'unlockedFreebies', 'lockedFreebies', 'totalCheckoutItems', 'homepageSettings', 'availableVouchers'));
+        return view('customer.checkout', compact('cartItems', 'subtotal', 'deliveryFee', 'rewardPreview', 'availableFreebies', 'unlockedFreebies', 'lockedFreebies', 'totalCheckoutItems', 'homepageSettings', 'availableVouchers'));
     }
 
     // Customer: place an order from cart
@@ -820,5 +821,59 @@ class OrderController extends Controller
         }
 
         return redirect()->back()->with('success', 'Order status updated.');
+    }
+
+    // Admin: bulk update order status
+    public function bulkUpdateStatus(Request $request)
+    {
+        $validated = $request->validate([
+            'order_ids' => 'required|array',
+            'order_ids.*' => 'required|integer',
+            'status' => 'required|in:pending,approved,assigned,out_for_delivery,delivered,cancelled',
+        ]);
+
+        $updatedCount = 0;
+        $updatedIds = [];
+
+        DB::transaction(function () use ($validated, &$updatedCount, &$updatedIds) {
+            foreach ($validated['order_ids'] as $orderId) {
+                $order = Order::find($orderId);
+                if (!$order) continue;
+
+                // If order is being cancelled, revert any used vouchers and update payment status to failed
+                if ($validated['status'] === 'cancelled') {
+                    \App\Models\UserVoucher::where('order_id', $order->id)
+                        ->where('is_used', true)
+                        ->update([
+                            'is_used' => false,
+                            'order_id' => null,
+                            'applied_at' => null,
+                        ]);
+
+                    // Update payment status to failed when order is cancelled
+                    Payment::where('order_id', $order->id)->update(['status' => 'failed']);
+                }
+
+                $order->update(['status' => $validated['status']]);
+
+                if ($validated['status'] === 'delivered') {
+                    $order->update(['delivered_at' => now()]);
+                    // Update payment status to paid when order is delivered
+                    Payment::where('order_id', $order->id)->update([
+                        'status' => 'paid',
+                        'paid_at' => now(),
+                    ]);
+                }
+
+                $updatedCount++;
+                $updatedIds[] = $order->id;
+            }
+        });
+
+        return response()->json([
+            'message' => "Successfully updated {$updatedCount} order(s).",
+            'count' => $updatedCount,
+            'order_ids' => $updatedIds,
+        ]);
     }
 }

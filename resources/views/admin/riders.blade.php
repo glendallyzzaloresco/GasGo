@@ -130,24 +130,9 @@
                             data-rider-name="{{ $riderUser->name }}"
                             data-rider-email="{{ $riderUser->email }}"
                             data-rider-phone="{{ $riderUser->phone ?? '' }}"
-                            data-rider-vehicle="{{ $rider->vehicle_type ?? '' }}"
-                            data-rider-plate="{{ $rider->plate_number ?? '' }}"
-                            data-rider-license="{{ $rider->license_number ?? '' }}"
                             style="border-radius:8px;font-weight:600;padding:6px 12px;">
                             <i class="fas fa-edit"></i>
                         </button>
-                        @if($availability !== 'available')
-                            <button class="btn btn-sm btn-primary" onclick="setRiderStatus(event)" data-rider-id="{{ $rider->id }}" data-status="available" style="border-radius:8px;font-weight:600;padding:6px 12px;" data-status-btn>Set Available</button>
-                        @endif
-                        @if($availability !== 'busy')
-                            <button class="btn btn-sm btn-warning" onclick="setRiderStatus(event)" data-rider-id="{{ $rider->id }}" data-status="busy" style="border-radius:8px;font-weight:600;padding:6px 12px;" data-status-btn>Set Busy</button>
-                        @endif
-                        @if($availability !== 'returning')
-                            <button class="btn btn-sm btn-info" onclick="setRiderStatus(event)" data-rider-id="{{ $rider->id }}" data-status="returning" style="border-radius:8px;font-weight:600;padding:6px 12px;" data-status-btn>Set Returning</button>
-                        @endif
-                        @if($availability !== 'offline')
-                            <button class="btn btn-sm btn-secondary" onclick="setRiderStatus(event)" data-rider-id="{{ $rider->id }}" data-status="offline" style="border-radius:8px;font-weight:600;padding:6px 12px;" data-status-btn>Set Offline</button>
-                        @endif
                         <button class="btn btn-sm btn-danger" onclick="deleteRider(event)" data-rider-id="{{ $rider->id }}" style="border-radius:8px;font-weight:600;padding:6px 14px;">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -193,7 +178,7 @@
                             <label class="form-label fw-bold" style="font-size:.88rem;">Password <span class="text-danger">*</span></label>
                             <div class="input-group" style="border-radius:10px;overflow:hidden;">
                                 <input type="password" name="password" id="riderPassword" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Min 6 characters" required>
-                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('riderPassword')" style="border-radius:0 10px 10px 0;">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this, 'riderPassword')" style="border-radius:0 10px 10px 0;">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
@@ -202,7 +187,7 @@
                             <label class="form-label fw-bold" style="font-size:.88rem;">Confirm Password <span class="text-danger">*</span></label>
                             <div class="input-group" style="border-radius:10px;overflow:hidden;">
                                 <input type="password" name="password_confirmation" id="riderPasswordConfirm" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Min 6 characters" required>
-                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('riderPasswordConfirm')" style="border-radius:0 10px 10px 0;">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this, 'riderPasswordConfirm')" style="border-radius:0 10px 10px 0;">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
@@ -246,17 +231,15 @@
                             <label class="form-label fw-bold" style="font-size:.88rem;">Phone Number <span class="text-danger">*</span></label>
                             <input type="text" id="editPhone" name="phone" class="form-control" style="border-radius:10px;" required>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold" style="font-size:.88rem;">Vehicle Type</label>
-                            <input type="text" id="editVehicleType" name="vehicle_type" class="form-control" style="border-radius:10px;" placeholder="e.g. Motorcycle, Tricycle">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold" style="font-size:.88rem;">Plate Number</label>
-                            <input type="text" id="editPlateNumber" name="plate_number" class="form-control" style="border-radius:10px;">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold" style="font-size:.88rem;">License Number</label>
-                            <input type="text" id="editLicenseNumber" name="license_number" class="form-control" style="border-radius:10px;">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold" style="font-size:.88rem;">Password</label>
+                            <p class="text-muted" style="font-size:.8rem;">Leave empty to keep current password</p>
+                            <div class="input-group" style="border-radius:10px;overflow:hidden;">
+                                <input type="password" id="editPassword" name="password" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Min 6 characters">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this, 'editPassword')" style="border-radius:0 10px 10px 0;">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -277,9 +260,8 @@
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
     // Toggle password visibility
-    function togglePasswordVisibility(fieldId) {
+    function togglePasswordVisibility(button, fieldId) {
         const input = document.getElementById(fieldId);
-        const button = event.target.closest('button');
         const icon = button.querySelector('i');
         
         if (input.type === 'password') {
@@ -294,7 +276,7 @@
     }
 
     // Open edit rider modal
-    function openEditRiderModal(riderId) {
+    function openEditRiderModal(event) {
         const button = event.target.closest('button');
         const riderId = button.dataset.riderId;
         
@@ -302,9 +284,7 @@
         document.getElementById('editName').value = button.dataset.riderName;
         document.getElementById('editEmail').value = button.dataset.riderEmail;
         document.getElementById('editPhone').value = button.dataset.riderPhone;
-        document.getElementById('editVehicleType').value = button.dataset.riderVehicle;
-        document.getElementById('editPlateNumber').value = button.dataset.riderPlate;
-        document.getElementById('editLicenseNumber').value = button.dataset.riderLicense;
+        document.getElementById('editPassword').value = '';  // Clear password field for security
         
         // Update the form action
         document.getElementById('editRiderForm').action = `/admin/riders/${riderId}`;
@@ -319,10 +299,23 @@
         e.preventDefault();
         
         const riderId = document.getElementById('editRiderId').value;
-        const formData = new FormData(this);
+        const name = document.getElementById('editName').value;
+        const email = document.getElementById('editEmail').value;
+        const phone = document.getElementById('editPhone').value;
+        const password = document.getElementById('editPassword').value;
+        
+        // Build FormData manually
+        const formData = new FormData();
+        formData.append('_method', 'PUT');
+        formData.append('name', name);
+        formData.append('email', email);
+        formData.append('phone', phone);
+        if (password) {
+            formData.append('password', password);
+        }
         
         fetch(`/admin/riders/${riderId}`, {
-            method: 'PUT',
+            method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest'
@@ -332,9 +325,14 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Close modal and reload page
+                // Close modal
                 bootstrap.Modal.getInstance(document.getElementById('editRiderModal')).hide();
-                setTimeout(() => location.reload(), 500);
+                
+                // Show success message
+                showSuccessMessage('Rider information updated successfully!');
+                
+                // Reload page after a brief delay
+                setTimeout(() => location.reload(), 1500);
             } else {
                 alert('Error updating rider: ' + (data.message || 'Unknown error'));
             }
@@ -344,6 +342,24 @@
             alert('Failed to update rider information');
         });
     });
+
+    // Helper function to show success message
+    function showSuccessMessage(message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show';
+        alertDiv.style.cssText = 'border-radius:12px;position:fixed;top:20px;right:20px;z-index:9999;max-width:400px;box-shadow:0 4px 12px rgba(0,0,0,0.15);';
+        alertDiv.innerHTML = `
+            <i class="fas fa-check-circle me-2" style="color:#28a745;"></i>
+            <strong>${message}</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(alertDiv);
+        
+        // Auto-hide after 4 seconds
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 4000);
+    }
 
     // Refresh rider stats only when status is manually updated
     function refreshRiderStats(cardElement, riderId, userId) {
@@ -447,10 +463,30 @@
         }
     }
 
-    function setRiderStatus(event) {
-        const button = event.target.closest('button');
-        const riderId = button.dataset.riderId;
-        const status = button.dataset.status;
+    function setRiderStatus(buttonOrRiderId, statusParam) {
+        // Handle both calling conventions:
+        // 1. From inline onclick: setRiderStatus(this) - button element
+        // 2. From dynamic buttons: setRiderStatus(riderId, status) - riderId number
+        let riderId, status, card;
+        
+        if (typeof buttonOrRiderId === 'object' && buttonOrRiderId.dataset) {
+            // Called from inline onclick with button element (this)
+            const button = buttonOrRiderId;
+            riderId = button.dataset.riderId;
+            status = button.dataset.status;
+            // Find the rider card by going up the DOM tree
+            card = button.closest('[data-rider-id]');
+        } else {
+            // Called from dynamic button with riderId and status
+            riderId = buttonOrRiderId;
+            status = statusParam;
+            card = document.querySelector(`[data-rider-id="${riderId}"]`);
+        }
+        
+        if (!riderId || !status) {
+            console.error('Error: Could not determine rider or status', { riderId, status });
+            return;
+        }
         
         fetch(`/admin/riders/${riderId}/availability`, {
             method: 'PUT',
@@ -464,8 +500,8 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                showSuccessMessage('Rider status updated successfully!');
                 // Refresh stats instead of full page reload
-                const card = document.querySelector(`[data-rider-id="${riderId}"]`);
                 if (card) {
                     const userId = card.dataset.userId;
                     refreshRiderStats(card, riderId, userId);
@@ -496,7 +532,10 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    document.querySelector(`[data-rider-id="${riderId}"]`).closest('.col-lg-4')?.remove();
+                    showSuccessMessage('Rider account deleted successfully!');
+                    setTimeout(() => {
+                        document.querySelector(`[data-rider-id="${riderId}"]`).closest('.col-lg-4')?.remove();
+                    }, 500);
                 } else {
                     alert('Error deleting rider: ' + (data.message || 'Unknown error'));
                 }

@@ -66,11 +66,11 @@ class DeliveryController extends Controller
                 Delivery::create([
                     'order_id'    => $order->id,
                     'rider_id'    => $validated['rider_id'],
-                    'status'      => 'out_for_delivery',
+                    'status'      => 'assigned',
                     'assigned_at' => now(),
                 ]);
 
-                $order->update(['status' => 'out_for_delivery']);
+                $order->update(['status' => 'assigned']);
                 $assignedOrderIds[] = (int) $order->id;
             }
         });
@@ -87,7 +87,7 @@ class DeliveryController extends Controller
                     : 'Rider assigned to order.',
                 'order_id' => (int) $assignedOrderIds[0],
                 'order_ids' => $assignedOrderIds,
-                'status' => 'out_for_delivery',
+                'status' => 'assigned',
                 'rider_name' => $firstDelivery?->rider?->name ?? 'Rider',
             ]);
         }

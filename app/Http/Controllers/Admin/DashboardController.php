@@ -505,6 +505,88 @@ class DashboardController extends Controller
         ));
     }
 
+    public function users()
+    {
+        // Fetch all riders
+        $riders = User::where('role', 'rider')
+            ->with('rider')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Calculate rider stats
+        $riderStats = $riders->map(function ($rider) {
+            $totalDeliveries = $rider->deliveries()->count();
+            $completedDeliveries = $rider->deliveries()->where('status', 'delivered')->count();
+            $todayDeliveries = $rider->deliveries()->whereDate('created_at', today())->count();
+            $availability = $rider->rider?->availability ?? 'offline';
+
+            return [
+                'rider' => $rider,
+                'totalDeliveries' => $totalDeliveries,
+                'completedDeliveries' => $completedDeliveries,
+                'todayDeliveries' => $todayDeliveries,
+                'availability' => $availability,
+            ];
+        });
+
+        // Fetch all customers
+        $customers = User::where('role', 'customer')
+            ->with(['orders', 'loyaltyPoints'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $customerStats = $customers->map(function ($customer) {
+            $totalOrders = $customer->orders->count();
+            $totalSpent = $customer->orders->sum('total_amount');
+            $loyaltyPoints = $customer->loyaltyPoints->where('type', 'earned')->sum('points') - 
+                            $customer->loyaltyPoints->where('type', 'redeemed')->sum('points');
+
+            if ($loyaltyPoints >= 300) {
+                $loyaltyTier = 'Gold';
+                $loyaltyBadge = 'success';
+            } elseif ($loyaltyPoints >= 150) {
+                $loyaltyTier = 'Silver';
+                $loyaltyBadge = 'primary';
+            } elseif ($loyaltyPoints > 0) {
+                $loyaltyTier = 'Member';
+                $loyaltyBadge = 'secondary';
+            } else {
+                $loyaltyTier = null;
+                $loyaltyBadge = null;
+            }
+
+            return [
+                'customer' => $customer,
+                'totalOrders' => $totalOrders,
+                'totalSpent' => $totalSpent,
+                'loyaltyPoints' => $loyaltyPoints,
+                'loyaltyTier' => $loyaltyTier,
+                'loyaltyBadge' => $loyaltyBadge,
+            ];
+        });
+
+        // Fetch all admins
+        $admins = User::where('role', 'admin')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Statistics
+        $totalRiders = $riders->count();
+        $totalCustomers = $customers->count();
+        $totalAdmins = $admins->count();
+        $activeRiders = $riders->filter(fn($r) => $r->rider?->availability === 'available')->count();
+
+        return view('admin.users', compact(
+            'riderStats',
+            'customerStats',
+            'admins',
+            'totalRiders',
+            'totalCustomers',
+            'totalAdmins',
+            'activeRiders'
+        ));
+    }
+
     public function notifications()
     {
         $items = [];

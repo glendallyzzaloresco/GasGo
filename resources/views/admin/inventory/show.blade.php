@@ -276,11 +276,6 @@
                 </div>
                 
                 <div class="detail-row">
-                    <span class="detail-label">SKU</span>
-                    <span class="detail-value">{{ $inventory->product->sku ?? 'N/A' }}</span>
-                </div>
-                
-                <div class="detail-row">
                     <span class="detail-label">Price</span>
                     <span class="detail-value">₱{{ number_format($inventory->product->price, 2) }}</span>
                 </div>

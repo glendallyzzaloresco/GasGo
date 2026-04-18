@@ -14,6 +14,8 @@ class Product extends Model
         'category',
         'description',
         'price',
+        'cost_price',
+        'selling_price',
         'stock',
         'weight',
         'image',
@@ -24,6 +26,8 @@ class Product extends Model
     {
         return [
             'price' => 'decimal:2',
+            'cost_price' => 'decimal:2',
+            'selling_price' => 'decimal:2',
             'is_active' => 'boolean',
         ];
     }

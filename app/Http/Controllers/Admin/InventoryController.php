@@ -274,28 +274,15 @@ class InventoryController extends Controller
      */
     public function adjust(Request $request, Inventory $inventory)
     {
-        // Get raw input first
-        $movementDateRaw = $request->input('movement_date');
-        
         $validated = $request->validate([
             'quantity_change' => 'required|integer|min:1',
             'type' => 'required|in:stock_in,stock_out,sale,damage,return',
             'notes' => 'nullable|string|max:255',
-            'movement_date' => 'nullable|string', // Accept raw string format
+            'movement_date' => 'nullable|string',
         ]);
 
-        // Convert datetime-local format (YYYY-MM-DDTHH:MM) to Y-m-d H:i:s
-        if ($movementDateRaw && !empty($movementDateRaw)) {
-            try {
-                // Replace T with space to convert from datetime-local format
-                $movementDateFormatted = str_replace('T', ' ', $movementDateRaw);
-                $movementDate = Carbon::createFromFormat('Y-m-d H:i', $movementDateFormatted);
-            } catch (\Exception $e) {
-                $movementDate = now();
-            }
-        } else {
-            $movementDate = now();
-        }
+        // Always use server's current time for consistency
+        $movementDate = now();
         
         $quantityChange = $validated['quantity_change'];
         $type = $validated['type'];

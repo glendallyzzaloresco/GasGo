@@ -265,10 +265,20 @@
                                                 @enderror
                                             </div>
                                             <div class="col-md-6">
-                                                <input type="password" name="password" class="form-control form-control-sm @error('password') is-invalid @enderror" placeholder="Password" required>
+                                                <div class="input-group" style="border-radius:6px;overflow:hidden;">
+                                                    <input type="password" name="password" id="adminPassword" class="form-control form-control-sm @error('password') is-invalid @enderror" placeholder="Password" required>
+                                                    <button class="btn btn-outline-secondary btn-sm" type="button" onclick="togglePasswordVisibility(this, 'adminPassword')" style="border-radius:0;">
+                                                        <i class="fas fa-eye" style="font-size:0.8rem;"></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                             <div class="col-md-6">
-                                                <input type="password" name="password_confirmation" class="form-control form-control-sm" placeholder="Confirm password" required>
+                                                <div class="input-group" style="border-radius:6px;overflow:hidden;">
+                                                    <input type="password" name="password_confirmation" id="adminPasswordConfirm" class="form-control form-control-sm" placeholder="Confirm password" required>
+                                                    <button class="btn btn-outline-secondary btn-sm" type="button" onclick="togglePasswordVisibility(this, 'adminPasswordConfirm')" style="border-radius:0;">
+                                                        <i class="fas fa-eye" style="font-size:0.8rem;"></i>
+                                                    </button>
+                                                </div>
                                                 @error('password')
                                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                                 @enderror
@@ -300,6 +310,22 @@
     style="display:none;"
 ></div>
 <script>
+// Toggle password visibility
+function togglePasswordVisibility(button, fieldId) {
+    const input = document.getElementById(fieldId);
+    const icon = button.querySelector('i');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
 (function () {
     var el = document.getElementById('settingsData');
     var logTailUrl = el.dataset.logTailUrl;

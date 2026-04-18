@@ -7,8 +7,13 @@
 @section('admin-styles')
 <style>
     .report-card {
-        background:#fff; border-radius:16px; padding:24px;
-        box-shadow:0 4px 15px rgba(0,0,0,.06);
+        background:#fff; border-radius:16px; padding:18px;
+        box-shadow:0 2px 8px rgba(0,0,0,.08);
+        border:1px solid #f0f0f0;
+        transition: all 0.3s ease;
+    }
+    .report-card:hover {
+        box-shadow:0 4px 16px rgba(0,0,0,.12);
     }
     .chart-placeholder {
         width:100%; height:250px; border-radius:12px;
@@ -23,21 +28,32 @@
     .chart-shell.small {
         height: 220px;
     }
-    .summary-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #f0f0f0; }
+    .summary-row { 
+        display:flex; 
+        justify-content:space-between;
+        align-items:center;
+        padding:8px 0; 
+        border-bottom:1px solid #f5f5f5;
+    }
     .summary-row:last-child { border-bottom:none; }
-    .summary-row .label { color:#888; font-size:.88rem; }
+    .summary-row .label { color:#666; font-size:.88rem; font-weight:500; }
     .summary-row .value { font-weight:700; font-size:.95rem; }
     .analytics-grid {
         display:grid;
-        grid-template-columns:repeat(5, minmax(0, 1fr));
+        grid-template-columns:repeat(4, minmax(0, 1fr));
         gap:12px;
     }
     .analytics-card {
         background:linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-        border:1px solid #edf2f7;
-        border-radius:16px;
-        padding:16px;
-        box-shadow:0 8px 24px rgba(15,23,42,.04);
+        border:1px solid #e8f0fa;
+        border-radius:12px;
+        padding:14px;
+        box-shadow:0 2px 6px rgba(15,23,42,.04);
+        transition: all 0.3s ease;
+    }
+    .analytics-card:hover {
+        transform: translateY(-2px);
+        box-shadow:0 4px 12px rgba(15,23,42,.08);
     }
     .analytics-card .label {
         color:#64748b;
@@ -45,23 +61,25 @@
         font-weight:600;
         text-transform:uppercase;
         letter-spacing:.04em;
+        margin-bottom:8px;
     }
     .analytics-card .value {
         font-size:1.8rem;
         font-weight:800;
         color:var(--gasgo-blue);
-        margin:8px 0 4px;
+        margin:8px 0 8px;
     }
     .analytics-card .meta {
-        color:#64748b;
-        font-size:.84rem;
+        color:#757575;
+        font-size:.82rem;
+        line-height:1.4;
     }
     .growth-chart {
         display:flex;
         align-items:flex-end;
         gap:14px;
-        min-height:220px;
-        padding-top:8px;
+        min-height:200px;
+        padding-top:12px;
     }
     .growth-bar-wrap {
         flex:1;
@@ -82,9 +100,10 @@
         color:#64748b;
     }
     .growth-value {
-        font-size:.8rem;
+        font-size:.85rem;
         color:#94a3b8;
         margin-bottom:6px;
+        font-weight:600;
     }
     .insight-pill {
         display:inline-flex;
@@ -131,7 +150,7 @@
 
 @section('content')
 <!-- Date Range Filter -->
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
     <form method="GET" action="{{ route('admin.reports') }}" class="d-flex gap-2 align-items-center" id="periodFilterForm">
         <label class="fw-bold" style="font-size:.88rem;color:#555;">Period:</label>
         <select name="period" id="periodFilterSelect" class="form-select form-select-sm" style="border-radius:10px;width:auto;">
@@ -179,7 +198,7 @@
     </div>
 </div>
 
-<div class="report-card mb-2 report-loading-target" data-report-loading>
+<div class="report-card mb-3 report-loading-target" data-report-loading>
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <div>
             <h6 class="fw-bold mb-1" style="color:var(--gasgo-blue);"><i class="fas fa-bullhorn me-2" style="color:var(--gasgo-orange);"></i>Marketing Analytics</h6>
@@ -215,59 +234,21 @@
     </div>
 </div>
 
-<div class="row g-3 mb-2">
+<div class="row g-3 mb-3">
     <!-- Revenue Chart -->
     <div class="col-lg-8">
         <div class="report-card report-loading-target" data-report-loading>
-            <h6 class="fw-bold mb-3" style="color:var(--gasgo-blue);">Revenue Trend</h6>
+            <h6 class="fw-bold mb-2" style="color:var(--gasgo-blue);">Revenue Trend</h6>
             <div class="chart-shell">
                 <canvas id="revenueTrendChart"></canvas>
             </div>
         </div>
     </div>
-    <!-- Order Channels -->
+    <!-- Top Products -->
     <div class="col-lg-4">
         <div class="report-card report-loading-target" data-report-loading>
-            <h6 class="fw-bold mb-3" style="color:var(--gasgo-blue);">Customer Growth</h6>
-            <div class="chart-shell small mb-3">
-                <canvas id="customerGrowthChart"></canvas>
-            </div>
-            <div class="growth-chart" id="growthBarsContainer">
-                @foreach($customerGrowth as $month)
-                    @php
-                        $barHeight = $maxCustomerGrowth > 0 ? max(12, round(($month['count'] / $maxCustomerGrowth) * 160)) : 12;
-                    @endphp
-                    <div class="growth-bar-wrap">
-                        <div class="growth-value">{{ $month['count'] }}</div>
-                        <div class="growth-bar" data-height="{{ $barHeight }}"></div>
-                        <div class="growth-label">{{ $month['label'] }}</div>
-                    </div>
-                @endforeach
-            </div>
-            <div class="mt-3">
-                <div class="summary-row">
-                    <span class="label" id="labelNewCustomersPeriod">New Customers ({{ $periodLabel }})</span>
-                    <span class="value" id="metricNewCustomersInPeriod">{{ $newCustomersInPeriod }}</span>
-                </div>
-                <div class="summary-row">
-                    <span class="label">Average Revenue Per Paying Customer</span>
-                    <span class="value" id="metricAvgRevenuePerCustomer">₱{{ number_format($avgRevenuePerCustomer, 2) }}</span>
-                </div>
-                <div class="summary-row">
-                    <span class="label">Loyalty Members</span>
-                    <span class="value" id="metricLoyaltyMembers">{{ $loyaltyMembers }}</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Top Products & Payment Methods -->
-<div class="row g-3 mb-2">
-    <div class="col-lg-6">
-        <div class="report-card report-loading-target" data-report-loading>
-            <h6 class="fw-bold mb-3" style="color:var(--gasgo-blue);"><i class="fas fa-trophy me-2" style="color:var(--gasgo-orange);"></i>Top Products</h6>
-            <div id="topProductsList">
+            <h6 class="fw-bold mb-2" style="color:var(--gasgo-blue);"><i class="fas fa-trophy me-2" style="color:var(--gasgo-orange);"></i>Top Products</h6>
+            <div id="topProductsList" style="max-height: 320px; overflow-y: auto;">
             @forelse($topProducts as $product)
                 <div class="summary-row">
                     <div>
@@ -284,75 +265,42 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-6">
-        <div class="report-card report-loading-target" data-report-loading>
-            <h6 class="fw-bold mb-3" style="color:var(--gasgo-blue);"><i class="fas fa-users me-2" style="color:var(--gasgo-orange);"></i>Top Customer Value</h6>
-            <div id="topCustomersList">
-            @forelse($topCustomers as $customer)
-                <div class="summary-row">
-                    <div>
-                        <span class="fw-bold">{{ $customer->name }}</span>
-                        <div style="font-size:.78rem;color:#888;">{{ $customer->total_orders }} completed/non-cancelled order(s)</div>
-                    </div>
-                    <span class="value" style="color:var(--gasgo-blue);">₱{{ number_format($customer->total_spent, 2) }}</span>
-                </div>
-            @empty
-                <div class="text-center text-muted py-3">
-                    <i class="fas fa-inbox me-2"></i>No customer value data yet.
-                </div>
-            @endforelse
-            </div>
-        </div>
-    </div>
 </div>
 
-<div class="row g-3 mt-0">
-    <div class="col-lg-6">
+<!-- Customer Growth -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-4">
         <div class="report-card report-loading-target" data-report-loading>
-            <h6 class="fw-bold mb-3" style="color:var(--gasgo-blue);"><i class="fas fa-credit-card me-2" style="color:var(--gasgo-orange);"></i>Payment Summary</h6>
-            <div class="chart-shell small mb-3">
-                <canvas id="paymentBreakdownChart"></canvas>
+            <h6 class="fw-bold mb-2" style="color:var(--gasgo-blue);">Customer Growth</h6>
+            <div class="chart-shell small mb-2">
+                <canvas id="customerGrowthChart"></canvas>
             </div>
-            @php
-                $totalPaymentRevenue = $paymentMethods->sum('revenue');
-            @endphp
-            <div id="paymentSummaryList">
-            @forelse($paymentMethods as $payment)
+            <div class="growth-chart" id="growthBarsContainer">
+                @foreach($customerGrowth as $month)
+                    @php
+                        $barHeight = $maxCustomerGrowth > 0 ? max(12, round(($month['count'] / $maxCustomerGrowth) * 160)) : 12;
+                    @endphp
+                    <div class="growth-bar-wrap">
+                        <div class="growth-value">{{ $month['count'] }}</div>
+                        <div class="growth-bar" data-height="{{ $barHeight }}"></div>
+                        <div class="growth-label">{{ $month['label'] }}</div>
+                    </div>
+                @endforeach
+            </div>
+            <div class="mt-2">
                 <div class="summary-row">
-                    <span class="label">
-                        @if($payment->payment_method === 'cash')
-                            <i class="fas fa-money-bill-wave me-2 text-success"></i>Cash
-                        @elseif($payment->payment_method === 'gcash')
-                            <i class="fas fa-mobile-alt me-2 text-primary"></i>GCash
-                        @elseif($payment->payment_method === 'card')
-                            <i class="fas fa-credit-card me-2 text-info"></i>Card
-                        @else
-                            {{ ucfirst($payment->payment_method) }}
-                        @endif
-                    </span>
-                    <span class="value">₱{{ number_format($payment->revenue, 2) }} <small class="text-muted">({{ $totalPaymentRevenue > 0 ? round(($payment->revenue / $totalPaymentRevenue) * 100) : 0 }}%)</small></span>
+                    <span class="label" id="labelNewCustomersPeriod">New Customers ({{ $periodLabel }})</span>
+                    <span class="value" id="metricNewCustomersInPeriod">{{ $newCustomersInPeriod }}</span>
                 </div>
-            @empty
-                <div class="text-center text-muted py-3">
-                    <i class="fas fa-inbox me-2"></i>No payment data available.
+                <div class="summary-row">
+                    <span class="label">Average Revenue Per Paying Customer</span>
+                    <span class="value" id="metricAvgRevenuePerCustomer">₱{{ number_format($avgRevenuePerCustomer, 2) }}</span>
                 </div>
-            @endforelse
+                <div class="summary-row">
+                    <span class="label">Loyalty Members</span>
+                    <span class="value" id="metricLoyaltyMembers">{{ $loyaltyMembers }}</span>
+                </div>
             </div>
-            <div class="summary-row mt-3" style="border-top:2px solid var(--gasgo-blue);padding-top:14px;">
-                <span class="label fw-bold" style="color:var(--gasgo-blue);">Total Revenue</span>
-                <span class="value" id="metricTotalRevenueBottom" style="font-size:1.1rem;color:var(--gasgo-blue);">₱{{ number_format($totalRevenue, 2) }}</span>
-            </div>
-
-            <h6 class="fw-bold mt-4 mb-3" style="color:var(--gasgo-blue);font-size:.9rem;"><i class="fas fa-motorcycle me-2" style="color:var(--gasgo-orange);"></i>Delivery Stats</h6>
-            <div class="summary-row">
-                <span class="label">Total Deliveries</span>
-                <span class="value" id="metricTotalDeliveries">{{ $totalDeliveries }}</span>
-            </div>
-            <div class="summary-row">
-                <span class="label">Avg. Delivery Time</span>
-                <span class="value" id="metricAvgDeliveryTime">{{ $avgDeliveryTime ? round($avgDeliveryTime) : 0 }} mins</span>
-            </div>
-            
         </div>
     </div>
 </div>
@@ -435,37 +383,6 @@ document.addEventListener('DOMContentLoaded', function() {
         `).join('');
     }
 
-    function renderTopCustomers(customers) {
-        const el = document.getElementById('topCustomersList');
-        if (!customers || !customers.length) {
-            el.innerHTML = '<div class="text-center text-muted py-3"><i class="fas fa-inbox me-2"></i>No customer value data yet.</div>';
-            return;
-        }
-        el.innerHTML = customers.map((c) => `
-            <div class="summary-row">
-                <div>
-                    <span class="fw-bold">${escapeHtml(c.name)}</span>
-                    <div style="font-size:.78rem;color:#888;">${numberFmt(c.total_orders)} completed/non-cancelled order(s)</div>
-                </div>
-                <span class="value" style="color:var(--gasgo-blue);">${peso(c.total_spent)}</span>
-            </div>
-        `).join('');
-    }
-
-    function renderPaymentSummary(methods) {
-        const el = document.getElementById('paymentSummaryList');
-        if (!methods || !methods.length) {
-            el.innerHTML = '<div class="text-center text-muted py-3"><i class="fas fa-inbox me-2"></i>No payment data available.</div>';
-            return;
-        }
-        el.innerHTML = methods.map((m) => `
-            <div class="summary-row">
-                <span class="label">${paymentIcon(m.payment_method)}</span>
-                <span class="value">${peso(m.revenue)} <small class="text-muted">(${numberFmt(m.percent)}%)</small></span>
-            </div>
-        `).join('');
-    }
-
     function toggleLoadingState(isLoading) {
         loadingTargets.forEach((el) => el.classList.toggle('loading', isLoading));
         periodSelect.classList.toggle('opacity-75', isLoading);
@@ -538,34 +455,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    const paymentCtx = document.getElementById('paymentBreakdownChart');
-    let paymentChart = null;
-    if (paymentCtx && paymentData.length) {
-        paymentChart = new Chart(paymentCtx, {
-            type: 'doughnut',
-            data: {
-                labels: paymentLabels,
-                datasets: [{
-                    data: paymentData,
-                    backgroundColor: ['#1a6db0', '#f7941d', '#27ae60', '#8e44ad', '#7f8c8d'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom' },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => ctx.label + ': ' + moneyTick(ctx.parsed)
-                        }
-                    }
-                }
-            }
-        });
-    }
-
     renderGrowthBars(customerGrowthLabels, customerGrowthData);
 
     async function updateReports(period) {
@@ -611,8 +500,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('metricNewCustomersInPeriod').textContent = numberFmt(metrics.newCustomersInPeriod);
             document.getElementById('metricAvgRevenuePerCustomer').textContent = peso(metrics.avgRevenuePerCustomer);
             document.getElementById('metricLoyaltyMembers').textContent = numberFmt(metrics.loyaltyMembers);
-            document.getElementById('metricTotalDeliveries').textContent = numberFmt(metrics.totalDeliveries);
-            document.getElementById('metricAvgDeliveryTime').textContent = `${numberFmt(Math.round(metrics.avgDeliveryTime || 0))} mins`;
             document.getElementById('metricAvgRating').innerHTML = `<i class="fas fa-star text-warning me-1"></i>${Number(metrics.avgRating || 0).toFixed(1)}`;
 
             const revenueTrend = charts.revenueTrend || { labels: [], data: [] };
@@ -631,15 +518,7 @@ document.addEventListener('DOMContentLoaded', function() {
             renderGrowthBars(growthTrend.labels || [], growthTrend.data || []);
 
             const paymentTrend = charts.paymentBreakdown || { labels: [], data: [] };
-            if (paymentChart) {
-                paymentChart.data.labels = paymentTrend.labels || [];
-                paymentChart.data.datasets[0].data = paymentTrend.data || [];
-                paymentChart.update();
-            }
-
             renderTopProducts(lists.topProducts || []);
-            renderTopCustomers(lists.topCustomers || []);
-            renderPaymentSummary(lists.paymentMethods || []);
 
             const newUrl = `${reportEndpoint}?period=${encodeURIComponent(period)}`;
             window.history.replaceState({}, '', newUrl);

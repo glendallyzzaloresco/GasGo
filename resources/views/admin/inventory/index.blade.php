@@ -111,12 +111,6 @@
         overflow: hidden;
         box-shadow: 0 2px 12px rgba(0,0,0,0.08);
         background: #fff;
-        transition: all 0.3s ease;
-    }
-
-    .inventory-section:hover {
-        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-        transform: translateY(-2px);
     }
 
     .inventory-section summary {
@@ -134,10 +128,7 @@
         transition: all 0.3s ease;
     }
 
-    .inventory-section summary:hover {
-        filter: brightness(1.08);
-        padding-left: 24px;
-    }
+
 
     .inventory-section summary::-webkit-details-marker {
         display: none;
@@ -211,11 +202,6 @@
 
     .table tbody tr {
         border-bottom: 1px solid #f0f0f0;
-        transition: background 0.2s ease;
-    }
-
-    .table tbody tr:hover {
-        background: #f9fbfd;
     }
 
     .table tbody td {
@@ -240,11 +226,6 @@
         border: 1px solid #e0e0e0;
         flex-shrink: 0;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-        transition: transform 0.2s ease;
-    }
-
-    .product-table-image:hover {
-        transform: scale(1.05);
     }
 
     .product-table-image-placeholder {
@@ -428,25 +409,9 @@
     }
 
     .btn-view {
-        transition: all 0.2s ease !important;
     }
-
-    .btn-view:hover {
-        background: #1976d2 !important;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4) !important;
-    }
-
-
 
     .btn-edit {
-        transition: all 0.2s ease !important;
-    }
-
-    .btn-edit:hover {
-        background: #f57c00 !important;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4) !important;
     }
 </style>
 @endsection
@@ -524,11 +489,9 @@
                                 {{ $totalStockReceived }} Units
                             </div>
                         </div>
-                        @if($stockReceived->count() > 0)
                         <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#stockReceivedModal">
                             <i class="fas fa-eye me-1"></i>View
                         </button>
-                        @endif
                     </div>
                     @if($stockReceived->count() > 0)
                     <div class="mt-3" style="max-height: 150px; overflow-y: auto;">
@@ -542,98 +505,27 @@
                             <small class="text-muted">{{ $movement->movement_date->format('h:i A') }}</small>
                         </div>
                         @endforeach
-                        @if($stockReceived->count() > 3)
-                        <small class="text-muted d-block mt-2">+{{ $stockReceived->count() - 3 }} more...</small>
-                        @endif
+                        </div>
+                        <small id="stockReceivedPreviewMore" class="text-muted d-block mt-2 @if($stockReceived->count() <= 3) d-none @endif">+{{ max($stockReceived->count() - 3, 0) }} more...</small>
                     </div>
                     @else
-                    <small class="text-muted d-block mt-2">No stock received today</small>
+                    <div class="mt-3 d-none" style="max-height: 150px; overflow-y: auto;">
+                        <div id="stockReceivedPreviewList"></div>
+                        <small id="stockReceivedPreviewMore" class="text-muted d-block mt-2 d-none"></small>
+                    </div>
+                    <small class="text-muted d-block mt-2" id="stockReceivedEmptyText">No stock received today</small>
                     @endif
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Recent Stock Movement History -->
-    <details class="inventory-section">
-        <summary style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);">
-            <span class="section-summary-left">
-                <i class="fas fa-history"></i>Recent Stock Movement History
-            </span>
-            <span class="section-summary-right">
-                <span>{{ ($recentStockMovements ?? collect())->count() }} records</span>
-                <a href="{{ route('admin.inventory.movements') }}" class="btn btn-sm" style="background: rgba(255,255,255,0.18); color: white; border: 1px solid rgba(255,255,255,0.35); font-weight: 600;" onclick="event.stopPropagation();">
-                    <i class="fas fa-external-link-alt me-1"></i>View Full History
-                </a>
-                <i class="fas fa-chevron-down section-chevron"></i>
-            </span>
-        </summary>
-
-        <div class="section-body">
-        @if(($recentStockMovements ?? collect())->isEmpty())
-            <div class="p-4 text-center text-muted">
-                <i class="fas fa-inbox me-2"></i>No stock movement history yet.
-            </div>
-        @else
-            <div class="table-responsive history-scroll-wrap">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th style="width: 25%;">Product</th>
-                            <th style="width: 12%;">Type</th>
-                            <th style="width: 10%;">Quantity</th>
-                            <th style="width: 18%;">Date & Time</th>
-                            <th style="width: 23%;">Notes</th>
-                            <th style="width: 12%;">By</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($recentStockMovements as $movement)
-                            @php
-                                $movementType = strtolower((string) $movement->type);
-                                $movementDate = $movement->movement_date ?? $movement->created_at;
-                                $quantityValue = (int) $movement->quantity_change;
-                                $badgeClass = 'bg-secondary';
-                                $qtyClass = 'text-success';
-
-                                if ($movementType === 'stock_in' || $movementType === 'purchase' || $quantityValue > 0) {
-                                    $badgeClass = 'bg-success';
-                                } elseif ($movementType === 'stock_out' || $movementType === 'sale' || $movementType === 'damage' || $quantityValue < 0) {
-                                    $badgeClass = 'bg-danger';
-                                    $qtyClass = 'text-danger';
-                                }
-                            @endphp
-                            <tr>
-                                <td>
-                                    <strong>{{ $movement->inventory->product->name ?? 'Unknown Product' }}</strong>
-                                </td>
-                                <td>
-                                    <span class="badge {{ $badgeClass }}" style="text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.3px;">
-                                        {{ str_replace('_', ' ', $movement->type) }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="{{ $qtyClass }}" style="font-weight: 700;">
-                                        {{ $quantityValue > 0 ? '+' : '' }}{{ $quantityValue }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <small>{{ $movementDate ? $movementDate->format('M d, Y - h:i A') : 'N/A' }}</small>
-                                </td>
-                                <td>
-                                    <small class="text-muted">{{ $movement->notes ?: 'No notes' }}</small>
-                                </td>
-                                <td>
-                                    <small>{{ $movement->creator->name ?? 'System' }}</small>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @endif
-        </div>
-    </details>
+    <!-- Recent Stock Movement History Button -->
+    <div class="mb-4">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#recentStockMovementModal" style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%); border: none; font-weight: 600; padding: 12px 24px; border-radius: 6px; font-size: 1rem;">
+            <i class="fas fa-history me-2"></i>View Recent Stock Movement History
+        </button>
+    </div>
 
     <!-- Empty Tanks Modal -->
     <div class="modal fade" id="emptyTanksModal" tabindex="-1">
@@ -800,12 +692,115 @@
         </div>
     </div>
 
+    <!-- Recent Stock Movement History Modal -->
+    <div class="modal fade" id="recentStockMovementModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%); color: white;">
+                    <h5 class="modal-title"><i class="fas fa-history me-2"></i>Recent Stock Movement History</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>Showing <strong>{{ ($recentStockMovements ?? collect())->count() }}</strong> recent records
+                            </small>
+                        </div>
+                        <a href="{{ route('admin.inventory.movements') }}" class="btn btn-sm" style="background: #0f766e; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;">
+                            <i class="fas fa-external-link-alt me-1"></i>View Full History
+                        </a>
+                    </div>
+                    
+                    @if(($recentStockMovements ?? collect())->isEmpty())
+                        <div class="p-4 text-center text-muted">
+                            <i class="fas fa-inbox me-2"></i>No stock movement history yet.
+                        </div>
+                    @else
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 25%;">Product</th>
+                                        <th style="width: 12%;">Type</th>
+                                        <th style="width: 10%;">Quantity</th>
+                                        <th style="width: 18%;">Date & Time</th>
+                                        <th style="width: 23%;">Notes</th>
+                                        <th style="width: 12%;">By</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($recentStockMovements as $movement)
+                                        @php
+                                            $movementType = strtolower((string) $movement->type);
+                                            $movementDate = $movement->movement_date ?? $movement->created_at;
+                                            $quantityValue = (int) $movement->quantity_change;
+                                            $badgeClass = 'bg-secondary';
+                                            $qtyClass = 'text-success';
+
+                                            if ($movementType === 'stock_in' || $movementType === 'purchase' || $quantityValue > 0) {
+                                                $badgeClass = 'bg-success';
+                                            } elseif ($movementType === 'stock_out' || $movementType === 'sale' || $movementType === 'damage' || $quantityValue < 0) {
+                                                $badgeClass = 'bg-danger';
+                                                $qtyClass = 'text-danger';
+                                            }
+                                        @endphp
+                                        <tr>
+                                            <td>
+                                                <strong>{{ $movement->inventory->product->name ?? 'Unknown Product' }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge {{ $badgeClass }}" style="text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.3px;">
+                                                    {{ str_replace('_', ' ', $movement->type) }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="{{ $qtyClass }}" style="font-weight: 700;">
+                                                    {{ $quantityValue > 0 ? '+' : '' }}{{ $quantityValue }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <small>{{ $movementDate ? $movementDate->format('M d, Y - h:i A') : 'N/A' }}</small>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">{{ $movement->notes ?: 'No notes' }}</small>
+                                            </td>
+                                            <td>
+                                                <small>{{ $movement->creator->name ?? 'System' }}</small>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
+
+    <!-- Toast Notification Container -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11; right: 20px; bottom: 20px;">
+        <div id="stockNotification" class="toast align-items-center border-0 shadow-lg" role="alert" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white; min-width: 300px;" data-bs-autohide="true" data-bs-delay="3000">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong id="toastMessage">Stock Added Successfully!</strong>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
 
     <div class="filter-section">
         <div class="row g-3 mb-3">
@@ -850,11 +845,7 @@
                 </select>
             </div>
 
-            <div class="col-md-3 d-flex align-items-end">
-                <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#bulkAddStockModal" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%); border: none; font-weight: 600; padding: 10px 20px; border-radius: 6px;">
-                    <i class="fas fa-plus-circle me-2"></i>Add Stock
-                </button>
-            </div>
+            <div class="col-md-3"></div>
         </div>
     </div>
 
@@ -866,35 +857,40 @@
                 <p>Start adding products to inventory management</p>
             </div>
         @else
-            @php
-                // Separate inventories by category
-                $tankInventories = $inventories->filter(fn($inv) => strtolower($inv->product->category) === 'tank');
-                $accessoriesInventories = $inventories->filter(fn($inv) => strtolower($inv->product->category) === 'accessories');
-                $applianceInventories = $inventories->filter(fn($inv) => in_array(strtolower($inv->product->category), ['stove', 'burner', 'appliance', 'appliances'], true));
-            @endphp
-
-            <!-- LPG TANKS SECTION -->
-            @if($tankInventories->count() > 0)
+            <!-- UNIFIED PRODUCTS TABLE -->
             <details class="inventory-section" open>
-                <summary style="background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);">
-                    <span class="section-summary-left"><i class="fas fa-cube"></i>LPG Tanks</span>
-                    <span class="section-summary-right">{{ $tankInventories->count() }} items <i class="fas fa-chevron-down section-chevron"></i></span>
+                <summary style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);">
+                    <span class="section-summary-left"><i class="fas fa-cubes"></i>All Products</span>
+                    <span class="section-summary-right">{{ $inventories->count() }} items <i class="fas fa-chevron-down section-chevron"></i></span>
                 </summary>
                 <div class="section-body">
+                <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th style="width: 28%;">Product Name</th>
-                            <th style="width: 8%;">SKU</th>
-                            <th style="width: 10%;">Category</th>
+                            <th style="width: 25%;">Product Name</th>
+                            <th style="width: 12%;">Category</th>
                             <th style="width: 12%;">Stock on Hand</th>
                             <th style="width: 10%;">Reorder Level</th>
                             <th style="width: 12%;">Status</th>
-                            <th style="width: 20%;">Actions</th>
+                            <th style="width: 29%;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($tankInventories as $inventory)
+                        @php
+                            // Sort inventories by category: Tank, Accessories, Appliances
+                            $sortedInventories = $inventories->sortBy(function($inv) {
+                                $category = strtolower($inv->product->category);
+                                $order = match($category) {
+                                    'tank' => 0,
+                                    'accessories' => 1,
+                                    'appliances' => 2,
+                                    default => 3,
+                                };
+                                return [$order, strtolower($inv->product->name)];
+                            });
+                        @endphp
+                        @foreach($sortedInventories as $inventory)
                             @php
                                 $stockStatus = 'in-stock';
                                 $stockLabel = 'In Stock';
@@ -915,10 +911,9 @@
                                         <span>{{ $inventory->product->name }}</span>
                                     </div>
                                 </td>
-                                <td>{{ $inventory->product->sku ?? 'N/A' }}</td>
                                 <td>
-                                    <span class="badge category-badge-{{ strtolower($inventory->product->category) }}">
-                                        {{ $inventory->product->category }}
+                                    <span class="badge category-badge-{{ strtolower($inventory->product->category) }}" style="font-size: 0.9rem; padding: 6px 12px;">
+                                        {{ ucfirst($inventory->product->category) }}
                                     </span>
                                 </td>
                                 <td class="font-weight-bold stock-on-hand">
@@ -926,166 +921,27 @@
                                 </td>
                                 <td>{{ $inventory->reorder_level }}</td>
                                 <td>
-                                    <span class="stock-status-badge {{ $stockStatus }}">
+                                    <span class="stock-status-badge {{ $stockStatus }}" style="display: inline-block; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">
                                         {{ $stockLabel }}
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-view" style="background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" title="View">
-                                        <i class="fas fa-eye me-1"></i>View
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-                </div>
-            </details>
-            @endif
-
-            <!-- APPLIANCES SECTION -->
-            @if($applianceInventories->count() > 0)
-            <details class="inventory-section" open>
-                <summary style="background: linear-gradient(135deg, #ff6f00 0%, #e55100 100%);">
-                    <span class="section-summary-left"><i class="fas fa-flame"></i>Appliances</span>
-                    <span class="section-summary-right">{{ $applianceInventories->count() }} items <i class="fas fa-chevron-down section-chevron"></i></span>
-                </summary>
-                <div class="section-body">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th style="width: 28%;">Product Name</th>
-                            <th style="width: 8%;">SKU</th>
-                            <th style="width: 10%;">Category</th>
-                            <th style="width: 12%;">Stock on Hand</th>
-                            <th style="width: 10%;">Reorder Level</th>
-                            <th style="width: 12%;">Status</th>
-                            <th style="width: 20%;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($applianceInventories as $inventory)
-                            @php
-                                $stockStatus = 'in-stock';
-                                $stockLabel = 'In Stock';
-                                if ($inventory->quantity_on_hand == 0) {
-                                    $stockStatus = 'out-of-stock';
-                                    $stockLabel = 'Out of Stock';
-                                } elseif ($inventory->quantity_on_hand <= $inventory->reorder_level) {
-                                    $stockStatus = 'low-stock';
-                                    $stockLabel = 'Low Stock';
-                                }
-                            @endphp
-                            <tr>
-                                <td>
-                                    <div class="product-name-cell">
-                                        <img src="{{ $inventory->product->image_url ?? asset('images/default-product.png') }}" 
-                                             alt="{{ $inventory->product->name }}" 
-                                             class="product-table-image">
-                                        <span>{{ $inventory->product->name }}</span>
+                                    <div class="d-flex gap-2">
+                                        <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-view" style="background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;">
+                                            <i class="fas fa-eye me-1"></i>View
+                                        </a>
+                                        <button type="button" class="btn btn-sm" onclick="setAdjustInventory('{{ $inventory->id }}', '{{ $inventory->product->name }}')" data-bs-toggle="modal" data-bs-target="#adjustStockModal" style="background: #27ae60; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;">
+                                            <i class="fas fa-plus me-1"></i>Add Stock
+                                        </button>
                                     </div>
                                 </td>
-                                <td>{{ $inventory->product->sku ?? 'N/A' }}</td>
-                                <td>
-                                    <span class="badge category-badge-{{ strtolower($inventory->product->category) }}">
-                                        {{ $inventory->product->category }}
-                                    </span>
-                                </td>
-                                <td class="font-weight-bold stock-on-hand">
-                                    {{ $inventory->quantity_on_hand }}
-                                </td>
-                                <td>{{ $inventory->reorder_level }}</td>
-                                <td>
-                                    <span class="stock-status-badge {{ $stockStatus }}">
-                                        {{ $stockLabel }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-view" style="background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" title="View">
-                                        <i class="fas fa-eye me-1"></i>View
-                                    </a>
-                                </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
                 </div>
-            </details>
-            @endif
-
-            <!-- ACCESSORIES SECTION -->
-            @if($accessoriesInventories->count() > 0)
-            <details class="inventory-section">
-                <summary style="background: linear-gradient(135deg, #7b1fa2 0%, #512da8 100%);">
-                    <span class="section-summary-left"><i class="fas fa-tools"></i>Accessories</span>
-                    <span class="section-summary-right">{{ $accessoriesInventories->count() }} items <i class="fas fa-chevron-down section-chevron"></i></span>
-                </summary>
-                <div class="section-body">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th style="width: 28%;">Product Name</th>
-                            <th style="width: 8%;">SKU</th>
-                            <th style="width: 10%;">Category</th>
-                            <th style="width: 9%;">Stock on Hand</th>
-                            <th style="width: 8%;">Reorder Level</th>
-                            <th style="width: 10%;">Status</th>
-                            <th style="width: 18%;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($accessoriesInventories as $inventory)
-                            @php
-                                $stockStatus = 'in-stock';
-                                $stockLabel = 'In Stock';
-                                if ($inventory->quantity_on_hand == 0) {
-                                    $stockStatus = 'out-of-stock';
-                                    $stockLabel = 'Out of Stock';
-                                } elseif ($inventory->quantity_on_hand <= $inventory->reorder_level) {
-                                    $stockStatus = 'low-stock';
-                                    $stockLabel = 'Low Stock';
-                                }
-                            @endphp
-                            <tr>
-                                <td>
-                                    <div class="product-name-cell">
-                                        <img src="{{ $inventory->product->image_url ?? asset('images/default-product.png') }}" 
-                                             alt="{{ $inventory->product->name }}" 
-                                             class="product-table-image">
-                                        <span>{{ $inventory->product->name }}</span>
-                                    </div>
-                                </td>
-                                <td>{{ $inventory->product->sku ?? 'N/A' }}</td>
-                                <td>
-                                    <span class="badge category-badge-{{ strtolower($inventory->product->category) }}">
-                                        {{ $inventory->product->category }}
-                                    </span>
-                                </td>
-                                <td class="font-weight-bold stock-on-hand">
-                                    {{ $inventory->quantity_on_hand }}
-                                </td>
-                                <td>{{ $inventory->reorder_level }}</td>
-                                <td>
-                                    <span class="stock-status-badge {{ $stockStatus }}">
-                                        {{ $stockLabel }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-view" style="background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" title="View">
-                                        <i class="fas fa-eye me-1"></i>View
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
                 </div>
             </details>
-            @endif
-
-            <div class="d-flex justify-content-center mt-4 mb-5" id="paginationContainer">
-                {{ $inventories->render() }}
-            </div>
 
             <!-- Freebies & Rewards Section -->
             @if($freebies && $freebies->count() > 0)
@@ -1144,9 +1000,14 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="{{ route('admin.products', ['tab' => 'freebies']) }}" class="btn btn-sm" style="background: #27ae60; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;" title="Manage">
-                                        <i class="fas fa-edit me-1"></i>Manage
-                                    </a>
+                                    <div class="d-flex gap-2">
+                                        <a href="{{ route('admin.products', ['tab' => 'freebies']) }}" class="btn btn-sm btn-view" style="background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;">
+                                            <i class="fas fa-eye me-1"></i>View
+                                        </a>
+                                        <button type="button" class="btn btn-sm" style="background: #27ae60; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;">
+                                            <i class="fas fa-plus me-1"></i>Add Stock
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -1568,9 +1429,9 @@ function setAdjustInventory(inventoryId, productName) {
     
     const movementDateInput = document.getElementById('movementDateTime');
     if (movementDateInput) {
-        // Set default to today's date and current time in correct format for datetime-local
+        // Set to server's current date/time using the same approach as Laravel
+        // Use now() which is already in server timezone
         const now = new Date();
-        // Format: YYYY-MM-DDTHH:mm (required format for datetime-local)
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
@@ -1579,8 +1440,6 @@ function setAdjustInventory(inventoryId, productName) {
         
         const localDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
         movementDateInput.value = localDateTime;
-        
-        // Remove readonly to allow value to be set, then add it back
         movementDateInput.readOnly = false;
         movementDateInput.value = localDateTime;
         movementDateInput.readOnly = true;
@@ -1627,10 +1486,12 @@ document.getElementById('adjustStockForm').addEventListener('submit', function(e
             if (modal) {
                 modal.hide();
             }
-            // Reload page to show updated stock
+            // Show success notification
+            showStockNotification('Stock Added Successfully!');
+            // Reload after notification is shown
             setTimeout(() => {
                 window.location.reload();
-            }, 500);
+            }, 1500);
         } else {
             return response.text().then(text => { 
                 console.error('Error response:', text);
@@ -1643,6 +1504,18 @@ document.getElementById('adjustStockForm').addEventListener('submit', function(e
         alert('Error adjusting stock: ' + error.message);
     });
 });
+
+// Function to show toast notification
+function showStockNotification(message = 'Stock Added Successfully!') {
+    const toastElement = document.getElementById('stockNotification');
+    const toastMessage = document.getElementById('toastMessage');
+    
+    if (toastElement && toastMessage) {
+        toastMessage.textContent = message;
+        const toast = new bootstrap.Toast(toastElement);
+        toast.show();
+    }
+}
 
 const searchInput = document.getElementById('searchInput');
 const statusSelect = document.getElementById('statusSelect');

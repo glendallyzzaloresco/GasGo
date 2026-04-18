@@ -165,8 +165,7 @@
                         @endphp
                         <tr class="urgency-critical">
                             <td>
-                                <strong>{{ $item->product->name }}</strong><br>
-                                <small class="text-muted">SKU: {{ $item->product->sku ?? 'N/A' }}</small>
+                                <strong>{{ $item->product->name }}</strong>
                             </td>
                             <td class="text-center">
                                 <span class="quantity-low">{{ $item->quantity_on_hand }}</span>

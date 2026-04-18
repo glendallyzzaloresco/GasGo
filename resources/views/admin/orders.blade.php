@@ -14,8 +14,67 @@
     .filter-tab:hover, .filter-tab.active { border-color:var(--gasgo-blue); background:var(--gasgo-blue); color:#fff; }
     .filter-tab .count { margin-left:6px; padding:2px 8px; border-radius:12px; font-size:.72rem; background:rgba(0,0,0,.1); }
     .filter-tab.active .count { background:rgba(255,255,255,.3); }
-    .order-row { cursor:pointer; transition:background .2s; }
-    .order-row:hover { background:var(--gasgo-blue-light) !important; }
+    .gasgo-table {
+        background: white;
+        border-radius: 12px;
+        overflow-x: auto;
+        box-shadow: 0 2px 8px rgba(0,0,0,.08);
+        border: 1px solid #f0f0f0;
+        width: 100%;
+        display: block;
+    }
+    .gasgo-table .table {
+        margin-bottom: 0;
+        font-size: 0.9rem;
+        width: 100%;
+        table-layout: auto;
+        display: table;
+    }
+    .gasgo-table thead {
+        background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
+        border-bottom: 2px solid #e8e8e8;
+        display: table-header-group;
+    }
+    .gasgo-table tbody {
+        display: table-row-group;
+        width: 100%;
+    }
+    .gasgo-table thead th {
+        padding: 14px 12px;
+        font-weight: 600;
+        color: #334155;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        border: none;
+    }
+    .gasgo-table tbody tr {
+        border-bottom: 1px solid #f5f5f5;
+        transition: all 0.2s ease;
+        display: table-row;
+        visibility: visible;
+    }
+    .gasgo-table tbody tr:last-child {
+        border-bottom: none;
+    }
+    .gasgo-table tbody td {
+        padding: 12px;
+        vertical-align: middle;
+        color: #333;
+    }
+    .order-row:hover {
+        background: linear-gradient(90deg, rgba(26, 109, 176, 0.04) 0%, rgba(26, 109, 176, 0.02) 100%) !important;
+    }
+    .order-row { 
+        cursor: pointer; 
+        transition: background 0.2s ease;
+        display: table-row !important;
+        visibility: visible !important;
+    }
+    .order-row.hidden {
+        display: none !important;
+    }
+    .order-row.is-updating { opacity:.62; }
     .search-box { position:relative; max-width:320px; }
     .search-box input {
         border-radius:25px; padding:10px 20px 10px 42px; border:2px solid #e0e0e0;
@@ -23,7 +82,22 @@
     }
     .search-box input:focus { border-color:var(--gasgo-blue); outline:none; box-shadow:none; }
     .search-box i { position:absolute; left:16px; top:50%; transform:translateY(-50%); color:#aaa; }
-    .order-row.is-updating { opacity:.62; }
+    /* Status Badge Styles */
+    .badge-status {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    .badge-pending { background: #fef3c7; color: #92400e; }
+    .badge-approved { background: #dbeafe; color: #0c4a6e; }
+    .badge-assigned { background: #e0e7ff; color: #312e81; }
+    .badge-out_for_delivery { background: #f3e8ff; color: #581c87; }
+    .badge-delivered { background: #dcfce7; color: #166534; }
+    .badge-cancelled { background: #fee2e2; color: #991b1b; }
 </style>
 @endsection
 
@@ -60,8 +134,14 @@
         <strong id="selectedCount">0</strong> order(s) selected
     </div>
     <div class="d-flex gap-2">
+        <button type="button" class="btn btn-sm" style="background:#28a745;color:#fff;font-weight:600;" onclick="openBulkApproveModal()">
+            <i class="fas fa-check me-1"></i>Approve Order
+        </button>
         <button type="button" class="btn btn-sm" style="background:var(--gasgo-orange);color:#fff;font-weight:600;" onclick="openBulkAssignModal()">
-            <i class="fas fa-motorcycle me-1"></i>Assign Rider to Selected
+            <i class="fas fa-motorcycle me-1"></i>Assign Rider
+        </button>
+        <button type="button" class="btn btn-sm" style="background:#17a2b8;color:#fff;font-weight:600;" onclick="openBulkMarkOutForDeliveryModal()">
+            <i class="fas fa-truck me-1"></i>Mark as Out for Delivery
         </button>
         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllSelections()">
             Clear
@@ -92,7 +172,7 @@
             @forelse($orders as $order)
                 <tr class="order-row" data-order-id="{{ $order->id }}" data-status="{{ $order->status }}">
                     <td>
-                        @if(in_array($order->status, ['pending', 'approved']))
+                        @if(in_array($order->status, ['pending', 'approved', 'assigned']))
                             <input type="checkbox" class="order-checkbox" value="{{ $order->id }}" onchange="updateBulkSelection()">
                         @endif
                     </td>
@@ -150,6 +230,11 @@
                                 <i class="fas fa-eye me-1"></i>Details
                             </a>
                             @if($order->status === 'pending')
+                                <form action="{{ route('admin.orders.status', $order) }}" method="POST" style="display:inline;">
+                                    @csrf @method('PUT')
+                                    <input type="hidden" name="status" value="approved">
+                                    <button class="btn btn-sm btn-action" style="background:#28a745;color:#fff;" title="Approve Order"><i class="fas fa-check me-1"></i>Approve</button>
+                                </form>
                                 <button class="btn btn-sm btn-action assign-btn" style="background:var(--gasgo-orange);color:#fff;" title="Assign Rider"
                                     data-order-id="{{ $order->id }}" data-order-number="{{ $order->order_number }}">
                                     <i class="fas fa-motorcycle me-1"></i>Assign
@@ -160,13 +245,15 @@
                                     <button class="btn btn-sm btn-action" style="background:#dc3545;color:#fff;" title="Cancel"><i class="fas fa-times"></i></button>
                                 </form>
                             @elseif($order->status === 'approved')
+                                <span class="badge bg-success me-1"><i class="fas fa-check-circle me-1"></i>Approved</span>
                                 <button class="btn btn-sm btn-action assign-btn" style="background:var(--gasgo-orange);color:#fff;" title="Assign Rider"
                                     data-order-id="{{ $order->id }}" data-order-number="{{ $order->order_number }}">
                                     <i class="fas fa-motorcycle me-1"></i>Assign
                                 </button>
                             @elseif(in_array($order->status, ['assigned', 'out_for_delivery']))
+                                <span class="badge bg-info me-1"><i class="fas fa-check-circle me-1"></i>Assigned</span>
                                 <span class="text-muted" style="font-size:.82rem;">
-                                    <i class="fas fa-motorcycle text-info me-1"></i>
+                                    <i class="fas fa-motorcycle me-1"></i>
                                     {{ $order->delivery->rider->name ?? 'Rider' }}
                                 </span>
                             @elseif($order->status === 'delivered')
@@ -308,6 +395,68 @@
         </div>
     </div>
 </div>
+
+<!-- Bulk Approve Modal -->
+<div class="modal fade" id="bulkApproveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius:16px;">
+            <form id="bulkApproveForm" method="POST">
+                @csrf @method('PUT')
+                <div class="modal-header" style="border-bottom:none;">
+                    <h5 class="modal-title fw-bold" style="color:var(--gasgo-blue);">
+                        <i class="fas fa-check me-2" style="color:#28a745;"></i>Approve Orders
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted" style="font-size:.88rem;">
+                        Approve <strong><span id="bulkApproveCount">0</span></strong> selected order(s)?
+                    </p>
+                    <div class="alert alert-info" style="border-radius:12px;font-size:.88rem;">
+                        <i class="fas fa-info-circle me-2"></i>This will change the order status to "Approved" and make them available for rider assignment.
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top:none;">
+                    <button type="button" class="btn" data-bs-dismiss="modal" style="border-radius:10px;">Cancel</button>
+                    <button type="submit" class="btn" style="background:#28a745;color:#fff;border-radius:10px;font-weight:600;">
+                        <i class="fas fa-check me-1"></i>Approve All
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Mark as Out for Delivery Modal -->
+<div class="modal fade" id="bulkMarkOutForDeliveryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius:16px;">
+            <form id="bulkMarkOutForDeliveryForm" method="POST">
+                @csrf @method('PUT')
+                <div class="modal-header" style="border-bottom:none;">
+                    <h5 class="modal-title fw-bold" style="color:var(--gasgo-blue);">
+                        <i class="fas fa-truck me-2" style="color:#17a2b8;"></i>Mark as Out for Delivery
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted" style="font-size:.88rem;">
+                        Mark <strong><span id="bulkMarkOutForDeliveryCount">0</span></strong> selected order(s) as out for delivery?
+                    </p>
+                    <div class="alert alert-info" style="border-radius:12px;font-size:.88rem;">
+                        <i class="fas fa-info-circle me-2"></i>This will change the order status to "Out for Delivery". Use this when riders start their delivery route.
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top:none;">
+                    <button type="button" class="btn" data-bs-dismiss="modal" style="border-radius:10px;">Cancel</button>
+                    <button type="submit" class="btn" style="background:#17a2b8;color:#fff;border-radius:10px;font-weight:600;">
+                        <i class="fas fa-truck me-1"></i>Mark as Out for Delivery
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -425,10 +574,14 @@
             const matchStatus = currentFilter === 'all' || row.dataset.status === currentFilter;
             const matchSearch = !search || row.textContent.toLowerCase().includes(search);
             const visible = matchStatus && matchSearch;
-            row.style.display = visible ? '' : 'none';
-
+            
             if (visible) {
+                row.classList.remove('hidden');
+                row.style.display = '';
                 visibleCount++;
+            } else {
+                row.classList.add('hidden');
+                row.style.display = 'none';
             }
         });
 
@@ -685,8 +838,209 @@
         }
     }
 
+    function openBulkApproveModal() {
+        const selectedIds = getSelectedOrderIds();
+        if (selectedIds.length === 0) {
+            showOrderToast('Please select at least one order.', true);
+            return;
+        }
+        
+        document.getElementById('bulkApproveCount').textContent = selectedIds.length;
+        
+        // Store selected order IDs in hidden inputs
+        let hiddenInputsContainer = document.getElementById('bulkApproveOrderIdsContainer');
+        if (!hiddenInputsContainer) {
+            hiddenInputsContainer = document.createElement('div');
+            hiddenInputsContainer.id = 'bulkApproveOrderIdsContainer';
+            hiddenInputsContainer.style.display = 'none';
+            document.getElementById('bulkApproveForm').appendChild(hiddenInputsContainer);
+        }
+        hiddenInputsContainer.innerHTML = '';
+        
+        selectedIds.forEach(orderId => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'order_ids[]';
+            input.value = orderId;
+            hiddenInputsContainer.appendChild(input);
+        });
+        
+        new bootstrap.Modal(document.getElementById('bulkApproveModal')).show();
+    }
+
+    async function submitBulkApprove(event) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+        const orderIds = Array.from(formData.getAll('order_ids[]'));
+        
+        if (!orderIds.length) {
+            showOrderToast('No orders selected.', true);
+            return;
+        }
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        setButtonLoading(submitBtn, true, 'Approving...');
+        
+        try {
+            const response = await fetch('{{ route("admin.orders.bulk-update-status") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    order_ids: orderIds,
+                    status: 'approved'
+                })
+            });
+
+            if (!response.ok) {
+                showOrderToast('Unable to approve orders. Try again.', true);
+                return;
+            }
+
+            const payload = await response.json();
+            
+            // Remove rows from the table with animation
+            orderIds.forEach(orderId => {
+                const row = document.querySelector(`.order-row[data-order-id="${orderId}"]`);
+                if (row) {
+                    row.style.transition = 'opacity 0.3s ease-out';
+                    row.style.opacity = '0';
+                    setTimeout(() => {
+                        row.style.display = 'none';
+                    }, 300);
+                }
+            });
+            
+            // Close modal and clear selection
+            const modalEl = document.getElementById('bulkApproveModal');
+            bootstrap.Modal.getInstance(modalEl)?.hide();
+            clearAllSelections();
+            
+            // Update counts and filters
+            setTimeout(() => {
+                updateTabCounts();
+                filterOrders();
+            }, 350);
+            
+            showOrderToast(`Successfully approved ${orderIds.length} order(s).`);
+        } catch (error) {
+            showOrderToast('Unable to approve orders. Try again.', true);
+        } finally {
+            setButtonLoading(submitBtn, false);
+        }
+    }
+
+    function openBulkMarkOutForDeliveryModal() {
+        const selectedIds = getSelectedOrderIds();
+        if (selectedIds.length === 0) {
+            showOrderToast('Please select at least one order.', true);
+            return;
+        }
+        
+        document.getElementById('bulkMarkOutForDeliveryCount').textContent = selectedIds.length;
+        
+        // Store selected order IDs in hidden inputs
+        let hiddenInputsContainer = document.getElementById('bulkMarkOutForDeliveryOrderIdsContainer');
+        if (!hiddenInputsContainer) {
+            hiddenInputsContainer = document.createElement('div');
+            hiddenInputsContainer.id = 'bulkMarkOutForDeliveryOrderIdsContainer';
+            hiddenInputsContainer.style.display = 'none';
+            document.getElementById('bulkMarkOutForDeliveryForm').appendChild(hiddenInputsContainer);
+        }
+        hiddenInputsContainer.innerHTML = '';
+        
+        selectedIds.forEach(orderId => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'order_ids[]';
+            input.value = orderId;
+            hiddenInputsContainer.appendChild(input);
+        });
+        
+        new bootstrap.Modal(document.getElementById('bulkMarkOutForDeliveryModal')).show();
+    }
+
+    async function submitBulkMarkOutForDelivery(event) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+        const orderIds = Array.from(formData.getAll('order_ids[]'));
+        
+        if (!orderIds.length) {
+            showOrderToast('No orders selected.', true);
+            return;
+        }
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        setButtonLoading(submitBtn, true, 'Updating...');
+        
+        try {
+            const response = await fetch('{{ route("admin.orders.bulk-update-status") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    order_ids: orderIds,
+                    status: 'out_for_delivery'
+                })
+            });
+
+            if (!response.ok) {
+                showOrderToast('Unable to mark orders as out for delivery. Try again.', true);
+                return;
+            }
+
+            const payload = await response.json();
+            
+            // Remove rows from the table with animation
+            orderIds.forEach(orderId => {
+                const row = document.querySelector(`.order-row[data-order-id="${orderId}"]`);
+                if (row) {
+                    row.style.transition = 'opacity 0.3s ease-out';
+                    row.style.opacity = '0';
+                    setTimeout(() => {
+                        row.style.display = 'none';
+                    }, 300);
+                }
+            });
+            
+            // Close modal and clear selection
+            const modalEl = document.getElementById('bulkMarkOutForDeliveryModal');
+            bootstrap.Modal.getInstance(modalEl)?.hide();
+            clearAllSelections();
+            
+            // Update counts and filters
+            setTimeout(() => {
+                updateTabCounts();
+                filterOrders();
+            }, 350);
+            
+            showOrderToast(`Successfully marked ${orderIds.length} order(s) as out for delivery.`);
+        } catch (error) {
+            showOrderToast('Unable to mark orders as out for delivery. Try again.', true);
+        } finally {
+            setButtonLoading(submitBtn, false);
+        }
+    }
+
     // Event listener for assign buttons
     document.addEventListener('DOMContentLoaded', function() {
+        // Attach form submit handlers
+        const bulkApproveForm = document.getElementById('bulkApproveForm');
+        if (bulkApproveForm) {
+            bulkApproveForm.addEventListener('submit', submitBulkApprove);
+        }
+        
+        const bulkMarkOutForDeliveryForm = document.getElementById('bulkMarkOutForDeliveryForm');
+        if (bulkMarkOutForDeliveryForm) {
+            bulkMarkOutForDeliveryForm.addEventListener('submit', submitBulkMarkOutForDelivery);
+        }
+
         document.querySelectorAll('.assign-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const orderId = this.dataset.orderId;

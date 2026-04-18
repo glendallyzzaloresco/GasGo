@@ -91,19 +91,25 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'category'    => 'required|in:tank,accessories,appliances,freebie',
-            'description' => 'nullable|string',
-            'price'       => 'required|numeric|min:0',
-            'stock'       => 'nullable|integer|min:0',
-            'weight'      => 'nullable|string|max:255',
-            'image'       => 'nullable|image|max:2048',
-            'is_active'   => 'boolean',
+            'name'           => 'required|string|max:255',
+            'category'       => 'required|in:tank,accessories,appliances,freebie',
+            'description'    => 'nullable|string',
+            'price'          => 'nullable|numeric|min:0',
+            'cost_price'     => 'required|numeric|min:0',
+            'selling_price'  => 'required|numeric|min:0',
+            'stock'          => 'nullable|integer|min:0',
+            'weight'         => 'nullable|string|max:255',
+            'image'          => 'nullable|image|max:2048',
+            'is_active'      => 'boolean',
         ]);
 
         $validated['category'] = strtolower((string) $validated['category']);
         $validated['is_active'] = $request->boolean('is_active');
         $validated['stock'] = (int) ($validated['stock'] ?? 0);
+        // If price is not provided, use selling_price as the price
+        if (!isset($validated['price']) || is_null($validated['price'])) {
+            $validated['price'] = $validated['selling_price'];
+        }
 
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('products', 'public');
@@ -152,18 +158,24 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'category'    => 'required|in:tank,accessories,appliances,freebie',
-            'description' => 'nullable|string',
-            'price'       => 'required|numeric|min:0',
-            'stock'       => 'nullable|integer|min:0',
-            'weight'      => 'nullable|string|max:255',
-            'image'       => 'nullable|image|max:2048',
-            'is_active'   => 'boolean',
+            'name'           => 'required|string|max:255',
+            'category'       => 'required|in:tank,accessories,appliances,freebie',
+            'description'    => 'nullable|string',
+            'price'          => 'nullable|numeric|min:0',
+            'cost_price'     => 'required|numeric|min:0',
+            'selling_price'  => 'required|numeric|min:0',
+            'stock'          => 'nullable|integer|min:0',
+            'weight'         => 'nullable|string|max:255',
+            'image'          => 'nullable|image|max:2048',
+            'is_active'      => 'boolean',
         ]);
 
         $validated['category'] = strtolower((string) $validated['category']);
         $validated['is_active'] = $request->boolean('is_active');
+        // If price is not provided, use selling_price as the price
+        if (!isset($validated['price']) || is_null($validated['price'])) {
+            $validated['price'] = $validated['selling_price'];
+        }
 
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('products', 'public');

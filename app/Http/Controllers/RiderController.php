@@ -7,6 +7,7 @@ use App\Models\Rider;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
@@ -82,40 +83,62 @@ class RiderController extends Controller
     public function updateProfile(Request $request)
     {
         $validated = $request->validate([
+            'name'           => 'required|string|max:255',
+            'email'          => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore(Auth::id())],
+            'phone'          => 'nullable|string|max:20',
+            'address'        => 'nullable|string|max:500',
             'vehicle_type'   => 'nullable|string|max:255',
             'plate_number'   => 'nullable|string|max:255',
             'license_number' => 'nullable|string|max:255',
-            'availability'   => 'required|in:available,busy,returning,offline',
+            'availability'   => 'nullable|in:available,busy,returning,offline',
         ]);
 
-        // Store previous availability status
+        // Update user information
+        $user = Auth::user();
+        $user->update([
+            'name' => $validated['name'],
+            'email' => strtolower($validated['email']),
+            'phone' => $validated['phone'],
+            'address' => $validated['address'],
+        ]);
+
+        // Update rider information if exists
         $rider = Rider::where('user_id', Auth::id())->first();
         $previousStatus = $rider?->availability;
 
-        $updated = Rider::updateOrCreate(
-            ['user_id' => Auth::id()],
-            $validated
-        );
+        if ($rider) {
+            $riderData = [
+                'vehicle_type' => $validated['vehicle_type'],
+                'plate_number' => $validated['plate_number'],
+                'license_number' => $validated['license_number'],
+            ];
+            
+            // Add availability if provided
+            if ($validated['availability']) {
+                $riderData['availability'] = $validated['availability'];
+            }
+            
+            $rider->update($riderData);
 
-        // Log status change
-        if ($validated['availability'] !== $previousStatus) {
-            Log::info('Rider Status Changed', [
-                'rider_id' => Auth::id(),
-                'rider_name' => Auth::user()->name,
-                'from_status' => $previousStatus,
-                'to_status' => $validated['availability'],
-                'timestamp' => now(),
-            ]);
+            // Log status change
+            if ($validated['availability'] && $validated['availability'] !== $previousStatus) {
+                Log::info('Rider Status Changed', [
+                    'rider_id' => Auth::id(),
+                    'rider_name' => Auth::user()->name,
+                    'from_status' => $previousStatus,
+                    'to_status' => $validated['availability'],
+                    'timestamp' => now(),
+                ]);
+            }
         }
 
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
-                'message' => 'Status updated successfully.',
-                'availability' => $validated['availability'],
+                'message' => 'Profile updated successfully.',
             ]);
         }
 
-        return redirect()->route('rider.profile')->with('success', 'Profile updated.');
+        return redirect()->route('rider.profile')->with('success', 'Profile updated successfully!');
     }
 
     // Admin: list all riders
@@ -260,24 +283,27 @@ class RiderController extends Controller
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => 'required|string|max:20',
-            'vehicle_type' => 'nullable|string|max:255',
-            'plate_number' => 'nullable|string|max:255',
-            'license_number' => 'nullable|string|max:255',
+            'password' => 'nullable|string|min:6',
         ]);
 
-        // Update user info
-        $user->update([
+        // Prepare update data
+        $updateData = [
             'name' => $validated['name'],
             'email' => strtolower($validated['email']),
             'phone' => $validated['phone'],
-        ]);
+        ];
 
-        // Update rider info
-        $rider->update([
-            'vehicle_type' => $validated['vehicle_type'],
-            'plate_number' => $validated['plate_number'],
-            'license_number' => $validated['license_number'],
-        ]);
+        // Update password if provided
+        if (!empty($validated['password'])) {
+            $updateData['password'] = password_hash($validated['password'], PASSWORD_ARGON2ID, [
+                'memory_cost' => 65536,
+                'time_cost' => 4,
+                'threads' => 1,
+            ]);
+        }
+
+        // Use DB::table to bypass Eloquent's hashed cast
+        DB::table('users')->where('id', $user->id)->update($updateData);
 
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Rider information updated successfully!']);

@@ -117,12 +117,12 @@ class LoyaltyController extends Controller
             ],
             [
                 'id' => 'bulk_bonus',
-                'title' => 'Buy 10+ LPG Quantity → Free LPG Tank',
+                'title' => 'Buy 20+ LPG Quantity → Free LPG Tank',
                 'badge' => 'BULK BONUS',
                 'badgeColor' => 'info',
                 'icon' => 'fas fa-fire',
                 'rules' => [
-                    'Purchase 10 or more LPG units in one checkout',
+                    'Purchase 20 or more LPG units in one checkout',
                     'Automatically added in checkout when qualified',
                     'Free tank delivered with your order',
                 ],

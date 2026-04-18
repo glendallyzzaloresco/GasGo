@@ -200,6 +200,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::get('/orders', [OrderController::class, 'adminIndex'])->name('admin.orders');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('admin.orders.show');
     Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('admin.orders.status');
+    Route::post('/orders/bulk-update-status', [OrderController::class, 'bulkUpdateStatus'])->name('admin.orders.bulk-update-status');
 
     // Products
     Route::get('/products', [ProductController::class, 'adminIndex'])->name('admin.products');
@@ -267,6 +268,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     // Reports & Customers (static views for now)
     Route::get('/reports', [DashboardController::class, 'reports'])->name('admin.reports');
     Route::get('/customers', [DashboardController::class, 'customers'])->name('admin.customers');
+    Route::get('/users', [DashboardController::class, 'users'])->name('admin.users');
 
     // Settings / Maintenance
     Route::get('/settings', [DashboardController::class, 'settings'])->name('admin.settings');

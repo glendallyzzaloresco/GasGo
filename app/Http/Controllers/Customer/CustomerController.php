@@ -7,7 +7,9 @@ use App\Models\Cart;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -130,10 +132,17 @@ class CustomerController extends Controller
         $user->address = $validated['address'] ?? null;
 
         if (! empty($validated['password'])) {
-            $user->password = $validated['password'];
+            // Use DB to directly update password, bypassing the hashed cast to set argon2id
+            DB::table('users')->where('id', $user->id)->update([
+                'password' => password_hash($validated['password'], PASSWORD_ARGON2ID, [
+                    'memory_cost' => 65536,
+                    'time_cost' => 4,
+                    'threads' => 1
+                ])
+            ]);
+        } else {
+            $user->save();
         }
-
-        $user->save();
 
         $message = 'Your account has been updated successfully.';
         if ($request->expectsJson()) {
@@ -154,50 +163,82 @@ class CustomerController extends Controller
             'password' => 'required',
         ]);
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
-            $request->session()->regenerate();
+        // Find user by email
+        $user = User::where('email', $credentials['email'])->first();
 
-            $user = Auth::user();
-
-            $this->mergeSessionCartToDatabase($request, $user->id);
-
-            $redirectPath = route('customer.dashboard');
-            $message = 'Welcome back!';
-
-            // Check if redirect parameter is set (e.g., redirect=checkout)
-            if ($request->query('redirect') === 'checkout') {
-                $redirectPath = route('customer.checkout');
-            } elseif ($user->role === 'admin') {
-                $redirectPath = route('admin.dashboard');
-                $message = 'Welcome back, Admin!';
-            } elseif ($user->role === 'rider') {
-                $redirectPath = route('rider.dashboard');
-                $message = 'Welcome back, Rider!';
-            }
-
+        if (!$user) {
+            $message = 'The provided credentials do not match our records.';
             if ($request->expectsJson()) {
                 return response()->json([
-                    'success' => true,
-                    'message' => $message,
-                    'redirect' => $redirectPath
-                ], 200);
+                    'success' => false,
+                    'message' => $message
+                ], 401);
             }
-
-            return redirect($redirectPath)
-                ->with('success', $message);
+            return back()
+                ->withInput($request->only('email'))
+                ->with('error', $message);
         }
 
-        $message = 'The provided credentials do not match our records.';
+        // Verify password using native PHP password_verify (supports all algorithms)
+        if (!password_verify($credentials['password'], $user->password)) {
+            $message = 'The provided credentials do not match our records.';
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message
+                ], 401);
+            }
+            return back()
+                ->withInput($request->only('email'))
+                ->with('error', $message);
+        }
+
+        // Password is valid - log the user in
+        Auth::login($user, $request->boolean('remember'));
+        $request->session()->regenerate();
+
+        // Auto-upgrade bcrypt passwords to argon2id on successful login
+        $isBcryptHash = strpos($user->password, '$2y$') === 0 || strpos($user->password, '$2a$') === 0;
+        if ($isBcryptHash) {
+            try {
+                // Hash with argon2id using native PHP function
+                $hashedPassword = password_hash($credentials['password'], PASSWORD_ARGON2ID, [
+                    'memory_cost' => 65536,
+                    'time_cost' => 4,
+                    'threads' => 1
+                ]);
+                DB::table('users')->where('id', $user->id)->update(['password' => $hashedPassword]);
+            } catch (\Exception $e) {
+                // Silently fail password upgrade, user is already logged in
+            }
+        }
+
+        $this->mergeSessionCartToDatabase($request, $user->id);
+
+        $redirectPath = route('customer.dashboard');
+        $message = 'Welcome back!';
+
+        // Check if redirect parameter is set (e.g., redirect=checkout)
+        if ($request->query('redirect') === 'checkout') {
+            $redirectPath = route('customer.checkout');
+        } elseif ($user->role === 'admin') {
+            $redirectPath = route('admin.dashboard');
+            $message = 'Welcome back, Admin!';
+        } elseif ($user->role === 'rider') {
+            $redirectPath = route('rider.dashboard');
+            $message = 'Welcome back, Rider!';
+        }
+
         if ($request->expectsJson()) {
             return response()->json([
-                'success' => false,
-                'message' => $message
-            ], 401);
+                'success' => true,
+                'message' => $message,
+                'redirect' => $redirectPath
+            ], 200);
         }
 
-        return back()
-            ->withInput($request->only('email'))
-            ->with('error', $message);
+        return redirect($redirectPath)
+            ->with('success', $message);
     }
 
     public function logout(Request $request)
@@ -235,14 +276,26 @@ class CustomerController extends Controller
             'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
         ]);
 
-        $user = User::create([
+        // Hash password with argon2id
+        $hashedPassword = password_hash($validated['password'], PASSWORD_ARGON2ID, [
+            'memory_cost' => 65536,
+            'time_cost' => 4,
+            'threads' => 1
+        ]);
+
+        // Create user using DB to bypass hashed cast
+        $userId = DB::table('users')->insertGetId([
             'name' => $validated['name'],
             'email' => strtolower($validated['email']),
             'phone' => $validated['phone'],
             'address' => $validated['address'] ?? null,
-            'password' => $validated['password'],
+            'password' => $hashedPassword,
             'role' => 'customer',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
+
+        $user = User::find($userId);
 
         Auth::login($user);
         $request->session()->regenerate();

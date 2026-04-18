@@ -488,7 +488,7 @@
         <div class="sidebar-section">Reports</div>
         <ul class="sidebar-menu">
             <li><a href="{{ url('/admin/reports') }}" class="@yield('nav-reports')"><i class="fas fa-chart-bar"></i>Sales Reports</a></li>
-            <li><a href="{{ url('/admin/customers') }}" class="@yield('nav-customers')"><i class="fas fa-users"></i>Customers</a></li>
+            <li><a href="{{ url('/admin/users') }}" class="@yield('nav-users')"><i class="fas fa-users-cog"></i>User Management</a></li>
         </ul>
         <div class="sidebar-section">Maintenance</div>
         <ul class="sidebar-menu">

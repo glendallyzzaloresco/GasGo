@@ -66,12 +66,20 @@
                 @method('PUT')
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Availability Status</label>
-                        <select name="availability" class="form-control" required>
-                            <option value="available" {{ $rider?->availability === 'available' ? 'selected' : '' }}>Available</option>
-                            <option value="busy" {{ $rider?->availability === 'busy' ? 'selected' : '' }}>Busy</option>
-                            <option value="offline" {{ $rider?->availability === 'offline' ? 'selected' : '' }}>Offline</option>
-                        </select>
+                        <label class="form-label fw-bold">Full Name</label>
+                        <input type="text" name="name" class="form-control" value="{{ auth()->user()->name }}" required style="border-radius:10px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email Address</label>
+                        <input type="email" name="email" class="form-control" value="{{ auth()->user()->email }}" required style="border-radius:10px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Phone Number</label>
+                        <input type="text" name="phone" class="form-control" value="{{ auth()->user()->phone ?? '' }}" placeholder="09XX-XXX-XXXX" style="border-radius:10px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Address</label>
+                        <textarea name="address" class="form-control" rows="3" placeholder="Enter your address" style="border-radius:10px;">{{ auth()->user()->address ?? '' }}</textarea>
                     </div>
                 </div>
                 <div class="modal-footer" style="border-top:none;">

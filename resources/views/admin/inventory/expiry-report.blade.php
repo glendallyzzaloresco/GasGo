@@ -230,7 +230,6 @@
                 <thead>
                     <tr>
                         <th>Product Name</th>
-                        <th class="text-center">SKU</th>
                         <th class="text-center">Current Stock</th>
                         <th class="text-center">Expiry Date</th>
                         <th class="text-center">Days Expired</th>
@@ -245,9 +244,6 @@
                         <tr class="expired-row">
                             <td>
                                 <strong>{{ $item->product->name }}</strong>
-                            </td>
-                            <td class="text-center">
-                                <small>{{ $item->product->sku ?? 'N/A' }}</small>
                             </td>
                             <td class="text-center">
                                 {{ $item->quantity_on_hand }} units
@@ -286,7 +282,6 @@
                 <thead>
                     <tr>
                         <th>Product Name</th>
-                        <th class="text-center">SKU</th>
                         <th class="text-center">Current Stock</th>
                         <th class="text-center">Expiry Date</th>
                         <th class="text-center">Days Remaining</th>
@@ -302,9 +297,6 @@
                         <tr class="expiring-row">
                             <td>
                                 <strong>{{ $item->product->name }}</strong>
-                            </td>
-                            <td class="text-center">
-                                <small>{{ $item->product->sku ?? 'N/A' }}</small>
                             </td>
                             <td class="text-center">
                                 {{ $item->quantity_on_hand }} units

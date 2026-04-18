@@ -77,8 +77,7 @@
 
     <div class="edit-form">
         <div class="product-info">
-            <strong>{{ $inventory->product->name }}</strong> 
-            <span class="text-muted ms-3">SKU: {{ $inventory->product->sku ?? 'N/A' }}</span>
+            <strong>{{ $inventory->product->name }}</strong>
         </div>
 
         <form action="{{ route('admin.inventory.update', $inventory) }}" method="POST">
