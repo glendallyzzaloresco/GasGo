@@ -21,7 +21,6 @@ class InventorySeeder extends Seeder
                 ['product_id' => $product->id],
                 [
                     'quantity_on_hand' => $product->stock ?? 0,
-                    'reorder_level' => 5,
                     'status' => $product->is_active ? 'active' : 'discontinued',
                     'supplier' => null,
                     'last_restocked' => now(),

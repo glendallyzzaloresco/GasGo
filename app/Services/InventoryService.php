@@ -198,7 +198,24 @@ class InventoryService
                 'created_by' => $userId ?? auth()?->id(),
             ]);
 
-            // Update product stock
+            // Get inventory and update quantity_on_hand (this is the source of truth)
+            $inventory = \App\Models\Inventory::where('product_id', $productId)->lockForUpdate()->first();
+            
+            if ($inventory) {
+                if ($type === 'IN') {
+                    $inventory->increment('quantity_on_hand', $quantity);
+                } elseif ($type === 'OUT') {
+                    $inventory->decrement('quantity_on_hand', $quantity);
+                } elseif ($type === 'ADJUSTMENT') {
+                    if ($isNegative) {
+                        $inventory->decrement('quantity_on_hand', $quantity);
+                    } else {
+                        $inventory->increment('quantity_on_hand', $quantity);
+                    }
+                }
+            }
+
+            // Update product stock to match inventory (backup sync)
             if ($type === 'IN') {
                 $product->increment('stock', $quantity);
             } elseif ($type === 'OUT') {

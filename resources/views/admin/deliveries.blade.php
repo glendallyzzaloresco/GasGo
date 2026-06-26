@@ -151,9 +151,7 @@
                         <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
                             <strong>Rider:</strong> {{ $delivery->rider->name ?? 'Unassigned' }}
                         </div>
-                        <div style="font-size:.82rem; color:#666;">
-                            <strong>Address:</strong> {{ $delivery->order->address_full ?? 'N/A' }}
-                        </div>
+                        
                     </div>
                 </div>
                 <div class="timeline-mini">

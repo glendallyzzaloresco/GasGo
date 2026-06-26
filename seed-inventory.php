@@ -22,11 +22,9 @@ foreach ($products as $product) {
         Inventory::create([
             'product_id' => $product->id,
             'quantity_on_hand' => rand(10, 50),
-            'reorder_level' => rand(5, 15),
             'supplier' => 'Premium Gas Co.',
             'status' => 'active',
             'expiry_date' => now()->addMonths(rand(3, 12)),
-            'batch_number' => 'BATCH' . date('YmdHi'),
             'last_restocked' => now()->subDays(rand(1, 30))
         ]);
         $count++;

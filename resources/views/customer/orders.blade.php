@@ -160,6 +160,7 @@
             <div class="order-footer">
                 <div>
                     <span class="order-total">Total: ₱{{ number_format($order->total_amount, 2) }}</span>
+                    <div style="font-size:.85rem;color:#555;margin-top:4px;">Delivery Fee: ₱{{ number_format($order->delivery_fee, 2) }}</div>
                     @if ((float) $order->discount > 0)
                         <div style="font-size:.8rem;color:#1e7e34;font-weight:600;">
                             <i class="fas fa-tag me-1"></i>Reward Discount Applied: ₱{{ number_format($order->discount, 2) }}

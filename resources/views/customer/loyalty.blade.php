@@ -678,10 +678,10 @@ Generate the corrected controller/service logic and the template updates.S =====
                 <div class="progress-info">
                     <div class="progress-info-item">
                         <strong>{{ $completedOrders }}</strong>
-                        <small>Orders Completed</small>
+                        <small>Total Delivered Orders</small>
                     </div>
                     <div class="progress-info-item">
-                        <strong>{{ $totalEarned }}</strong>
+                        <strong>{{ $balance }}</strong>
                         <small>Points Earned</small>
                     </div>
                     <div class="progress-info-item">
@@ -690,13 +690,13 @@ Generate the corrected controller/service logic and the template updates.S =====
                     </div>
                 </div>
 
-                @if ($completedOrders < 30)
+                @if ($balance < $nextMilestone)
                 <p style="font-weight: 600; color: var(--gasgo-blue);">Progress to Unlock Voucher</p>
-                <div class="progress-bar-gasgo" style="--fill-width: {{ ($completedOrders / $nextMilestone) * 100 }}%;">
+                <div class="progress-bar-gasgo" style="--fill-width: {{ ($balance / $nextMilestone) * 100 }}%;">
                     <div class="fill"></div>
                 </div>
                 <p class="text-muted mb-3" style="font-size: 0.9rem;">
-                    <strong>{{ $pointsToNextReward }} more delivered order{{ $pointsToNextReward === 1 ? '' : 's' }}</strong> to unlock ₱{{ $nextReward }} OFF voucher
+                    <strong>{{ $pointsToNextReward }} more points</strong> to unlock ₱{{ $nextReward }} OFF voucher
                 </p>
                 @else
                 <div style="background: linear-gradient(135deg, var(--gasgo-orange), #ff6b35); color: white; padding: 20px; border-radius: 12px; text-align: center;">
@@ -761,7 +761,7 @@ Generate the corrected controller/service logic and the template updates.S =====
                         <div>
                             <strong style="color: var(--gasgo-blue);">No vouchers unlocked yet!</strong>
                             <p style="margin: 4px 0 0 0; font-size: 0.9rem; color: #666;">
-                                Complete <strong>{{ $pointsToNextReward }} more delivered order{{ $pointsToNextReward === 1 ? '' : 's' }}</strong> to unlock your first voucher!
+                                Earn <strong>{{ $pointsToNextReward }} more points</strong> to unlock your first voucher!
                             </p>
                         </div>
                     </div>
@@ -801,7 +801,7 @@ Generate the corrected controller/service logic and the template updates.S =====
                         <div style="background: rgba(247, 148, 29, 0.1); padding: 10px; border-radius: 8px;">
                             <small style="color: var(--gasgo-orange); display: block; font-weight: 600;">
                                 <i class="fas fa-target me-1"></i>
-                                {{ max(0, $voucher->reward_points_required - $completedOrders) }} more delivered order{{ max(0, $voucher->reward_points_required - $completedOrders) === 1 ? '' : 's' }} to unlock
+                                {{ max(0, $voucher->reward_points_required - $balance) }} more points to unlock (₱{{ number_format(max(0, $voucher->reward_points_required - $balance) * 100, 0) }} spend)
                             </small>
                         </div>
                     </div>
@@ -842,9 +842,9 @@ Generate the corrected controller/service logic and the template updates.S =====
                 @endif
                 <h6>{{ $voucher->name }}</h6>
                 <p class="reward-requirement">
-                    <strong>₱{{ number_format($voucher->discount_amount, 2) }} OFF</strong> • Unlock at {{ $voucher->reward_points_required }} orders
+                    <strong>₱{{ number_format($voucher->discount_amount, 2) }} OFF</strong> • Unlock at {{ $voucher->reward_points_required }} points (₱{{ number_format($voucher->reward_points_required * 100, 0) }} spend)
                     @if (!$voucher->isUnlocked)
-                        • {{ max(0, $voucher->reward_points_required - $completedOrders) }} more orders needed
+                        • {{ max(0, $voucher->reward_points_required - $balance) }} more points needed (₱{{ number_format(max(0, $voucher->reward_points_required - $balance) * 100, 0) }} spend)
                     @endif
                 </p>
             </div>
@@ -934,7 +934,9 @@ Generate the corrected controller/service logic and the template updates.S =====
                     </span>
                 </div>
                 <h6>{{ $reward['title'] }}</h6>
-                <p class="reward-requirement">{{ $reward['requirement'] }}</p>
+                <p class="reward-requirement">
+                    {{ $reward['requirement'] }} @if(isset($reward['spendRequirement'])) • ₱{{ number_format($reward['spendRequirement'], 0) }} spend @endif
+                </p>
                 <small style="color: #999; font-size: 0.75rem; display: block; margin-top: 10px;">Login to earn</small>
             </div>
             @endforeach

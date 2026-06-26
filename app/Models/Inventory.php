@@ -16,12 +16,10 @@ class Inventory extends Model
         'product_id',
         'quantity_on_hand',
         'empty_on_hand',
-        'reorder_level',
         'last_restocked',
         'supplier',
         'status',
         'expiry_date',
-        'batch_number',
     ];
 
     protected $casts = [
@@ -46,11 +44,11 @@ class Inventory extends Model
     }
 
     /**
-     * Check if inventory is low (below reorder level)
+     * Check if inventory is low (below fixed threshold)
      */
     public function isLow()
     {
-        return $this->quantity_on_hand <= $this->reorder_level;
+        return $this->quantity_on_hand <= 5;
     }
 
     /**

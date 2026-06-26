@@ -608,15 +608,16 @@
                             <i class="fas fa-phone"></i>
                             {{ $delivery->order->contact_number }}
                         </div>
+                        <div class="task-fee" style="font-size:.82rem;color:#555;margin-top:4px;">
+                            Delivery Fee: ₱{{ number_format($delivery->order->delivery_fee, 2) }}
+                        </div>
                         <div class="task-amount">₱{{ number_format($delivery->order->total_amount, 2) }}</div>
                     </div>
                     <div class="task-actions">
                         <button type="button" class="btn-locate" data-action="locate">
                             <i class="fas fa-crosshairs"></i> LOCATE
                         </button>
-                        <button type="button" class="btn-navigate" data-action="navigate">
-                            <i class="fas fa-directions"></i>
-                        </button>
+                       
                         <a href="tel:{{ $delivery->order->contact_number }}" class="btn-call" data-action="call">
                             <i class="fas fa-phone"></i>
                         </a>

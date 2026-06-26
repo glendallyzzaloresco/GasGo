@@ -93,7 +93,7 @@ class InventoryController extends Controller
                     // Custom method: In Stock, Low Stock, Out of Stock
                     if ($item->quantity_on_hand == 0) {
                         return "C_out";
-                    } elseif ($item->quantity_on_hand <= $item->reorder_level) {
+                    } elseif ($item->quantity_on_hand <= 5) {
                         return "B_low";
                     }
                     return "A_ok";
@@ -254,11 +254,9 @@ class InventoryController extends Controller
     public function update(Request $request, Inventory $inventory)
     {
         $validated = $request->validate([
-            'reorder_level' => 'required|integer|min:0',
             'supplier' => 'nullable|string|max:255',
             'status' => 'required|in:active,discontinued,damaged',
             'expiry_date' => 'nullable|date|after:today',
-            'batch_number' => 'nullable|string|max:255',
         ]);
 
         // Update only settings fields - never update quantity_on_hand here
@@ -316,7 +314,7 @@ class InventoryController extends Controller
     public function reorderReport()
     {
         $lowStockItems = Inventory::with('product')
-            ->whereRaw('quantity_on_hand <= reorder_level')
+            ->where('quantity_on_hand', '<=', 5)
             ->orderBy('quantity_on_hand')
             ->get();
 
@@ -354,11 +352,10 @@ class InventoryController extends Controller
 
         foreach ($inventories as $inv) {
             $csv .= sprintf(
-                '"%s","%s",%d,%d,"%s","%s","%s","%s"' . "\n",
+                '"%s","%s",%d,"%s","%s","%s","%s"' . "\n",
                 $inv->product->name,
                 $inv->product->sku ?? 'N/A',
                 $inv->quantity_on_hand,
-                $inv->reorder_level,
                 $inv->status,
                 $inv->supplier ?? 'N/A',
                 $inv->expiry_date ?? 'N/A',

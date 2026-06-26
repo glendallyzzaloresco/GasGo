@@ -119,7 +119,7 @@
 
     @php
         $lowStockItems = \App\Models\Inventory::with('product')
-            ->whereRaw('quantity_on_hand <= reorder_level')
+            ->where('quantity_on_hand', '<=', 5)
             ->orderBy('quantity_on_hand', 'asc')
             ->get();
     @endphp
@@ -140,7 +140,7 @@
             
             <div class="summary-card">
                 <i class="fas fa-layer-group" style="font-size: 2rem; color: #f39c12;"></i>
-                <div class="number">{{ $lowStockItems->sum('reorder_level') }}</div>
+                <div class="number">{{ $lowStockItems->sum(fn($item) => max(0, 5 - $item->quantity_on_hand)) }}</div>
                 <div class="label">Total Reorder Needed</div>
             </div>
         </div>
@@ -151,7 +151,7 @@
                     <tr>
                         <th>Product Name</th>
                         <th class="text-center">Current Stock</th>
-                        <th class="text-center">Reorder Level</th>
+                        <th class="text-center">Threshold</th>
                         <th class="text-center">Shortage</th>
                         <th>Supplier</th>
                         <th class="text-center">Actions</th>
@@ -160,8 +160,8 @@
                 <tbody>
                     @foreach($lowStockItems as $item)
                         @php
-                            $shortage = $item->reorder_level - $item->quantity_on_hand;
-                            $percentage = ($item->quantity_on_hand / $item->reorder_level) * 100;
+                            $threshold = 5;
+                            $shortage = max(0, $threshold - $item->quantity_on_hand);
                         @endphp
                         <tr class="urgency-critical">
                             <td>
@@ -170,7 +170,7 @@
                             <td class="text-center">
                                 <span class="quantity-low">{{ $item->quantity_on_hand }}</span>
                             </td>
-                            <td class="text-center">{{ $item->reorder_level }}</td>
+                            <td class="text-center">{{ $threshold }}</td>
                             <td class="text-center">
                                 <span class="deficit-badge">
                                     <i class="fas fa-arrow-up me-1"></i>{{ $shortage }} units

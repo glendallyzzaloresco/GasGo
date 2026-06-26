@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\HomepageSetting;
+use App\Models\Inventory;
+use App\Observers\InventoryObserver;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
@@ -60,5 +62,8 @@ class AppServiceProvider extends ServiceProvider
                 $view->with('homepageSettings', $defaults);
             }
         });
+
+        // Register Inventory Observer to sync product.stock with inventory.quantity_on_hand
+        Inventory::observe(InventoryObserver::class);
     }
 }

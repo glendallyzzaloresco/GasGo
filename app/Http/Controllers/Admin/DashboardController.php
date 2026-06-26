@@ -26,7 +26,7 @@ class DashboardController extends Controller
         $totalOrders = Order::count();
         $revenue = Order::whereHas('delivery', function ($query) {
             $query->where('status', 'delivered');
-        })->sum('total_amount');
+        })->selectRaw('COALESCE(SUM(subtotal - discount), 0) as revenue')->value('revenue') ?? 0;
         $pendingOrders = Order::where('status', 'pending')->count();
         $totalCustomers = User::where('role', 'customer')->count();
 
@@ -137,7 +137,7 @@ class DashboardController extends Controller
 
     public function riders()
     {
-        return view('admin.riders');
+        return redirect()->route('admin.users');
     }
 
     public function deliveries()
@@ -211,7 +211,7 @@ class DashboardController extends Controller
         $applyDateRange($ordersInPeriod);
 
         // Total revenue from filtered delivered orders
-        $totalRevenue = (clone $ordersInPeriod)->sum('total_amount');
+        $totalRevenue = (clone $ordersInPeriod)->selectRaw('COALESCE(SUM(subtotal - discount), 0) as revenue')->value('revenue') ?? 0;
 
         // Total orders count in selected period
         $totalOrders = (clone $ordersInPeriod)->count();
@@ -247,7 +247,7 @@ class DashboardController extends Controller
             $query->where('status', 'delivered');
         })
             ->whereNotNull('payment_method')
-            ->selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as revenue')
+            ->selectRaw('payment_method, COUNT(*) as count, COALESCE(SUM(subtotal - discount), 0) as revenue')
             ->groupBy('payment_method');
         $applyDateRange($paymentMethodsQuery);
         $paymentMethods = $paymentMethodsQuery->get();
@@ -322,7 +322,8 @@ class DashboardController extends Controller
             })
                 ->whereYear('created_at', $monthDate->year)
                 ->whereMonth('created_at', $monthDate->month)
-                ->sum('total_amount');
+                ->selectRaw('COALESCE(SUM(subtotal - discount), 0) as revenue')
+                ->value('revenue') ?? 0;
 
             return [
                 'label' => $monthDate->format('M'),
@@ -348,7 +349,7 @@ class DashboardController extends Controller
                 'users.name',
                 'users.email',
                 DB::raw('COUNT(orders.id) as total_orders'),
-                DB::raw('SUM(orders.total_amount) as total_spent')
+                DB::raw('COALESCE(SUM(orders.subtotal - orders.discount), 0) as total_spent')
             )
             ->groupBy('users.id', 'users.name', 'users.email')
             ->orderByDesc('total_spent')
@@ -453,7 +454,10 @@ class DashboardController extends Controller
         // Calculate stats for each customer
         $customerStats = $customers->map(function ($customer) {
             $totalOrders = $customer->orders->count();
-            $totalSpent = $customer->orders->sum('total_amount');
+            $deliveredOrders = $customer->orders->where('status', 'delivered');
+            $productTotal = $deliveredOrders->sum(fn($order) => $order->fee_free_total);
+            $deliveryTotal = $deliveredOrders->sum('delivery_fee');
+            $totalSpent = $productTotal + $deliveryTotal;
             $loyaltyPoints = $customer->loyaltyPoints->where('type', 'earned')->sum('points') - 
                             $customer->loyaltyPoints->where('type', 'redeemed')->sum('points');
             $lastOrder = $customer->orders->sortByDesc('created_at')->first();
@@ -537,7 +541,10 @@ class DashboardController extends Controller
 
         $customerStats = $customers->map(function ($customer) {
             $totalOrders = $customer->orders->count();
-            $totalSpent = $customer->orders->sum('total_amount');
+            $deliveredOrders = $customer->orders->where('status', 'delivered');
+            $productTotal = $deliveredOrders->sum(fn($order) => $order->fee_free_total);
+            $deliveryTotal = $deliveredOrders->sum('delivery_fee');
+            $totalSpent = $productTotal + $deliveryTotal;
             $loyaltyPoints = $customer->loyaltyPoints->where('type', 'earned')->sum('points') - 
                             $customer->loyaltyPoints->where('type', 'redeemed')->sum('points');
 
@@ -558,6 +565,8 @@ class DashboardController extends Controller
             return [
                 'customer' => $customer,
                 'totalOrders' => $totalOrders,
+                'productTotal' => $productTotal,
+                'deliveryTotal' => $deliveryTotal,
                 'totalSpent' => $totalSpent,
                 'loyaltyPoints' => $loyaltyPoints,
                 'loyaltyTier' => $loyaltyTier,
@@ -626,14 +635,14 @@ class DashboardController extends Controller
                 $query->where('is_active', true)
                     ->where('price', '>', 0);
             })
-            ->whereRaw('quantity_on_hand <= reorder_level')
+            ->where('quantity_on_hand', '<=', 5)
             ->count();
         $lowStockAt = Inventory::query()
             ->whereHas('product', function ($query) {
                 $query->where('is_active', true)
                     ->where('price', '>', 0);
             })
-            ->whereRaw('quantity_on_hand <= reorder_level')
+            ->where('quantity_on_hand', '<=', 5)
             ->max('updated_at');
         if ($lowStockCount > 0) {
             $items[] = [
@@ -765,6 +774,18 @@ class DashboardController extends Controller
         $homepageSettings->update($validated);
 
         return back()->with('success', 'GCash account details updated successfully.');
+    }
+
+    public function updateDeliveryFee(Request $request)
+    {
+        $validated = $request->validate([
+            'delivery_fee' => 'required|numeric|min:0',
+        ]);
+
+        $homepageSettings = HomepageSetting::singleton();
+        $homepageSettings->update(['delivery_fee' => $validated['delivery_fee']]);
+
+        return back()->with('success', 'Delivery fee updated successfully.');
     }
 
     public function profile()

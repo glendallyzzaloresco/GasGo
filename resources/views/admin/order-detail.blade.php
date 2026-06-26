@@ -242,9 +242,17 @@
                     <div class="detail-value">₱{{ number_format($order->delivery_fee, 2) }}</div>
                 </div>
             </div>
+            @if($order->discount > 0)
+                <div class="detail-row">
+                    <div class="detail-col">
+                        <span class="detail-label">Discount Applied</span>
+                        <div class="detail-value text-danger">-₱{{ number_format($order->discount, 2) }}</div>
+                    </div>
+                </div>
+            @endif
             <div class="detail-row">
                 <div class="detail-col">
-                    <span class="detail-label" style="font-size: 1rem;">Total Amount</span>
+                    <span class="detail-label">Total Amount</span>
                     <div class="detail-value" style="font-size: 1.3rem; font-weight: 700; color: var(--gasgo-orange);">₱{{ number_format($order->total_amount, 2) }}</div>
                 </div>
             </div>
@@ -260,7 +268,20 @@
         </div>
 
         <!-- Actions -->
-        @if($order->status === 'pending' || $order->status === 'approved')
+        @if($order->status === 'pending')
+            <div class="detail-card" style="background: #f8f9fa; border: 2px dashed #28a745;">
+                <h5 style="color: #28a745;"><i class="fas fa-check-circle"></i>Approve Order</h5>
+                <p class="text-muted mb-3" style="font-size: .9rem;">Approve this order so it can be assigned to a rider.</p>
+                <form action="{{ route('admin.orders.status', $order) }}" method="POST">
+                    @csrf
+                    @method('PUT')
+                    <input type="hidden" name="status" value="approved">
+                    <button type="submit" class="btn btn-gasgo w-100" style="background:#28a745; color:#fff; font-weight:700;">
+                        <i class="fas fa-check me-2"></i>Approve Order
+                    </button>
+                </form>
+            </div>
+        @elseif($order->status === 'approved')
             <div class="detail-card" style="background: #f8f9fa; border: 2px dashed var(--gasgo-orange);">
                 <h5 style="color: var(--gasgo-orange);"><i class="fas fa-motorcycle"></i>Assign Rider</h5>
                 <p class="text-muted mb-3" style="font-size: .9rem;">Ready to assign this order to a rider?</p>
@@ -274,26 +295,95 @@
     </div>
 </div>
 
+<!-- Assign Rider Modal -->
+<div class="modal fade" id="assignRiderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius:16px;">
+            <form id="assignRiderForm" method="POST" action="{{ route('admin.deliveries.store') }}">
+                @csrf
+                <input type="hidden" name="order_id" id="assignOrderId" value="{{ $order->id }}">
+                <div class="modal-header" style="border-bottom:none;">
+                    <h5 class="modal-title fw-bold" style="color:var(--gasgo-blue);">
+                        <i class="fas fa-motorcycle me-2" style="color:var(--gasgo-orange);"></i>Assign Rider
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted" style="font-size:.88rem;">
+                        Assign a rider to order <strong id="assignOrderNumber">#{{ $order->order_number }}</strong>:
+                    </p>
+                    @if($riders->count() > 0)
+                        <div class="list-group">
+                            @foreach($riders as $rider)
+                                <label class="list-group-item d-flex align-items-center gap-3 mb-2" style="border-radius:12px;cursor:pointer;">
+                                    <input type="radio" name="rider_id" value="{{ $rider->user_id }}" class="form-check-input" required>
+                                    <div>
+                                        <div class="fw-bold">{{ $rider->user->name ?? 'Unknown' }}</div>
+                                        <small class="text-muted">
+                                            {{ $rider->vehicle_type ?? 'No vehicle info' }}
+                                            @if($rider->plate_number) &bull; {{ $rider->plate_number }} @endif
+                                        </small>
+                                    </div>
+                                    @if($rider->availability === 'available')
+                                        <span class="badge bg-success ms-auto">Available</span>
+                                    @elseif($rider->availability === 'busy')
+                                        <span class="badge bg-warning text-dark ms-auto">Busy</span>
+                                    @elseif($rider->availability === 'returning')
+                                        <span class="badge bg-info ms-auto">Returning to Store</span>
+                                    @else
+                                        <span class="badge bg-secondary ms-auto">Offline</span>
+                                    @endif
+                                </label>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="alert alert-warning" style="border-radius:12px;">
+                            <i class="fas fa-exclamation-triangle me-2"></i>No riders are currently online. Please wait for a rider to come online.
+                        </div>
+                    @endif
+                </div>
+                <div class="modal-footer" style="border-top:none;">
+                    <button type="button" class="btn" data-bs-dismiss="modal" style="border-radius:10px;">Cancel</button>
+                    @if($riders->count() > 0)
+                        <button type="submit" class="btn" style="background:var(--gasgo-orange);color:#fff;border-radius:10px;font-weight:600;">
+                            <i class="fas fa-check me-1"></i>Assign Rider
+                        </button>
+                    @endif
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @endsection
 
-@push('scripts')
+@section('scripts')
 <script>
-document.querySelectorAll('.assign-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const orderId = this.dataset.orderId;
-        const orderNumber = this.dataset.orderNumber;
-        
-        // Trigger the modal or action
-        openAssignModal(orderId, orderNumber);
+    document.addEventListener('DOMContentLoaded', function() {
+        const assignButton = document.querySelector('.assign-btn');
+        if (assignButton) {
+            assignButton.addEventListener('click', function() {
+                const orderId = this.dataset.orderId;
+                const orderNumber = this.dataset.orderNumber;
+                openAssignModal(orderId, orderNumber);
+            });
+        }
     });
-});
 
-function openAssignModal(orderId, orderNumber) {
-    // This will trigger the assign rider modal from your existing code
-    const assignBtn = document.querySelector(`[data-order-id="${orderId}"]`);
-    if (assignBtn && assignBtn.classList.contains('assign-btn')) {
-        assignBtn.click();
+    function openAssignModal(orderId, orderNumber) {
+        const orderInput = document.getElementById('assignOrderId');
+        const orderLabel = document.getElementById('assignOrderNumber');
+        if (orderInput) {
+            orderInput.value = orderId;
+        }
+        if (orderLabel) {
+            orderLabel.textContent = '#' + orderNumber;
+        }
+        document.querySelectorAll('#assignRiderForm input[name="rider_id"]').forEach(r => r.checked = false);
+        const modalElement = document.getElementById('assignRiderModal');
+        if (modalElement) {
+            new bootstrap.Modal(modalElement).show();
+        }
     }
-}
 </script>
-@endpush
+@endsection

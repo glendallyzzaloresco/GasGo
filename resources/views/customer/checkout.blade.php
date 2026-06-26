@@ -175,6 +175,25 @@
     @endphp
     <form action="{{ route('customer.order.store') }}" method="POST" id="checkoutForm" enctype="multipart/form-data">
         @csrf
+        @if (session('success'))
+            <div class="alert alert-success" style="margin-bottom: 18px;">
+                {{ session('success') }}
+            </div>
+        @endif
+        @if (session('error'))
+            <div class="alert alert-danger" style="margin-bottom: 18px;">
+                {{ session('error') }}
+            </div>
+        @endif
+        @if ($errors->any())
+            <div class="alert alert-danger" style="margin-bottom: 18px;">
+                <ul style="margin: 0; padding-left: 18px;">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
         <div class="row g-4">
             <div class="col-lg-8">
                 <!-- Delivery Address -->
@@ -183,7 +202,7 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Full Name</label>
-                            <input type="text" class="form-control form-control-gasgo" value="{{ Auth::user()->name }}" readonly>
+                            <input type="text" class="form-control form-control-gasgo" name="customer_name" value="{{ Auth::user()->name }}" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Contact Number</label>
@@ -201,20 +220,21 @@
                             <input type="text" class="form-control form-control-gasgo" name="notes" value="{{ old('notes') }}" placeholder="Landmark, gate color, etc.">
                         </div>
                         <div class="col-12 mt-2">
-                            <label class="form-label"><i class="fas fa-map me-1" style="color:var(--gasgo-orange)"></i>Pin Your Location <span style="color: #999; font-weight: normal;">(Optional)</span></label>
+                            <label class="form-label"><i class="fas fa-map me-1" style="color:var(--gasgo-orange)"></i>Pin Your Location <span style="color: #e74c3c; font-weight: 600;">*</span></label>
                             <div class="map-search-wrap">
                                 <input type="text" id="mapSearch" placeholder="Search address or place..." autocomplete="off">
-                                <button type="button" class="search-btn" id="mapSearchBtn" onclick="searchAddress()"><i class="fas fa-search" id="mapSearchBtnIcon"></i></button>
+                                    <button type="button" class="search-btn" id="mapSearchBtn"><i class="fas fa-search" id="mapSearchBtnIcon"></i></button>
                                 <div class="map-search-results" id="searchResults"></div>
                             </div>
                             <div id="checkoutMap"></div>
                             <div class="d-flex justify-content-between align-items-center" style="margin-top: 12px;">
-                                <p class="map-hint mb-0"><i class="fas fa-info-circle me-1"></i>Click on the map or drag the pin to set your exact delivery location (optional)</p>
-                                <button type="button" class="btn btn-sm mt-1" style="background:var(--gasgo-blue);color:white;border-radius:8px;font-size:.78rem;" onclick="useMyLocation()"><i class="fas fa-crosshairs me-1"></i>Use My Location</button>
+                                <p class="map-hint mb-0"><i class="fas fa-info-circle me-1"></i>Click on the map or drag the pin to set your exact delivery location</p>
+                                      <button type="button" id="useMyLocationBtn" class="btn btn-sm mt-1" style="background:var(--gasgo-blue);color:white;border-radius:8px;font-size:.78rem;"><i class="fas fa-crosshairs me-1"></i>Use My Location</button>
                             </div>
                             <input type="hidden" name="latitude" id="latitude" value="{{ old('latitude') }}">
                             <input type="hidden" name="longitude" id="longitude" value="{{ old('longitude') }}">
                             <input type="hidden" name="address_full" id="addressFull" value="{{ old('address_full') }}">
+                            <input type="hidden" name="user_pinned" id="userPinnedFlag" value="{{ old('user_pinned', 0) }}">
                         </div>
                     </div>
                 </div>
@@ -224,7 +244,7 @@
                     <h5><i class="fas fa-credit-card"></i>Payment Method</h5>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <div class="payment-option selected" onclick="selectPayment(this,'cash')">
+                                <div class="payment-option selected" data-payment-method="cash" style="cursor: pointer;">
                                 <div class="pay-icon cash"><i class="fas fa-money-bill-wave"></i></div>
                                 <div>
                                     <div class="fw-bold">Cash on Delivery</div>
@@ -233,7 +253,7 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="payment-option" onclick="selectPayment(this,'gcash')">
+                                <div class="payment-option" data-payment-method="gcash" style="cursor: pointer;">
                                 <div class="pay-icon gcash"><i class="fas fa-mobile-alt"></i></div>
                                 <div>
                                     <div class="fw-bold">GCash</div>
@@ -334,7 +354,7 @@
                                 </div>
                                 <button type="button" class="btn voucher-apply-btn" 
                                         style="background: var(--gasgo-orange); color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;"
-                                        onclick="applyVoucher('{{ $voucher->id }}', '{{ $voucher->discount_amount }}')">
+                                            data-voucher-id="{{ $voucher->id }}" data-discount="{{ $voucher->discount_amount }}">
                                     <i class="fas fa-check-circle me-1"></i>Apply Voucher
                                 </button>
                             </div>
@@ -448,9 +468,9 @@
                     </div>
                     @endforeach
                     <div class="summary-item mt-3"><span>Subtotal</span><span id="summarySubtotal">₱{{ number_format($subtotal, 2) }}</span></div>
-                    <div class="summary-item"><span>Delivery Fee</span><span id="summaryDeliveryFee">₱{{ number_format($deliveryFee, 2) }}</span></div>
+                    <div class="summary-item"><span>Delivery Fee</span><span id="summaryDeliveryFee" data-value="{{ number_format($deliveryFee, 2, '.', '') }}">₱{{ number_format($deliveryFee, 2) }}</span></div>
                     
-                    <!-- NEW: Voucher Discount Line Item (shown conditionally) -->
+                    <!-- Voucher Discount Line Item (shown conditionally) -->
                     <div id="discountSummaryRow" class="summary-item" style="display: none; color: #27ae60;">
                         <span><i class="fas fa-tag me-1" style="color:var(--gasgo-orange);"></i>Voucher Discount</span>
                         <span id="discountAmount" style="font-weight: 700; color: #27ae60; font-size: 1rem;">-₱0.00</span>
@@ -458,10 +478,17 @@
                     
                     <div class="summary-item total"><span>Total</span><span class="val" id="summaryTotal">₱{{ number_format($subtotal + $deliveryFee, 2) }}</span></div>
                     
-                    <input type="hidden" id="selectedCartIds" name="selected_cart_ids" value="">
+                    <input type="hidden" id="selectedCartIds" name="selected_cart_ids" value="{{ $cartItems->pluck('id')->implode(',') }}">
+                    <input type="hidden" id="selectedProductIds" name="selected_product_ids" value="{{ $cartItems->pluck('product_id')->implode(',') }}">
                     
-                    <button type="submit" class="btn btn-gasgo w-100 mt-3">
-                        <i class="fas fa-check-circle me-2"></i>Place Order
+                    <div id="checkoutErrors" style="display: none; background: #fee; border: 1px solid #fcc; color: #c33; padding: 12px; border-radius: 8px; margin-bottom: 12px; font-size: 0.9rem;"></div>
+                                    <div id="checkoutDebug" style="display:none; background:#eef; border:1px solid #cce; color:#114; padding:8px; border-radius:6px; font-size:0.8rem; margin-bottom:12px;">
+                                        <strong>DEBUG</strong>: <span id="debugMsg">init</span>
+                                        <div style="margin-top:6px">Lat: <span id="dbgLat">-</span> &nbsp; Lng: <span id="dbgLng">-</span> &nbsp; Pinned: <span id="dbgPinned">0</span></div>
+                                    </div>
+                    
+                    <button type="submit" id="placeOrderBtn" class="btn btn-gasgo w-100 mt-3" style="cursor: pointer;">
+                        <i class="fas fa-check-circle me-2"></i><span>Place Order</span>
                     </button>
                     <a href="{{ route('customer.cart') }}" class="btn btn-gasgo-outline w-100 mt-2" style="padding:12px;">
                         <i class="fas fa-arrow-left me-2"></i>Back to Cart
@@ -504,8 +531,93 @@ function selectPayment(el, method) {
     }
 }
 
+function validateCheckout() {
+    try {
+        const errorDiv = document.getElementById('checkoutErrors');
+        let errors = [];
+
+        const selectedCartIds = document.getElementById('selectedCartIds')?.value || '';
+        const paymentMethod = document.getElementById('paymentMethod')?.value || 'cash';
+        const proofInput = document.getElementById('proofOfPayment');
+        const customerName = (document.querySelector('[name="customer_name"]')?.value || '').trim();
+        const contactNumber = (document.querySelector('[name="contact_number"]')?.value || '').trim();
+        const deliveryAddress = (document.querySelector('[name="delivery_address"]')?.value || '').trim();
+        const latitude = (document.getElementById('latitude')?.value || '').trim();
+        const longitude = (document.getElementById('longitude')?.value || '').trim();
+
+        console.log('Validation check:', {
+            customerName, contactNumber, deliveryAddress, latitude, longitude, selectedCartIds, paymentMethod
+        });
+
+        // Check all required fields
+        if (!customerName) {
+            errors.push('⚠️ Please enter your full name.');
+        }
+
+        if (!contactNumber) {
+            errors.push('⚠️ Please enter your contact number.');
+        }
+
+        if (!deliveryAddress) {
+            errors.push('⚠️ Please enter your delivery address.');
+        }
+
+        // Location is required for all payment methods
+        if (!latitude || !longitude) {
+            errors.push('📍 Please pin your location on the map before placing order.');
+        }
+
+        // Check if items exist
+        if (!selectedCartIds) {
+            errors.push('⚠️ Your cart is empty. Please add items before placing an order.');
+        }
+
+        // Check GCash proof upload if GCash is selected
+        if (paymentMethod === 'gcash') {
+            if (!proofInput || !proofInput.files || proofInput.files.length === 0) {
+                errors.push('⚠️ Please upload proof of payment for GCash transactions.');
+            } else {
+                const file = proofInput.files[0];
+                const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+                if (!validTypes.includes(file.type)) {
+                    errors.push('⚠️ Please upload a valid image file (JPG, PNG, or GIF).');
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    errors.push('⚠️ File size must not exceed 5MB.');
+                }
+            }
+        }
+        
+        // Display errors if any
+        if (errors.length > 0) {
+            console.log('Validation errors:', errors);
+            if (errorDiv) {
+                errorDiv.innerHTML = errors.join('<br>');
+                errorDiv.style.display = 'block';
+                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                alert(errors.join('\n'));
+            }
+            return false;
+        }
+        
+        // Clear error display
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.innerHTML = '';
+        }
+        
+        console.log('Validation passed!');
+        return true;
+    } catch (err) {
+        console.error('Validation error:', err);
+        alert('An error occurred during validation: ' + err.message);
+        return false;
+    }
+}
+
 // Handle proof of payment file preview
-document.addEventListener('DOMContentLoaded', function() {
+function setupProofInputPreview() {
     const proofInput = document.getElementById('proofOfPayment');
     if (proofInput) {
         proofInput.addEventListener('change', function() {
@@ -525,10 +637,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-
-    // Form submission is handled at the end of the checkout form validation
-
-});
+}
 
 const defaultLat = 16.0433;
 const defaultLng = 120.3654;
@@ -536,6 +645,11 @@ const locationSearchUrl = "{{ route('geocode.search') }}";
 const locationReverseUrl = "{{ route('geocode.reverse') }}";
 
 let map, marker;
+let userPinnedLocation = false; // when true, do not auto-reposition map/address
+function setUserPinnedFlag() {
+    const el = document.getElementById('userPinnedFlag');
+    if (el) el.value = userPinnedLocation ? '1' : '0';
+}
 let searchTimeout;
 let searchAbortController = null;
 let reverseAbortController = null;
@@ -608,7 +722,7 @@ function setMapSearchButtonLoading(isLoading) {
     icon.className = isLoading ? 'fas fa-spinner fa-spin' : 'fas fa-search';
 }
 
-function updateLocationFields(mapLabel, fullAddress, lat, lng, onlyIfEmpty = false) {
+function updateLocationFields(mapLabel, fullAddress, lat, lng, onlyIfEmpty = false, updateDeliveryAddress = false) {
     document.getElementById('mapSearch').value = mapLabel || fullAddress || '';
     document.getElementById('addressFull').value = fullAddress || mapLabel || '';
 
@@ -617,8 +731,21 @@ function updateLocationFields(mapLabel, fullAddress, lat, lng, onlyIfEmpty = fal
         document.getElementById('longitude').value = lng.toFixed(7);
     }
 
+    // update debug panel if present
+    try {
+        const dbgLat = document.getElementById('dbgLat');
+        const dbgLng = document.getElementById('dbgLng');
+        const dbgPinned = document.getElementById('dbgPinned');
+        if (dbgLat) dbgLat.textContent = (lat ? lat.toFixed(7) : document.getElementById('latitude').value || '-');
+        if (dbgLng) dbgLng.textContent = (lng ? lng.toFixed(7) : document.getElementById('longitude').value || '-');
+        if (dbgPinned) dbgPinned.textContent = userPinnedLocation ? '1' : '0';
+    } catch (err) {
+        console.debug('Debug panel update failed', err);
+    }
+
+    // Only update delivery address if explicitly requested or if it's empty
     const deliveryAddress = document.querySelector('[name="delivery_address"]');
-    if (!onlyIfEmpty || !deliveryAddress.value.trim()) {
+    if (updateDeliveryAddress && (!onlyIfEmpty || !deliveryAddress.value.trim())) {
         deliveryAddress.value = fullAddress || mapLabel || '';
     }
 }
@@ -637,14 +764,14 @@ function parseReversePayload(payload, lat, lng) {
     return { street, suburb, city, full, mapLabel };
 }
 
-function reverseGeocode(lat, lng, zoomLevel = null) {
+function reverseGeocode(lat, lng, zoomLevel = null, updateDeliveryAddress = false) {
     const zoom = Math.max(5, Math.min(18, Number.isFinite(zoomLevel) ? Math.round(zoomLevel) : 18));
     const key = lat.toFixed(5) + ':' + lng.toFixed(5) + ':' + zoom;
     setMapSearchButtonLoading(true);
 
     if (reverseCache.has(key)) {
         const cached = reverseCache.get(key);
-        updateLocationFields(cached.mapLabel, cached.full, lat, lng);
+        updateLocationFields(cached.mapLabel, cached.full, lat, lng, false, updateDeliveryAddress);
         setMapSearchButtonLoading(false);
         return;
     }
@@ -660,14 +787,14 @@ function reverseGeocode(lat, lng, zoomLevel = null) {
         .then(data => {
             const parsed = parseReversePayload(data, lat, lng);
             reverseCache.set(key, parsed);
-            updateLocationFields(parsed.mapLabel, parsed.full, lat, lng);
+            updateLocationFields(parsed.mapLabel, parsed.full, lat, lng, false, updateDeliveryAddress);
         })
         .catch(error => {
             if (error && error.name === 'AbortError') {
                 return;
             }
             const fallback = formatPinnedLocation(lat, lng);
-            updateLocationFields(fallback, fallback, lat, lng, true);
+            updateLocationFields(fallback, fallback, lat, lng, true, updateDeliveryAddress);
         })
         .finally(() => setMapSearchButtonLoading(false));
 }
@@ -696,7 +823,10 @@ function applySearchResult(result) {
     const lng = parseFloat(result.lon);
     map.setView([lat, lng], 17);
     marker.setLatLng([lat, lng]);
-    reverseGeocode(lat, lng, 17);
+    // Selecting a search result is considered an explicit user action
+    userPinnedLocation = true;
+    setUserPinnedFlag();
+    reverseGeocode(lat, lng, 17, true);  // Update delivery address when applying search result
     document.getElementById('searchResults').style.display = 'none';
 }
 
@@ -818,11 +948,17 @@ function initMap() {
 
     marker.on('dragend', function () {
         const pos = marker.getLatLng();
+        // User dragged the pin -> mark as user-pinned to avoid auto overrides
+        userPinnedLocation = true;
+        setUserPinnedFlag();
         reverseGeocode(pos.lat, pos.lng, map.getZoom());
     });
 
     map.on('click', function (e) {
         marker.setLatLng(e.latlng);
+        // User clicked on map to set pin
+        userPinnedLocation = true;
+        setUserPinnedFlag();
         reverseGeocode(e.latlng.lat, e.latlng.lng, map.getZoom());
     });
 
@@ -839,6 +975,9 @@ function initMap() {
         const lng = parseFloat(existingLng);
         map.setView([lat, lng], 16);
         marker.setLatLng([lat, lng]);
+        // Treat pre-filled coordinates as user-pinned to avoid auto overrides
+        userPinnedLocation = true;
+        setUserPinnedFlag();
         // Don't call reverseGeocode here to preserve address field
     } else {
         // On initial load, just set default view without modifying address
@@ -859,8 +998,11 @@ function useMyLocation() {
             const lng = position.coords.longitude;
             map.setView([lat, lng], 17);
             marker.setLatLng([lat, lng]);
+            // Using 'Use My Location' is a deliberate user action
+            userPinnedLocation = true;
+            setUserPinnedFlag();
             document.getElementById('mapSearch').value = 'Getting your address...';
-            reverseGeocode(lat, lng, 17);
+            reverseGeocode(lat, lng, 17, true);  // Update delivery address when using geolocation
         },
         function () {
             alert('Unable to get your location. Please allow location access.');
@@ -877,6 +1019,8 @@ function resetPinnedLocation() {
     document.getElementById('latitude').value = '';
     document.getElementById('longitude').value = '';
     document.getElementById('addressFull').value = '';
+    userPinnedLocation = false;
+    setUserPinnedFlag();
 }
 
 // Geocode customer's default address when page loads
@@ -887,6 +1031,11 @@ async function geocodeDefaultAddress() {
     
     // If latitude/longitude already exist (from previous submission), skip auto-geocoding
     const hasStoredCoordinates = document.getElementById('latitude').value && document.getElementById('longitude').value;
+    // If user has already pinned a location, do not auto-geocode or reposition
+    if (userPinnedLocation) {
+        console.log('Skipping auto-geocode because userPinnedLocation is true');
+        return;
+    }
     if (hasStoredCoordinates || !deliveryAddress) {
         console.log('Skipping geocode - stored coords:', hasStoredCoordinates, 'address:', deliveryAddress);
         return;
@@ -951,8 +1100,9 @@ async function geocodeDefaultAddress() {
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
-    // Define delivery fee at the start
-    const deliveryFee = {{ $deliveryFee }};
+    
+    // Setup proof of payment file preview
+    setupProofInputPreview();
     
     initMap();
     
@@ -996,6 +1146,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     });
 
+    const deliveryFee = parseFloat(document.getElementById('summaryDeliveryFee').dataset.value || '0');
+
     // Cart item selection handling - now includes all items by default (no checkbox selection)
     function updateSelectedItems() {
         // Get all cart items
@@ -1011,53 +1163,47 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
 
         document.getElementById('summarySubtotal').textContent = '₱' + selectedSubtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        const total = selectedSubtotal + deliveryFee;
-        document.getElementById('summaryTotal').textContent = '₱' + total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        if (selectedVoucherDiscount > 0) {
+            updateOrderSummaryWithDiscount(selectedVoucherDiscount);
+        } else {
+            const total = selectedSubtotal + deliveryFee;
+            document.getElementById('summaryTotal').textContent = '₱' + total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
     }
 
     // Initialize selected items
     updateSelectedItems();
 
-    // Prevent form submission if no items in cart
-    document.getElementById('checkoutForm').addEventListener('submit', function (e) {
-        const selectedCartIds = document.getElementById('selectedCartIds').value;
-        const paymentMethod = document.getElementById('paymentMethod').value;
-        const proofInput = document.getElementById('proofOfPayment');
+    // Form submission with validation
+    const checkoutForm = document.getElementById('checkoutForm');
+    const placeOrderBtn = document.getElementById('placeOrderBtn');
 
-        // Check if items exist
-        if (!selectedCartIds) {
-            e.preventDefault();
-            alert('Your cart is empty.');
-            return false;
-        }
+    if (checkoutForm) {
+        checkoutForm.addEventListener('submit', function (e) {
+            console.log('Form submission initiated');
+            const isValid = validateCheckout();
+            console.log('Checkout validation result:', isValid);
 
-        // Check GCash proof upload if GCash is selected
-        if (paymentMethod === 'gcash' && proofInput) {
-            if (!proofInput.files || proofInput.files.length === 0) {
+            if (!isValid) {
                 e.preventDefault();
-                alert('Proof of payment is required for GCash transactions.');
-                proofInput.focus();
+                e.stopPropagation();
+                const errorDiv = document.getElementById('checkoutErrors');
+                if (errorDiv) {
+                    errorDiv.style.display = 'block';
+                }
                 return false;
             }
-            // Validate file type
-            const file = proofInput.files[0];
-            const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
-            if (!validTypes.includes(file.type)) {
-                e.preventDefault();
-                alert('Please upload a valid image file (JPG, PNG, or GIF).');
-                proofInput.focus();
-                return false;
+
+            setUserPinnedFlag();
+
+            if (placeOrderBtn) {
+                placeOrderBtn.disabled = true;
+                placeOrderBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Placing Order...';
             }
-            // Validate file size (max 5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                e.preventDefault();
-                alert('File size must not exceed 5MB.');
-                proofInput.focus();
-                return false;
-            }
-        }
-        return true;
-    });
+
+            return true;
+        });
+    }
 
     // ===== VOUCHER & FREEBIE MANAGEMENT =====
     let selectedVoucherId = null;
@@ -1200,6 +1346,45 @@ document.addEventListener('DOMContentLoaded', async function () {
             });
         }
     });
+
+        // Payment method selection - handle clicks on payment options
+        document.querySelectorAll('.payment-option').forEach(option => {
+            option.addEventListener('click', function() {
+                    const method = this.dataset.paymentMethod;
+                selectPayment(this, method);
+            });
+        });
+
+        // Map search button
+        const mapSearchBtn = document.getElementById('mapSearchBtn');
+        if (mapSearchBtn) {
+            mapSearchBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                searchAddress();
+            });
+        }
+
+        // Use my location button
+            const useLocationBtn = document.getElementById('useMyLocationBtn');
+        if (useLocationBtn) {
+            useLocationBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                useMyLocation();
+            });
+        }
+
+            // Voucher apply buttons - event delegation
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.voucher-apply-btn')) {
+                    e.preventDefault();
+                    const btn = e.target.closest('.voucher-apply-btn');
+                    const voucherId = btn.dataset.voucherId;
+                    const discount = btn.dataset.discount;
+                    if (voucherId && discount) {
+                        applyVoucher(voucherId, discount);
+                    }
+                }
+            });
 });
 </script>
 @endpush

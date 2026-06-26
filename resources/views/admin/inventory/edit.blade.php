@@ -118,25 +118,6 @@
                 </div>
             </div>
 
-            <!-- Reorder Settings -->
-            <div class="form-section">
-                <h5><i class="fas fa-bell me-2"></i>Reorder Settings</h5>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Reorder Level</label>
-                            <input type="number" name="reorder_level" class="form-control @error('reorder_level') is-invalid @enderror"
-                                   value="{{ old('reorder_level', $inventory->reorder_level) }}" 
-                                   min="0" required>
-                            <small class="form-text text-muted">Alert when full tanks fall below this level</small>
-                            @error('reorder_level')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Status & Supplier -->
             <div class="form-section">
@@ -178,21 +159,6 @@
             <div class="form-section">
                 <h5><i class="fas fa-barcode me-2"></i>Tracking Information</h5>
                 
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Batch Number</label>
-                            <input type="text" name="batch_number" class="form-control @error('batch_number') is-invalid @enderror"
-                                   value="{{ old('batch_number', $inventory->batch_number) }}"
-                                   placeholder="e.g., BATCH2024001"
-                                   maxlength="255">
-                            <small class="form-text text-muted">Optional: For tracking and quality control</small>
-                            @error('batch_number')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                </div>
             </div>
             <!-- Form Actions -->
             <div class="d-flex gap-2 justify-content-between mt-4">

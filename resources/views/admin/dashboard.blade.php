@@ -382,7 +382,7 @@
                         <tr>
                             <td class="fw-bold">#{{ $order->order_number }}</td>
                             <td>{{ $order->user->name ?? 'N/A' }}</td>
-                            <td class="fw-bold">₱{{ number_format($order->total_amount, 2) }}</td>
+                            <td class="fw-bold">₱{{ number_format($order->fee_free_total, 2) }}</td>
                             <td><span class="badge bg-primary" style="font-size:.7rem;">{{ ucfirst($order->payment_method ?? 'N/A') }}</span></td>
                             <td><span class="badge-status badge-{{ $order->status }}">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</span></td>
                         </tr>
@@ -409,7 +409,7 @@
         <div class="gasgo-table">
             <div class="d-flex justify-content-between align-items-center px-3 pt-2 pb-2">
                 <h6 class="fw-bold mb-0" style="color:var(--gasgo-blue);"><i class="fas fa-motorcycle me-2" style="color:var(--gasgo-orange);"></i>Rider Status Overview</h6>
-                <a href="{{ url('/admin/riders') }}" class="btn btn-sm" style="color:var(--gasgo-orange);font-weight:600;">Manage Riders <i class="fas fa-arrow-right ms-1"></i></a>
+                <a href="{{ route('admin.users') }}" class="btn btn-sm" style="color:var(--gasgo-orange);font-weight:600;">Manage Riders <i class="fas fa-arrow-right ms-1"></i></a>
             </div>
             <table class="table">
                 <thead>
@@ -540,11 +540,11 @@
         </div>
         <div class="modal-body-custom">
             @php
-                $deliveredAmount = $orders->where('status', 'delivered')->sum('total_amount');
-                $pendingAmount = $orders->where('status', 'pending')->sum('total_amount');
-                $approvedAmount = $orders->where('status', 'approved')->sum('total_amount');
-                $assignedAmount = $orders->where('status', 'assigned')->sum('total_amount');
-                $outForDeliveryAmount = $orders->where('status', 'out_for_delivery')->sum('total_amount');
+                $deliveredAmount = $orders->where('status', 'delivered')->sum(fn($order) => $order->fee_free_total);
+                $pendingAmount = $orders->where('status', 'pending')->sum(fn($order) => $order->fee_free_total);
+                $approvedAmount = $orders->where('status', 'approved')->sum(fn($order) => $order->fee_free_total);
+                $assignedAmount = $orders->where('status', 'assigned')->sum(fn($order) => $order->fee_free_total);
+                $outForDeliveryAmount = $orders->where('status', 'out_for_delivery')->sum(fn($order) => $order->fee_free_total);
             @endphp
             <div class="detail-item">
                 <div class="detail-label">Total Revenue (All Orders)</div>
@@ -619,7 +619,7 @@
             @empty
                 <p class="text-muted">No riders registered.</p>
             @endforelse
-            <a href="{{ route('admin.riders') }}" class="btn btn-gasgo w-100 mt-4">
+            <a href="{{ route('admin.users') }}" class="btn btn-gasgo w-100 mt-4">
                 <i class="fas fa-users me-2"></i>Manage Riders
             </a>
         </div>
@@ -653,7 +653,7 @@
                                 <div class="detail-subtitle">{{ $order->created_at->format('M j, Y — g:i A') }}</div>
                             </div>
                             <div class="text-end">
-                                <div class="fw-bold" style="color: var(--gasgo-orange);">₱{{ number_format($order->total_amount, 2) }}</div>
+                                <div class="fw-bold" style="color: var(--gasgo-orange);">₱{{ number_format($order->fee_free_total, 2) }}</div>
                             </div>
                         </div>
                     </div>

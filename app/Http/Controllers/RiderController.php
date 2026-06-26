@@ -57,6 +57,7 @@ class RiderController extends Controller
             'rider_id' => Auth::id(),
             'status' => 'out_for_delivery',
             'assigned_at' => now(),
+            'picked_up_at' => now(),
             'latitude' => null,
             'longitude' => null,
         ]);
@@ -83,8 +84,8 @@ class RiderController extends Controller
     public function updateProfile(Request $request)
     {
         $validated = $request->validate([
-            'name'           => 'required|string|max:255',
-            'email'          => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore(Auth::id())],
+            'name'           => 'required_without:availability|string|max:255',
+            'email'          => ['required_without:availability', 'email', 'max:255', Rule::unique('users', 'email')->ignore(Auth::id())],
             'phone'          => 'nullable|string|max:20',
             'address'        => 'nullable|string|max:500',
             'vehicle_type'   => 'nullable|string|max:255',
@@ -93,35 +94,51 @@ class RiderController extends Controller
             'availability'   => 'nullable|in:available,busy,returning,offline',
         ]);
 
-        // Update user information
         $user = Auth::user();
-        $user->update([
-            'name' => $validated['name'],
-            'email' => strtolower($validated['email']),
-            'phone' => $validated['phone'],
-            'address' => $validated['address'],
-        ]);
+        $userUpdates = [];
+
+        if (array_key_exists('name', $validated)) {
+            $userUpdates['name'] = $validated['name'];
+        }
+        if (array_key_exists('email', $validated)) {
+            $userUpdates['email'] = strtolower($validated['email']);
+        }
+        if (array_key_exists('phone', $validated)) {
+            $userUpdates['phone'] = $validated['phone'];
+        }
+        if (array_key_exists('address', $validated)) {
+            $userUpdates['address'] = $validated['address'];
+        }
+
+        if (! empty($userUpdates)) {
+            $user->update($userUpdates);
+        }
 
         // Update rider information if exists
         $rider = Rider::where('user_id', Auth::id())->first();
         $previousStatus = $rider?->availability;
 
         if ($rider) {
-            $riderData = [
-                'vehicle_type' => $validated['vehicle_type'],
-                'plate_number' => $validated['plate_number'],
-                'license_number' => $validated['license_number'],
-            ];
-            
-            // Add availability if provided
-            if ($validated['availability']) {
+            $riderData = [];
+
+            if (array_key_exists('vehicle_type', $validated)) {
+                $riderData['vehicle_type'] = $validated['vehicle_type'];
+            }
+            if (array_key_exists('plate_number', $validated)) {
+                $riderData['plate_number'] = $validated['plate_number'];
+            }
+            if (array_key_exists('license_number', $validated)) {
+                $riderData['license_number'] = $validated['license_number'];
+            }
+            if (array_key_exists('availability', $validated)) {
                 $riderData['availability'] = $validated['availability'];
             }
-            
-            $rider->update($riderData);
 
-            // Log status change
-            if ($validated['availability'] && $validated['availability'] !== $previousStatus) {
+            if (! empty($riderData)) {
+                $rider->update($riderData);
+            }
+
+            if (array_key_exists('availability', $validated) && $validated['availability'] !== $previousStatus) {
                 Log::info('Rider Status Changed', [
                     'rider_id' => Auth::id(),
                     'rider_name' => Auth::user()->name,
@@ -141,40 +158,10 @@ class RiderController extends Controller
         return redirect()->route('rider.profile')->with('success', 'Profile updated successfully!');
     }
 
-    // Admin: list all riders
+    // Admin: list all riders (redirects to User Management)
     public function adminIndex()
     {
-        $riders = User::where('role', 'rider')
-            ->with('rider')
-            ->get();
-
-        // Delivery stats per rider
-        $deliveryStats = Delivery::selectRaw("
-                rider_id,
-                COUNT(*) as total,
-                SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) as completed
-            ")
-            ->groupBy('rider_id')
-            ->pluck('total', 'rider_id');
-
-        $completedStats = Delivery::where('status', 'delivered')
-            ->selectRaw('rider_id, COUNT(*) as completed')
-            ->groupBy('rider_id')
-            ->pluck('completed', 'rider_id');
-
-        // Today's deliveries per rider
-        $todayDeliveries = Delivery::whereDate('created_at', today())
-            ->selectRaw('rider_id, COUNT(*) as total')
-            ->groupBy('rider_id')
-            ->pluck('total', 'rider_id');
-
-        // Active delivery per rider
-        $activeDeliveries = Delivery::whereNotIn('status', ['delivered', 'failed'])
-            ->with('order')
-            ->get()
-            ->keyBy('rider_id');
-
-        return view('admin.riders', compact('riders', 'deliveryStats', 'completedStats', 'todayDeliveries', 'activeDeliveries'));
+        return redirect()->route('admin.users')->with('info', 'Rider management has been moved to User Management page.');
     }
 
     // Admin: create a new rider account
@@ -208,7 +195,7 @@ class RiderController extends Controller
             'availability'   => 'offline',
         ]);
 
-        return redirect()->route('admin.riders')->with('success', 'Rider account created successfully!');
+        return redirect()->route('admin.users')->with('success', 'Rider account created successfully!');
     }
 
     // Admin: view single rider details with delivery stats
@@ -309,7 +296,7 @@ class RiderController extends Controller
             return response()->json(['success' => true, 'message' => 'Rider information updated successfully!']);
         }
 
-        return redirect()->route('admin.riders')->with('success', 'Rider information updated successfully!');
+        return redirect()->route('admin.users')->with('success', 'Rider information updated successfully!');
     }
 
     // Admin: delete rider account
@@ -325,7 +312,7 @@ class RiderController extends Controller
                 return response()->json(['success' => true, 'message' => "Rider '$riderName' deleted successfully!"]);
             }
             
-            return redirect()->route('admin.riders')->with('success', "Rider '$riderName' account deleted successfully!");
+            return redirect()->route('admin.users')->with('success', "Rider '$riderName' account deleted successfully!");
         }
 
         if (request()->expectsJson() || request()->ajax()) {

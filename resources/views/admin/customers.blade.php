@@ -123,7 +123,11 @@
                     <td>{{ $stat['customer']->phone ?? 'N/A' }}</td>
                     <td style="font-size:.82rem;">{{ $stat['customer']->address ?? 'No address' }}</td>
                     <td class="fw-bold">{{ $stat['totalOrders'] }}</td>
-                    <td class="fw-bold" style="color:var(--gasgo-orange);">₱{{ number_format($stat['totalSpent'], 2) }}</td>
+                    <td>
+                        <div>₱{{ number_format($stat['productTotal'], 2) }}</div>
+                        <div class="text-muted" style="font-size:.8rem;">Delivery: ₱{{ number_format($stat['deliveryTotal'], 2) }}</div>
+                        <div class="fw-bold mt-1" style="color:var(--gasgo-orange);">Total: ₱{{ number_format($stat['totalSpent'], 2) }}</div>
+                    </td>
                     <td>
                         @if($stat['loyaltyTier'])
                             <span class="badge bg-{{ $stat['loyaltyBadge'] }}" style="font-size:.72rem;"><i class="fas fa-star me-1"></i>{{ $stat['loyaltyTier'] }}</span>

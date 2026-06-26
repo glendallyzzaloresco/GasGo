@@ -343,4 +343,37 @@ class ProductController extends Controller
 
         return redirect()->route('admin.products')->with('success', 'Freebie deleted successfully.');
     }
+
+    // Admin: adjust freebie stock
+    public function adjustFreebieStock(Request $request, Freebie $freebie)
+    {
+        $validated = $request->validate([
+            'quantity_change' => 'required|integer|min:1',
+            'type' => 'required|in:stock_in,stock_out,damage,return',
+            'notes' => 'nullable|string|max:255',
+            'movement_date' => 'nullable|date',
+        ]);
+
+        $quantityChange = (int) $validated['quantity_change'];
+        $type = $validated['type'];
+
+        if (in_array($type, ['stock_in', 'return'], true)) {
+            $freebie->increment('stock', $quantityChange);
+        } else {
+            $freebie->decrement('stock', $quantityChange);
+        }
+
+        $freebie->refresh();
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Freebie stock updated successfully.',
+                'stock' => $freebie->stock,
+            ]);
+        }
+
+        return redirect()->route('admin.products', ['tab' => 'freebies'])
+            ->with('success', 'Freebie stock updated successfully.');
+    }
 }

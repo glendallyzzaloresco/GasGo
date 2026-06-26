@@ -39,69 +39,71 @@ class LoyaltyController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            // Count delivered orders for loyalty tier (in last 12 months)
-            $completedOrders = \App\Models\Order::where('user_id', $userId)
+            $deliveredOrders = \App\Models\Order::where('user_id', $userId)
                 ->where('status', 'delivered')
                 ->where('created_at', '>=', now()->subYear())
-                ->count();
+                ->get();
 
-            // SYNC POINTS: Ensure points match delivered orders count (1 point per order)
-            $this->syncPointsToDeliveredOrders($userId, $completedOrders);
+            $completedOrders = $deliveredOrders->count();
+            $totalSpend = $deliveredOrders->sum(function ($order) {
+                return max(0, $order->total_amount);
+            });
+
+            // SYNC POINTS: Ensure points reflect spend amount for each delivered order
+            // 1 point = ₱100 spent on a delivered order
+            $this->syncPointsToDeliveredOrders($userId, $deliveredOrders);
+
+            // Refresh point transactions after sync
+            $points = LoyaltyPoint::where('user_id', $userId)
+                ->orderBy('created_at', 'desc')
+                ->get();
 
             // Get balance after sync
             [$totalEarned, $totalRedeemed, $balance] = $this->getBalance($userId);
 
-            // DETERMINE NEXT MILESTONE based on delivered orders and database vouchers
+            // DETERMINE NEXT MILESTONE based on earned points and database vouchers
             $nextTarget = 10;      // Default to first tier
             $nextRewardAmount = 0; // Default
-            $nextVoucher = $allVouchers->first(); // Get the first (easiest) voucher as default
+            $nextVoucher = $allVouchers->first();
 
-            if ($allVouchers->count() > 0 && $completedOrders < $allVouchers->last()->reward_points_required) {
-                // Find the next voucher the customer will unlock
-                $nextVoucher = $allVouchers->first(function ($voucher) use ($completedOrders) {
-                    return $voucher->reward_points_required > $completedOrders;
+            if ($allVouchers->count() > 0 && $balance < $allVouchers->last()->reward_points_required) {
+                $nextVoucher = $allVouchers->first(function ($voucher) use ($balance) {
+                    return $voucher->reward_points_required > $balance;
                 });
 
                 if ($nextVoucher) {
                     $nextTarget = $nextVoucher->reward_points_required;
                     $nextRewardAmount = $nextVoucher->discount_amount;
-                    $pointsToNextReward = max(0, $nextTarget - $completedOrders);
+                    $pointsToNextReward = max(0, $nextTarget - $balance);
                 } else {
-                    // All vouchers unlocked
                     $nextTarget = $allVouchers->last()->reward_points_required;
                     $nextRewardAmount = 0;
                     $pointsToNextReward = 0;
                 }
             }
 
-            // Pass milestone data to view
             $nextMilestone = $nextTarget;
             $nextReward = $nextRewardAmount;
 
-            // Get active/available user vouchers (not expired, not used)
             $availableVouchers = UserVoucher::where('user_id', $userId)
                 ->where('is_used', false)
                 ->where('expires_at', '>', now())
                 ->orderBy('expires_at', 'asc')
                 ->get();
 
-            // Get SUCCESSFULLY USED vouchers by this user (is_used = true)
-            // Only these show as "Claimed" - cancelled orders don't count
-            $usedVoucherNames = UserVoucher::where('user_id', $userId)
-                ->where('is_used', true)
+            $activeClaimedVoucherNames = UserVoucher::where('user_id', $userId)
+                ->where('is_used', false)
+                ->where('expires_at', '>', now())
                 ->pluck('voucher_name')
                 ->toArray();
 
-            // Mark which vouchers are unlocked based on completed orders
-            $unlockedVouchers = $allVouchers->map(function ($voucher) use ($completedOrders, $usedVoucherNames) {
-                $voucher->isUnlocked = $completedOrders >= $voucher->reward_points_required;
-                // Mark as claimed ONLY if successfully used (is_used = true)
-                $voucher->isClaimed = in_array($voucher->name, $usedVoucherNames);
+            $unlockedVouchers = $allVouchers->map(function ($voucher) use ($balance, $activeClaimedVoucherNames) {
+                $voucher->isUnlocked = $balance >= $voucher->reward_points_required;
+                $voucher->isClaimed = in_array($voucher->name, $activeClaimedVoucherNames);
                 return $voucher;
             });
         }
 
-        // Marketing data for both guest and logged-in users
         $promos = [
             [
                 'id' => 'freebie_auto',
@@ -143,19 +145,21 @@ class LoyaltyController extends Controller
                 return [
                     'tier' => ['Bronze', 'Silver', 'Gold', 'Platinum'][$index] ?? 'Tier ' . ($index + 1),
                     'title' => $voucher->name,
-                    'requirement' => $voucher->reward_points_required . ' delivered orders within 12 months',
+                    'requirement' => $voucher->reward_points_required . ' points',
+                    'spendRequirement' => $voucher->reward_points_required * 100,
                     'icon' => 'fas fa-tag',
                     'color' => ['bronze', 'silver', 'gold', 'platinum'][$index] ?? 'default',
                 ];
             })->values()->toArray();
         } else {
             // Logged-in view: Personal earned/achievable rewards - use database vouchers
-            $rewards = $allVouchers->map(function ($voucher) use ($completedOrders) {
+            $rewards = $allVouchers->map(function ($voucher) use ($balance) {
                 return [
                     'title' => $voucher->name,
-                    'requirement' => $voucher->reward_points_required . ' delivered orders',
+                    'requirement' => $voucher->reward_points_required . ' points',
+                    'spendRequirement' => $voucher->reward_points_required * 100,
                     'icon' => 'fas fa-tag',
-                    'earned' => $completedOrders >= $voucher->reward_points_required,
+                    'earned' => $balance >= $voucher->reward_points_required,
                 ];
             })->toArray();
         }
@@ -167,7 +171,7 @@ class LoyaltyController extends Controller
             ],
             [
                 'question' => 'When are rewards counted?',
-                'answer' => 'Only delivered orders count towards your loyalty rewards. Each delivered order unlocks you closer to earning vouchers. Orders must be delivered within the last 12 months to count.',
+                'answer' => 'You earn 1 loyalty point for every ₱100 spent on delivered orders. Points from the past 12 months count toward vouchers, so higher spend unlocks bigger rewards like the ₱50 and ₱100 vouchers.',
             ],
             [
                 'question' => 'How long are vouchers valid?',
@@ -274,49 +278,65 @@ class LoyaltyController extends Controller
                 ->with('error', 'This voucher is no longer available.');
         }
 
-        // Check if user has successfully used this voucher (is_used = true)
-        // Allow reclaiming if:
-        // 1. No claim exists yet, OR
-        // 2. Only unused claims exist (is_used = false means cancelled/failed order)
-        // Block only if: User has a claim with is_used = true (successfully used)
-        $successfullyUsedClaim = UserVoucher::where('user_id', $userId)
+        // Block only when the user already has an active unused claim for this voucher.
+        $existingUnusedClaim = UserVoucher::where('user_id', $userId)
             ->where('voucher_name', $voucher->name)
-            ->where('is_used', true)
-            ->first();
+            ->where('is_used', false)
+            ->where('expires_at', '>', now())
+            ->exists();
 
-        if ($successfullyUsedClaim) {
+        if ($existingUnusedClaim) {
             return redirect()->route('customer.loyalty')
-                ->with('info', 'You have already used this voucher. Each voucher can only be used once.');
+                ->with('info', 'You already have this voucher claimed. Use it at checkout before claiming again.');
         }
 
-        // Clean up any old unused claims (from cancelled orders)
+        // Remove any expired unused claims for the same voucher name
         UserVoucher::where('user_id', $userId)
             ->where('voucher_name', $voucher->name)
             ->where('is_used', false)
+            ->where('expires_at', '<=', now())
             ->delete();
 
         // Get user's completed orders
-        $completedOrders = \App\Models\Order::where('user_id', $userId)
+        $deliveredOrders = \App\Models\Order::where('user_id', $userId)
             ->where('status', 'delivered')
             ->where('created_at', '>=', now()->subYear())
-            ->count();
+            ->get();
 
-        // Check if user has unlocked this voucher
-        if ($completedOrders < $voucher->reward_points_required) {
-            return redirect()->route('customer.loyalty')
-                ->with('error', 'You have not yet unlocked this voucher. Complete more orders to unlock it!');
-        }
+        $totalSpend = $deliveredOrders->sum(function ($order) {
+            return max(0, ($order->subtotal - $order->discount));
+        });
 
-        // Add voucher to user_vouchers
-        UserVoucher::create([
-            'user_id' => $userId,
-            'voucher_name' => $voucher->name,
-            'discount_amount' => $voucher->discount_amount,
-            'description' => $voucher->description,
-            'unlocked_at' => now(),
-            'expires_at' => now()->addDays(30),
-            'is_used' => false,
-        ]);
+        DB::transaction(function () use ($userId, $voucher) {
+            // Lock all loyalty point transactions for this user and recalculate balance
+            LoyaltyPoint::where('user_id', $userId)->lockForUpdate()->get();
+
+            [$totalEarned, $totalRedeemed, $balance] = $this->getBalance($userId);
+
+            // Check if user has enough available points to claim this voucher
+            if ($balance < $voucher->reward_points_required) {
+                abort(422, 'You have not yet unlocked this voucher or do not have enough available points. Earn more points to unlock it.');
+            }
+
+            // Add voucher to user_vouchers
+            UserVoucher::create([
+                'user_id' => $userId,
+                'voucher_name' => $voucher->name,
+                'discount_amount' => $voucher->discount_amount,
+                'description' => $voucher->description,
+                'unlocked_at' => now(),
+                'expires_at' => now()->addDays(30),
+                'is_used' => false,
+            ]);
+
+            // Deduct points for the claimed voucher so available balance updates immediately
+            LoyaltyPoint::create([
+                'user_id' => $userId,
+                'points' => $voucher->reward_points_required,
+                'type' => 'redeemed',
+                'description' => 'Points redeemed to claim ' . $voucher->name,
+            ]);
+        });
 
         return redirect()->route('customer.loyalty')
             ->with('success', 'Voucher claimed successfully! Head to checkout to use it.');
@@ -329,9 +349,9 @@ class LoyaltyController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        // Customer redeemable vouchers - sorted by unlock points (easiest to hardest)
+        // Show all voucher kinds to admin, sorted by active status then unlock points
         $vouchers = \App\Models\Voucher::query()
-            ->where('is_active', true)
+            ->orderByDesc('is_active')
             ->orderBy('reward_points_required', 'asc')
             ->get();
 
@@ -403,33 +423,35 @@ class LoyaltyController extends Controller
     }
 
     /**
-     * Sync loyalty points with delivered orders (1 point per order)
-     * Idempotent: won't create duplicate points for the same order
+     * Sync loyalty points with delivered orders based on spend
+     * Idempotent: keeps one earned points entry per order and updates its point value
      */
-    private function syncPointsToDeliveredOrders(int $userId, int $deliveredOrderCount): void
+    private function syncPointsToDeliveredOrders(int $userId, $deliveredOrders): void
     {
-        // Get all delivered orders for the user
-        $deliveredOrders = \App\Models\Order::where('user_id', $userId)
-            ->where('status', 'delivered')
-            ->pluck('id');
+        foreach ($deliveredOrders as $order) {
+            $orderSpend = max(0, $order->total_amount);
+            $pointsEarned = (int) floor($orderSpend / 100);
 
-        // For each delivered order, ensure there's exactly one 'earned' point entry
-        foreach ($deliveredOrders as $orderId) {
-            $existingPoint = LoyaltyPoint::where('user_id', $userId)
-                ->where('order_id', $orderId)
-                ->where('type', 'earned')
-                ->exists();
-
-            // Only create if this order doesn't have a point entry yet (idempotent)
-            if (!$existingPoint) {
-                LoyaltyPoint::create([
-                    'user_id'     => $userId,
-                    'order_id'    => $orderId,
-                    'points'      => 1,
-                    'type'        => 'earned',
-                    'description' => 'Points earned from Order #' . $orderId,
-                ]);
+            if ($pointsEarned <= 0) {
+                // Remove zero-point entries for orders that no longer qualify
+                LoyaltyPoint::where('user_id', $userId)
+                    ->where('order_id', $order->id)
+                    ->where('type', 'earned')
+                    ->delete();
+                continue;
             }
+
+            LoyaltyPoint::updateOrCreate(
+                [
+                    'user_id' => $userId,
+                    'order_id' => $order->id,
+                    'type' => 'earned',
+                ],
+                [
+                    'points' => $pointsEarned,
+                    'description' => 'Points earned from Order #' . $order->id,
+                ]
+            );
         }
     }
 

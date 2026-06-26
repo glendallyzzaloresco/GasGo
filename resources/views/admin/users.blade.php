@@ -207,7 +207,7 @@
                             <th>Email</th>
                             <th>Phone</th>
                             <th>Orders</th>
-                            <th>Total Spent</th>
+                            <th>Product / Delivery</th>
                             <th>Loyalty Tier</th>
                         </tr>
                     </thead>
@@ -233,7 +233,11 @@
                                         {{ $item['totalOrders'] }} orders
                                     </span>
                                 </td>
-                                <td class="fw-bold">₱{{ number_format($item['totalSpent'], 2) }}</td>
+                                <td>
+                                    <div>₱{{ number_format($item['productTotal'], 2) }}</div>
+                                    <div class="text-muted" style="font-size:.8rem;">Delivery: ₱{{ number_format($item['deliveryTotal'], 2) }}</div>
+                                    <div class="fw-bold mt-1">Total: ₱{{ number_format($item['totalSpent'], 2) }}</div>
+                                </td>
                                 <td>
                                     @if($item['loyaltyTier'])
                                         <span class="badge bg-{{ $item['loyaltyBadge'] }}">

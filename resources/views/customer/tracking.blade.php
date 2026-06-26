@@ -305,10 +305,6 @@
                     <span class="text-muted">Subtotal</span>
                     <span>₱{{ number_format($order->subtotal, 2) }}</span>
                 </div>
-                <div class="d-flex justify-content-between">
-                    <span class="text-muted">Delivery Fee</span>
-                    <span>₱{{ number_format($order->delivery_fee, 2) }}</span>
-                </div>
                 @if ((float) $order->discount > 0)
                 <div class="d-flex justify-content-between">
                     <span class="text-muted">Reward Discount</span>
@@ -328,7 +324,7 @@
                 <h5 class="fw-bold mb-1" style="color:var(--gasgo-blue);">
                     <i class="fas fa-clipboard-list me-2" style="color:var(--gasgo-orange);"></i>Order Status
                 </h5>
-                <p class="text-muted mb-3" style="font-size:.85rem;">
+                <p class="text-muted mb-1" style="font-size:.85rem;">
                     Placed {{ $order->created_at->format('M j, Y — g:i A') }}
                 </p>
 
@@ -360,10 +356,16 @@
                             @if($stepClass === 'done' || $stepClass === 'active')
                                 @if($step['key'] === 'pending')
                                     <div class="time-label">{{ $order->created_at->format('g:i A') }}</div>
+                                @elseif($step['key'] === 'approved' && $order->approved_at)
+                                    <div class="time-label">{{ $order->approved_at->format('g:i A') }}</div>
                                 @elseif($step['key'] === 'assigned' && $order->delivery && $order->delivery->assigned_at)
                                     <div class="time-label">{{ $order->delivery->assigned_at->format('g:i A') }}</div>
-                                @elseif($step['key'] === 'out_for_delivery' && $order->delivery && $order->delivery->picked_up_at)
-                                    <div class="time-label">{{ $order->delivery->picked_up_at->format('g:i A') }}</div>
+                                @elseif($step['key'] === 'out_for_delivery')
+                                    @if($order->delivery && $order->delivery->picked_up_at)
+                                        <div class="time-label">{{ $order->delivery->picked_up_at->format('g:i A') }}</div>
+                                    @elseif($order->status === 'out_for_delivery')
+                                        <div class="time-label">{{ $order->updated_at->format('g:i A') }}</div>
+                                    @endif
                                 @elseif($step['key'] === 'delivered' && $order->delivered_at)
                                     <div class="time-label">{{ $order->delivered_at->format('g:i A') }}</div>
                                 @endif
@@ -384,6 +386,10 @@
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted" style="font-size:.88rem;">Delivery To</span>
                         <span class="fw-bold text-end" style="font-size:.82rem;max-width:60%;">{{ $order->delivery_address }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted" style="font-size:.88rem;">Delivery Fee</span>
+                        <span class="fw-bold">₱{{ number_format($order->delivery_fee, 2) }}</span>
                     </div>
                     @if($order->estimated_delivery_time)
                     <div class="d-flex justify-content-between mb-2">
@@ -455,11 +461,12 @@
 
     // Wait for Google Maps to load
     window.addEventListener('load', function() {
-        // Don't initialize map yet - wait for first poll to get rider's actual location
-        // Show message if no rider assigned yet
+        // Don't initialize map until order is out for delivery
         const msg = document.getElementById('mapMessage');
-        if (orderStatus === 'pending' || orderStatus === 'approved') {
-            msg.textContent = 'Rider location will appear once a rider is assigned';
+        if (orderStatus === 'pending' || orderStatus === 'approved' || orderStatus === 'assigned') {
+            msg.textContent = 'Rider location will appear once the order is out for delivery';
+        } else if (orderStatus === 'out_for_delivery') {
+            msg.textContent = 'Loading map...';
         }
         
         // Start polling updates immediately if order is active
@@ -653,20 +660,15 @@
             }
         }
 
-        // Initialize map with rider's actual location if not yet initialized
-        if (!map && data.rider_lat && data.rider_lng) {
-            initMap(parseFloat(data.rider_lat), parseFloat(data.rider_lng));
-        }
+        const canShowRiderMap = data.status === 'out_for_delivery';
 
-        // Update map with rider position
-        if (data.rider_lat && data.rider_lng) {
-            updateRiderPosition(parseFloat(data.rider_lat), parseFloat(data.rider_lng));
-        }
-
-        // Customer only sees their own delivery location, not other waypoints
-        // Initialize map with rider position if not already done
-        if (!map && data.rider_lat && data.rider_lng) {
-            initMap(parseFloat(data.rider_lat), parseFloat(data.rider_lng));
+        // Initialize map only when order is out for delivery
+        if (canShowRiderMap && data.rider_lat && data.rider_lng) {
+            if (!map) {
+                initMap(parseFloat(data.rider_lat), parseFloat(data.rider_lng));
+            } else {
+                updateRiderPosition(parseFloat(data.rider_lat), parseFloat(data.rider_lng));
+            }
         }
 
         // Update map overlay message
@@ -678,17 +680,13 @@
         } else if (data.status === 'cancelled') {
             overlay.classList.remove('hidden');
             msg.textContent = 'This order was cancelled';
+        } else if (!canShowRiderMap) {
+            overlay.classList.remove('hidden');
+            msg.textContent = 'Rider location will appear once the order is out for delivery';
         } else if (!data.rider_lat || !data.rider_lng) {
-            if (data.status === 'pending' || data.status === 'approved') {
-                msg.textContent = 'Rider location will appear once a rider is assigned';
-            } else if (data.waypoints && data.waypoints.length > 0) {
-                msg.textContent = ''; // Hide message if map is showing waypoints
-                overlay.classList.add('hidden');
-            } else {
-                msg.textContent = 'Waiting for rider location update...';
-            }
+            overlay.classList.remove('hidden');
+            msg.textContent = 'Waiting for rider location update...';
         } else {
-            // Rider is available, hide overlay
             overlay.classList.add('hidden');
         }
 
@@ -787,6 +785,23 @@
             }
         );
     }
+
+    // Update the live clock every second
+    function updateCurrentTime() {
+        const timeEl = document.getElementById('currentTime');
+        if (!timeEl) return;
+
+        const now = new Date();
+        const hours = now.getHours();
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const hour12 = hours % 12 || 12;
+        timeEl.textContent = `${hour12}:${minutes}:${seconds} ${ampm}`;
+    }
+
+    updateCurrentTime();
+    setInterval(updateCurrentTime, 1000);
 
     // Check location permission after page loads
     window.addEventListener('load', function() {

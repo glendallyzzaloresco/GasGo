@@ -285,6 +285,141 @@
         opacity: 0.6;
     }
 
+    /* ===== NOTIFICATION TOAST ===== */
+    .gasgo-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        background: #d4f1f0;
+        border: 1px solid #a8dcd9;
+        border-radius: 12px;
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        max-width: 380px;
+        width: 90%;
+        animation: slideInNotification 0.35s ease-out;
+        font-size: 0.95rem;
+        color: #1a5a57;
+    }
+
+    .gasgo-notification.error {
+        background: #ffe8e8;
+        border-color: #ffb3b3;
+        color: #8b0000;
+    }
+
+    .gasgo-notification.error .notification-icon {
+        background: #ff4444;
+    }
+
+    .notification-icon {
+        flex-shrink: 0;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--gasgo-orange);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 1.3rem;
+    }
+
+    .notification-content {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .notification-text {
+        font-weight: 500;
+        line-height: 1.4;
+    }
+
+    .notification-link {
+        color: var(--gasgo-orange);
+        text-decoration: none;
+        font-weight: 600;
+        margin-left: 8px;
+        white-space: nowrap;
+        transition: opacity 0.2s;
+    }
+
+    .notification-link:hover {
+        opacity: 0.8;
+        text-decoration: underline;
+    }
+
+    .notification-error .notification-link {
+        color: #8b0000;
+    }
+
+    .notification-close {
+        flex-shrink: 0;
+        background: none;
+        border: none;
+        color: #999;
+        font-size: 1.3rem;
+        cursor: pointer;
+        padding: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.2s;
+    }
+
+    .notification-close:hover {
+        color: #333;
+    }
+
+    .notification-error .notification-close {
+        color: #b30000;
+    }
+
+    @keyframes slideInNotification {
+        from {
+            transform: translateX(420px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOutNotification {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(420px);
+            opacity: 0;
+        }
+    }
+
+    .gasgo-notification.fade-out {
+        animation: slideOutNotification 0.35s ease-out forwards;
+    }
+
+    @media (max-width: 576px) {
+        .gasgo-notification {
+            top: 10px;
+            right: 10px;
+            left: 10px;
+            width: auto;
+            max-width: none;
+        }
+    }
+
     @media (max-width: 768px) {
         .hero-title { font-size: 2rem; }
         .hero-section { padding: 60px 0 60px; }
@@ -618,30 +753,42 @@ function buyNowWelcome(productId) {
 
 // Notification system
 function showNotificationWithAction(message, type = 'success', duration = 3000) {
-    const toast = document.createElement('div');
-    toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
-    toast.setAttribute('role', 'alert');
-    toast.style.position = 'fixed';
-    toast.style.top = '20px';
-    toast.style.right = '20px';
-    toast.style.zIndex = '9999';
-    toast.style.minWidth = '350px';
-    
     const cartUrl = "{{ route('customer.cart') }}";
+    const notification = document.createElement('div');
     
-    toast.innerHTML = `
-        ${type === 'success' ? '<i class="fas fa-check-circle me-2"></i>' : '<i class="fas fa-exclamation-circle me-2"></i>'}
-        ${message}
-        ${type === 'success' ? `<a href="${cartUrl}" class="alert-link ms-2">View Cart</a>` : ''}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    notification.className = `gasgo-notification ${type === 'error' ? 'error' : ''}`;
+    
+    const iconHtml = type === 'success' 
+        ? '<i class="fas fa-check"></i>' 
+        : '<i class="fas fa-exclamation"></i>';
+    
+    const viewCartHtml = type === 'success' 
+        ? `<a href="${cartUrl}" class="notification-link">View Cart</a>` 
+        : '';
+    
+    notification.innerHTML = `
+        <div class="notification-icon">${iconHtml}</div>
+        <div class="notification-content">
+            <div class="notification-text">${message}${viewCartHtml}</div>
+        </div>
+        <button class="notification-close" aria-label="Close notification">
+            <i class="fas fa-times"></i>
+        </button>
     `;
     
-    document.body.appendChild(toast);
+    const closeBtn = notification.querySelector('.notification-close');
+    closeBtn.addEventListener('click', () => {
+        notification.classList.add('fade-out');
+        setTimeout(() => notification.remove(), 350);
+    });
+    
+    document.body.appendChild(notification);
     
     if (duration) {
         setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
+            if (notification.parentNode) {
+                notification.classList.add('fade-out');
+                setTimeout(() => notification.remove(), 350);
             }
         }, duration);
     }

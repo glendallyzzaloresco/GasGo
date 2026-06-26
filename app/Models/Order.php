@@ -16,12 +16,14 @@ class Order extends Model
         'discount',
         'delivery_fee',
         'total_amount',
+        'customer_name',
         'delivery_address',
         'contact_number',
         'latitude',
         'longitude',
         'payment_method',
         'status',
+        'approved_at',
         'notes',
         'is_urgent',
         'estimated_delivery_time',
@@ -37,8 +39,14 @@ class Order extends Model
             'total_amount' => 'decimal:2',
             'is_urgent' => 'boolean',
             'estimated_delivery_time' => 'datetime',
+            'approved_at' => 'datetime',
             'delivered_at' => 'datetime',
         ];
+    }
+
+    public function getFeeFreeTotalAttribute()
+    {
+        return max(0, $this->subtotal - $this->discount);
     }
 
     // ── Relationships ──

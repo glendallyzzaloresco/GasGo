@@ -209,6 +209,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('admin.products.destroy');
     Route::post('/freebies', [ProductController::class, 'storeFreebie'])->name('admin.freebies.store');
     Route::put('/freebies/{freebie}', [ProductController::class, 'updateFreebie'])->name('admin.freebies.update');
+    Route::post('/freebies/{freebie}/adjust-stock', [ProductController::class, 'adjustFreebieStock'])->name('admin.freebies.adjust-stock');
     Route::delete('/freebies/{freebie}', [ProductController::class, 'destroyFreebie'])->name('admin.freebies.destroy');
 
     // Inventory Management
@@ -276,6 +277,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::post('/settings/homepage', [HomepageSettingController::class, 'update'])->name('admin.settings.homepage.update');
     Route::post('/settings/admin-users', [DashboardController::class, 'storeAdminUser'])->name('admin.settings.admin-users.store');
     Route::post('/settings/update-gcash', [DashboardController::class, 'updateGCash'])->name('admin.settings.update-gcash');
+    Route::post('/settings/update-delivery-fee', [DashboardController::class, 'updateDeliveryFee'])->name('admin.settings.update-delivery-fee');
     Route::post('/settings/clear-cache', function () {
         Artisan::call('cache:clear');
         Artisan::call('view:clear');

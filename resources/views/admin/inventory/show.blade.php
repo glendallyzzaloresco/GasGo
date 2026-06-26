@@ -236,13 +236,9 @@
     <div class="summary-grid">
         <div class="summary-card">
             <div class="summary-label">Current Stock</div>
-            <div class="summary-value {{ $inventory->quantity_on_hand <= $inventory->reorder_level ? 'text-danger' : 'text-success' }}">
+            <div class="summary-value {{ $inventory->quantity_on_hand <= 5 ? 'text-danger' : 'text-success' }}">
                 {{ $inventory->quantity_on_hand }}
             </div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-label">Reorder Level</div>
-            <div class="summary-value">{{ $inventory->reorder_level }}</div>
         </div>
         <div class="summary-card">
             <div class="summary-label">Status</div>
@@ -293,7 +289,7 @@
                 
                 <div class="detail-row">
                     <span class="detail-label">Current Stock</span>
-                    <span class="detail-value fw-bold {{ $inventory->quantity_on_hand <= $inventory->reorder_level ? 'text-danger' : 'text-success' }}">
+                    <span class="detail-value fw-bold {{ $inventory->quantity_on_hand <= 5 ? 'text-danger' : 'text-success' }}">
                         {{ $inventory->quantity_on_hand }} units
                     </span>
                 </div>
@@ -307,10 +303,7 @@
                 </div>
                 @endif
                 
-                <div class="detail-row">
-                    <span class="detail-label">Reorder Level</span>
-                    <span class="detail-value">{{ $inventory->reorder_level }} units</span>
-                </div>
+               
                 
                 <div class="detail-row">
                     <span class="detail-label">Status</span>
@@ -334,10 +327,7 @@
             <div class="details-card">
                 <h5 class="mb-4"><i class="fas fa-calendar me-2"></i>Tracking Information</h5>
                 
-                <div class="detail-row">
-                    <span class="detail-label">Batch Number</span>
-                    <span class="detail-value">{{ $inventory->batch_number ?? '-' }}</span>
-                </div>
+
                 
                 <div class="detail-row">
                     <span class="detail-label">Last Restocked</span>
@@ -375,21 +365,6 @@
                     @method('PUT')
                     
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label"><i class="fas fa-bell me-2"></i>Reorder Level</label>
-                                <div class="input-group">
-                                    <input type="number" name="reorder_level" class="form-control @error('reorder_level') is-invalid @enderror"
-                                           value="{{ old('reorder_level', $inventory->reorder_level) }}" 
-                                           min="0" required>
-                                    <span class="input-group-text">units</span>
-                                </div>
-                                <small class="form-text text-muted">Alert when stock falls below this level</small>
-                                @error('reorder_level')
-                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
                         
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -422,20 +397,6 @@
                             </div>
                         </div>
                         
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label"><i class="fas fa-barcode me-2"></i>Batch Number</label>
-                                <input type="text" name="batch_number" class="form-control @error('batch_number') is-invalid @enderror"
-                                       value="{{ old('batch_number', $inventory->batch_number) }}"
-                                       placeholder="e.g., BATCH2024001"
-                                       maxlength="255">
-                                <small class="form-text text-muted">Optional: For tracking and QC</small>
-                                @error('batch_number')
-                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                    </div>
                     
                     <div class="d-flex gap-2 justify-content-end mt-3">
                         <button type="reset" class="btn btn-secondary">

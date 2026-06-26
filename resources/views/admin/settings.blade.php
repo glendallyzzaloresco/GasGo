@@ -239,53 +239,29 @@
                             </div>
                         </div>
 
-                        {{-- Add Admin Account --}}
+                        {{-- Delivery Fee Setting --}}
                         <div class="col-md-6">
                             <div class="border rounded-3 p-4">
                                 <div class="d-flex align-items-start gap-3">
-                                    <div style="width:48px;height:48px;background:#e7f1ff;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                        <i class="fas fa-user-shield" style="color:#1a6db0;font-size:1.3rem;"></i>
+                                    <div style="width:48px;height:48px;background:#e0f7fa;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i class="fas fa-dollar-sign" style="color:#007d8f;font-size:1.3rem;"></i>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <h6 class="fw-bold mb-1">Add Admin Account</h6>
-                                        <p class="text-muted small mb-3">Create a new administrator account with full admin access.</p>
+                                        <h6 class="fw-bold mb-1">Delivery Fee</h6>
+                                        <p class="text-muted small mb-3">Set the default delivery fee used for every new order. Existing orders keep their current fee.</p>
 
-                                        <form action="{{ route('admin.settings.admin-users.store') }}" method="POST" class="row g-2">
+                                        <form action="{{ route('admin.settings.update-delivery-fee') }}" method="POST" class="row g-2">
                                             @csrf
                                             <div class="col-12">
-                                                <input type="text" name="name" class="form-control form-control-sm @error('name') is-invalid @enderror" placeholder="Full name" value="{{ old('name') }}" required>
-                                                @error('name')
+                                                <label class="form-label small">Delivery Fee (PHP)</label>
+                                                <input type="number" name="delivery_fee" step="0.01" min="0" class="form-control form-control-sm @error('delivery_fee') is-invalid @enderror" value="{{ old('delivery_fee', number_format($homepageSettings->delivery_fee ?? 50, 2, '.', '')) }}">
+                                                @error('delivery_fee')
                                                     <div class="invalid-feedback">{{ $message }}</div>
-                                                @enderror
-                                            </div>
-                                            <div class="col-12">
-                                                <input type="email" name="email" class="form-control form-control-sm @error('email') is-invalid @enderror" placeholder="Email address" value="{{ old('email') }}" required>
-                                                @error('email')
-                                                    <div class="invalid-feedback">{{ $message }}</div>
-                                                @enderror
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="input-group" style="border-radius:6px;overflow:hidden;">
-                                                    <input type="password" name="password" id="adminPassword" class="form-control form-control-sm @error('password') is-invalid @enderror" placeholder="Password" required>
-                                                    <button class="btn btn-outline-secondary btn-sm" type="button" onclick="togglePasswordVisibility(this, 'adminPassword')" style="border-radius:0;">
-                                                        <i class="fas fa-eye" style="font-size:0.8rem;"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="input-group" style="border-radius:6px;overflow:hidden;">
-                                                    <input type="password" name="password_confirmation" id="adminPasswordConfirm" class="form-control form-control-sm" placeholder="Confirm password" required>
-                                                    <button class="btn btn-outline-secondary btn-sm" type="button" onclick="togglePasswordVisibility(this, 'adminPasswordConfirm')" style="border-radius:0;">
-                                                        <i class="fas fa-eye" style="font-size:0.8rem;"></i>
-                                                    </button>
-                                                </div>
-                                                @error('password')
-                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
                                                 @enderror
                                             </div>
                                             <div class="col-12">
                                                 <button type="submit" class="btn btn-primary btn-sm">
-                                                    <i class="fas fa-user-plus me-1"></i>Create Admin
+                                                    <i class="fas fa-save me-1"></i>Save Delivery Fee
                                                 </button>
                                             </div>
                                         </form>

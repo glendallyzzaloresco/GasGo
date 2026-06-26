@@ -134,14 +134,11 @@
         <strong id="selectedCount">0</strong> order(s) selected
     </div>
     <div class="d-flex gap-2">
-        <button type="button" class="btn btn-sm" style="background:#28a745;color:#fff;font-weight:600;" onclick="openBulkApproveModal()">
+        <button id="bulkApproveBtn" type="button" class="btn btn-sm" style="background:#28a745;color:#fff;font-weight:600;" onclick="openBulkApproveModal()">
             <i class="fas fa-check me-1"></i>Approve Order
         </button>
-        <button type="button" class="btn btn-sm" style="background:var(--gasgo-orange);color:#fff;font-weight:600;" onclick="openBulkAssignModal()">
+        <button id="bulkAssignBtn" type="button" class="btn btn-sm" style="background:var(--gasgo-orange);color:#fff;font-weight:600;" onclick="openBulkAssignModal()">
             <i class="fas fa-motorcycle me-1"></i>Assign Rider
-        </button>
-        <button type="button" class="btn btn-sm" style="background:#17a2b8;color:#fff;font-weight:600;" onclick="openBulkMarkOutForDeliveryModal()">
-            <i class="fas fa-truck me-1"></i>Mark as Out for Delivery
         </button>
         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllSelections()">
             Clear
@@ -187,7 +184,12 @@
                         @endforeach
                     </td>
                     <td class="fw-bold order-total {{ $order->status === 'cancelled' ? 'text-decoration-line-through text-muted' : '' }}">
-                        ₱{{ number_format($order->total_amount, 2) }}
+                        ₱{{ number_format($order->fee_free_total, 2) }}
+                        @if($order->discount > 0)
+                            <div class="text-muted" style="font-size:.78rem; margin-top:4px;">
+                                Discount applied: ₱{{ number_format($order->discount, 2) }}
+                            </div>
+                        @endif
                     </td>
                     <td>
                         <span class="badge {{ $order->payment_method === 'gcash' ? 'bg-success' : 'bg-secondary' }}" style="font-size:.72rem;">
@@ -235,21 +237,20 @@
                                     <input type="hidden" name="status" value="approved">
                                     <button class="btn btn-sm btn-action" style="background:#28a745;color:#fff;" title="Approve Order"><i class="fas fa-check me-1"></i>Approve</button>
                                 </form>
-                                <button class="btn btn-sm btn-action assign-btn" style="background:var(--gasgo-orange);color:#fff;" title="Assign Rider"
-                                    data-order-id="{{ $order->id }}" data-order-number="{{ $order->order_number }}">
-                                    <i class="fas fa-motorcycle me-1"></i>Assign
-                                </button>
+                               
                                 <form action="{{ route('admin.orders.status', $order) }}" method="POST" class="cancel-order-form" data-order-id="{{ $order->id }}" onsubmit="return confirm('Cancel this order?')">
                                     @csrf @method('PUT')
                                     <input type="hidden" name="status" value="cancelled">
                                     <button class="btn btn-sm btn-action" style="background:#dc3545;color:#fff;" title="Cancel"><i class="fas fa-times"></i></button>
                                 </form>
-                            @elseif($order->status === 'approved')
+                            @elseif($order->status === 'approved' && ! optional($order->delivery)->id)
                                 <span class="badge bg-success me-1"><i class="fas fa-check-circle me-1"></i>Approved</span>
                                 <button class="btn btn-sm btn-action assign-btn" style="background:var(--gasgo-orange);color:#fff;" title="Assign Rider"
                                     data-order-id="{{ $order->id }}" data-order-number="{{ $order->order_number }}">
                                     <i class="fas fa-motorcycle me-1"></i>Assign
                                 </button>
+                            @elseif($order->status === 'approved' && optional($order->delivery)->id)
+                                <span class="badge bg-secondary me-1"><i class="fas fa-motorcycle me-1"></i>Assignment Pending</span>
                             @elseif(in_array($order->status, ['assigned', 'out_for_delivery']))
                                 <span class="badge bg-info me-1"><i class="fas fa-check-circle me-1"></i>Assigned</span>
                                 <span class="text-muted" style="font-size:.82rem;">
@@ -427,36 +428,6 @@
     </div>
 </div>
 
-<!-- Bulk Mark as Out for Delivery Modal -->
-<div class="modal fade" id="bulkMarkOutForDeliveryModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content" style="border-radius:16px;">
-            <form id="bulkMarkOutForDeliveryForm" method="POST">
-                @csrf @method('PUT')
-                <div class="modal-header" style="border-bottom:none;">
-                    <h5 class="modal-title fw-bold" style="color:var(--gasgo-blue);">
-                        <i class="fas fa-truck me-2" style="color:#17a2b8;"></i>Mark as Out for Delivery
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="text-muted" style="font-size:.88rem;">
-                        Mark <strong><span id="bulkMarkOutForDeliveryCount">0</span></strong> selected order(s) as out for delivery?
-                    </p>
-                    <div class="alert alert-info" style="border-radius:12px;font-size:.88rem;">
-                        <i class="fas fa-info-circle me-2"></i>This will change the order status to "Out for Delivery". Use this when riders start their delivery route.
-                    </div>
-                </div>
-                <div class="modal-footer" style="border-top:none;">
-                    <button type="button" class="btn" data-bs-dismiss="modal" style="border-radius:10px;">Cancel</button>
-                    <button type="submit" class="btn" style="background:#17a2b8;color:#fff;border-radius:10px;font-weight:600;">
-                        <i class="fas fa-truck me-1"></i>Mark as Out for Delivery
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 @endsection
 
 @section('scripts')
@@ -564,6 +535,7 @@
         btn.classList.add('active');
         currentFilter = status;
         filterOrders();
+        updateBulkActionButtons();
     }
 
     function filterOrders() {
@@ -627,7 +599,8 @@
             });
 
             if (!response.ok) {
-                showOrderToast('Unable to assign rider. Try again.', true);
+                const errorPayload = await response.json().catch(() => null);
+                showOrderToast(errorPayload?.message || 'Unable to assign rider. Try again.', true);
                 return;
             }
 
@@ -685,13 +658,17 @@
             
             // Hide the row with animation
             if (row) {
-                row.style.transition = 'opacity 0.3s ease-out';
-                row.style.opacity = '0';
-                setTimeout(() => {
-                    row.style.display = 'none';
-                    updateTabCounts();
-                    filterOrders();
-                }, 300);
+                row.dataset.status = 'cancelled';
+                row.querySelector('.badge-status')?.classList.remove('badge-pending', 'badge-approved', 'badge-assigned', 'badge-out_for_delivery', 'badge-delivered');
+                row.querySelector('.badge-status')?.classList.add('badge-cancelled');
+                row.querySelector('.badge-status').textContent = 'Cancelled';
+                row.querySelector('.order-total')?.classList.add('text-decoration-line-through', 'text-muted');
+                const actionCell = row.querySelector('td:last-child');
+                if (actionCell) {
+                    actionCell.innerHTML = '<span class="text-muted" style="font-size:.82rem;">Cancelled</span>';
+                }
+                updateTabCounts();
+                filterOrders();
             }
             
             showOrderToast(payload.message || 'Order cancelled.');
@@ -716,6 +693,27 @@
         
         selectedCountEl.textContent = selectedCount;
         toolbar.style.display = selectedCount > 0 ? 'flex' : 'none';
+        updateBulkActionButtons();
+    }
+
+    function updateBulkActionButtons() {
+        const approveBtn = document.getElementById('bulkApproveBtn');
+        const assignBtn = document.getElementById('bulkAssignBtn');
+        if (!approveBtn || !assignBtn) return;
+
+        if (currentFilter === 'pending') {
+            approveBtn.style.display = '';
+            assignBtn.style.display = 'none';
+        } else if (currentFilter === 'approved') {
+            approveBtn.style.display = 'none';
+            assignBtn.style.display = '';
+        } else if (['assigned', 'out_for_delivery', 'delivered', 'cancelled'].includes(currentFilter)) {
+            approveBtn.style.display = 'none';
+            assignBtn.style.display = 'none';
+        } else {
+            approveBtn.style.display = '';
+            assignBtn.style.display = '';
+        }
     }
 
     function toggleSelectAll(checkbox) {
@@ -933,100 +931,6 @@
         }
     }
 
-    function openBulkMarkOutForDeliveryModal() {
-        const selectedIds = getSelectedOrderIds();
-        if (selectedIds.length === 0) {
-            showOrderToast('Please select at least one order.', true);
-            return;
-        }
-        
-        document.getElementById('bulkMarkOutForDeliveryCount').textContent = selectedIds.length;
-        
-        // Store selected order IDs in hidden inputs
-        let hiddenInputsContainer = document.getElementById('bulkMarkOutForDeliveryOrderIdsContainer');
-        if (!hiddenInputsContainer) {
-            hiddenInputsContainer = document.createElement('div');
-            hiddenInputsContainer.id = 'bulkMarkOutForDeliveryOrderIdsContainer';
-            hiddenInputsContainer.style.display = 'none';
-            document.getElementById('bulkMarkOutForDeliveryForm').appendChild(hiddenInputsContainer);
-        }
-        hiddenInputsContainer.innerHTML = '';
-        
-        selectedIds.forEach(orderId => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'order_ids[]';
-            input.value = orderId;
-            hiddenInputsContainer.appendChild(input);
-        });
-        
-        new bootstrap.Modal(document.getElementById('bulkMarkOutForDeliveryModal')).show();
-    }
-
-    async function submitBulkMarkOutForDelivery(event) {
-        event.preventDefault();
-        const form = event.target;
-        const formData = new FormData(form);
-        const orderIds = Array.from(formData.getAll('order_ids[]'));
-        
-        if (!orderIds.length) {
-            showOrderToast('No orders selected.', true);
-            return;
-        }
-
-        const submitBtn = form.querySelector('button[type="submit"]');
-        setButtonLoading(submitBtn, true, 'Updating...');
-        
-        try {
-            const response = await fetch('{{ route("admin.orders.bulk-update-status") }}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    order_ids: orderIds,
-                    status: 'out_for_delivery'
-                })
-            });
-
-            if (!response.ok) {
-                showOrderToast('Unable to mark orders as out for delivery. Try again.', true);
-                return;
-            }
-
-            const payload = await response.json();
-            
-            // Remove rows from the table with animation
-            orderIds.forEach(orderId => {
-                const row = document.querySelector(`.order-row[data-order-id="${orderId}"]`);
-                if (row) {
-                    row.style.transition = 'opacity 0.3s ease-out';
-                    row.style.opacity = '0';
-                    setTimeout(() => {
-                        row.style.display = 'none';
-                    }, 300);
-                }
-            });
-            
-            // Close modal and clear selection
-            const modalEl = document.getElementById('bulkMarkOutForDeliveryModal');
-            bootstrap.Modal.getInstance(modalEl)?.hide();
-            clearAllSelections();
-            
-            // Update counts and filters
-            setTimeout(() => {
-                updateTabCounts();
-                filterOrders();
-            }, 350);
-            
-            showOrderToast(`Successfully marked ${orderIds.length} order(s) as out for delivery.`);
-        } catch (error) {
-            showOrderToast('Unable to mark orders as out for delivery. Try again.', true);
-        } finally {
-            setButtonLoading(submitBtn, false);
-        }
-    }
 
     // Event listener for assign buttons
     document.addEventListener('DOMContentLoaded', function() {
@@ -1036,10 +940,6 @@
             bulkApproveForm.addEventListener('submit', submitBulkApprove);
         }
         
-        const bulkMarkOutForDeliveryForm = document.getElementById('bulkMarkOutForDeliveryForm');
-        if (bulkMarkOutForDeliveryForm) {
-            bulkMarkOutForDeliveryForm.addEventListener('submit', submitBulkMarkOutForDelivery);
-        }
 
         document.querySelectorAll('.assign-btn').forEach(btn => {
             btn.addEventListener('click', function() {

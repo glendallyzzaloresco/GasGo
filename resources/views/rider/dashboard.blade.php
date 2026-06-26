@@ -31,7 +31,7 @@
 
 <!-- Today's Stats -->
 <div class="row g-4 mb-4">
-    <div class="col-md-4 col-sm-6">
+    <div class="col-md-6 col-sm-5">
         <a href="{{ url('/rider/route/live-map') }}" class="text-decoration-none">
             <div class="rider-card" style="cursor:pointer;">
                 <div class="d-flex align-items-center gap-3">
@@ -41,15 +41,11 @@
                         <p>Active Deliveries</p>
                     </div>
                 </div>
-                @if(count($activeDeliveries) > 0)
-                <div class="mt-2 pt-2" style="border-top:1px solid var(--admin-border);">
-                    <small style="color:var(--gasgo-blue);font-weight:600;"><i class="fas fa-external-link-alt me-1"></i>Open Live Route Map</small>
-                </div>
-                @endif
+                
             </div>
         </a>
     </div>
-    <div class="col-md-4 col-sm-6">
+    <div class="col-md-6 col-sm-5">
         <div class="rider-card">
             <div class="d-flex align-items-center gap-3">
                 <div class="card-icon green"><i class="fas fa-check-double"></i></div>
@@ -105,14 +101,13 @@
         }
         
         fetch(profileUrl, {
-            method: 'POST',
+            method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({
-                _method: 'PUT',
                 availability: status
             })
         })

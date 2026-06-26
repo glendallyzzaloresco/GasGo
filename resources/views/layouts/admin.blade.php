@@ -478,7 +478,6 @@
         </ul>
         <div class="sidebar-section">Delivery</div>
         <ul class="sidebar-menu">
-            <li><a href="{{ url('/admin/riders') }}" class="@yield('nav-riders')"><i class="fas fa-motorcycle"></i>Riders</a></li>
             <li><a href="{{ url('/admin/deliveries') }}" class="@yield('nav-deliveries')"><i class="fas fa-truck"></i>Deliveries</a></li>
         </ul>
         <div class="sidebar-section">Marketing</div>

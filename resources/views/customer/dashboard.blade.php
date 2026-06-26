@@ -540,8 +540,6 @@ function applyStaggerReveal() {
 function addToCart(id, name, price, image) {
     addToCartAjax(id, 1)
         .then(() => {
-            // Show modal pop-up with product details
-            showAddToCartModal(name, price, image);
             // Show success notification with View Cart button
             showNotificationWithAction(`✓ ${name} added to cart!`, 'success', 5000);
         })
@@ -549,25 +547,6 @@ function addToCart(id, name, price, image) {
             console.error('Add to cart error:', error);
             showNotificationWithAction('Failed to add item to cart', 'error', 3000);
         });
-}
-
-function showAddToCartModal(productName, productPrice, productImage) {
-    const modal = document.getElementById('addToCartModal');
-    const modalImage = document.getElementById('modalProductImage');
-    const modalName = document.getElementById('modalProductName');
-    const modalPrice = document.getElementById('modalProductPrice');
-    
-    if (modalImage) modalImage.src = productImage || '';
-    if (modalName) modalName.textContent = productName;
-    if (modalPrice) modalPrice.textContent = '₱' + parseFloat(productPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    
-    if (modal) {
-        modal.classList.add('show');
-        modal.style.display = 'flex';
-        setTimeout(() => {
-            modal.classList.add('visible');
-        }, 10);
-    }
 }
 
 document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
@@ -653,175 +632,184 @@ document.addEventListener('DOMContentLoaded', function() {
     applyTiltEffect();
     applyStaggerReveal();
     snapshotActionButtonState();
-    
-    // Add to Cart Modal Close Handlers
-    const modal = document.getElementById('addToCartModal');
-    const closeBtn = document.querySelector('.add-to-cart-modal-close');
-    const viewCartBtn = document.getElementById('viewCartBtn');
-    const continuShoppingBtn = document.getElementById('continueShoppingBtn');
-    
-    if (closeBtn) {
-        closeBtn.addEventListener('click', function() {
-            closeAddToCartModal();
-        });
-    }
-    
-    if (viewCartBtn) {
-        viewCartBtn.addEventListener('click', function() {
-            window.location.href = '{{ route("customer.cart") }}';
-        });
-    }
-    
-    if (continuShoppingBtn) {
-        continuShoppingBtn.addEventListener('click', function() {
-            closeAddToCartModal();
-        });
-    }
-    
-    if (modal) {
-        modal.addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeAddToCartModal();
-            }
-        });
-    }
 });
 
-function closeAddToCartModal() {
-    const modal = document.getElementById('addToCartModal');
-    if (modal) {
-        modal.classList.remove('visible');
+function showNotificationWithAction(message, type = 'success', duration = 3000) {
+    const cartUrl = "{{ route('customer.cart') }}";
+    const notification = document.createElement('div');
+    
+    notification.className = `gasgo-notification ${type === 'error' ? 'error' : ''}`;
+    
+    const iconHtml = type === 'success' 
+        ? '<i class="fas fa-check"></i>' 
+        : '<i class="fas fa-exclamation"></i>';
+    
+    const viewCartHtml = type === 'success' 
+        ? `<a href="${cartUrl}" class="notification-link">View Cart</a>` 
+        : '';
+    
+    notification.innerHTML = `
+        <div class="notification-icon">${iconHtml}</div>
+        <div class="notification-content">
+            <div class="notification-text">${message}${viewCartHtml}</div>
+        </div>
+        <button class="notification-close" aria-label="Close notification">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    const closeBtn = notification.querySelector('.notification-close');
+    closeBtn.addEventListener('click', () => {
+        notification.classList.add('fade-out');
+        setTimeout(() => notification.remove(), 350);
+    });
+    
+    document.body.appendChild(notification);
+    
+    if (duration) {
         setTimeout(() => {
-            modal.classList.remove('show');
-            modal.style.display = 'none';
-        }, 300);
+            if (notification.parentNode) {
+                notification.classList.add('fade-out');
+                setTimeout(() => notification.remove(), 350);
+            }
+        }, duration);
     }
 }
 </script>
 
-<!-- Add to Cart Modal -->
-<div id="addToCartModal" class="add-to-cart-modal">
-    <div class="add-to-cart-modal-content">
-        <button class="add-to-cart-modal-close">×</button>
-        
-        <div class="modal-header text-center mb-4">
-            <h4 style="color: var(--gasgo-blue); font-weight: 700;">Added to Cart!</h4>
-        </div>
-        
-        <div class="modal-body text-center mb-4">
-            <img id="modalProductImage" src="" alt="Product" class="modal-product-image" style="border-radius: 12px; object-fit: cover;">
-            <h5 id="modalProductName" style="color: var(--gasgo-blue); margin-top: 16px; font-weight: 600;"></h5>
-            <p id="modalProductPrice" style="color: var(--gasgo-orange); font-size: 1.4rem; font-weight: 700; margin-top: 8px;"></p>
-        </div>
-        
-        <p style="text-align: center; color: #666; font-size: 0.9rem; margin-bottom: 20px;">
-            <i class="fas fa-check-circle" style="color: #27ae60; font-size: 1.3rem;"></i><br>
-            Item successfully added to your cart!
-        </p>
-        
-        <div class="modal-footer">
-            <button id="continueShoppingBtn" class="btn" style="background: white; color: var(--gasgo-orange); border: 2px solid var(--gasgo-orange); padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; flex: 1; margin-right: 8px;">
-                Continue Shopping
-            </button>
-            <button id="viewCartBtn" class="btn" style="background: linear-gradient(135deg, var(--gasgo-orange), #ff6b35); color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; flex: 1;">
-                View Cart
-            </button>
-        </div>
-    </div>
-</div>
-
 <style>
-.add-to-cart-modal {
-    display: none;
+/* ===== NOTIFICATION TOAST ===== */
+.gasgo-notification {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    justify-content: center;
-    align-items: center;
+    top: 20px;
+    right: 20px;
     z-index: 9999;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.add-to-cart-modal.show {
+    background: #d4f1f0;
+    border: 1px solid #a8dcd9;
+    border-radius: 12px;
+    padding: 16px 20px;
     display: flex;
-}
-
-.add-to-cart-modal.visible {
-    opacity: 1;
-}
-
-.add-to-cart-modal-content {
-    background: white;
-    border-radius: 16px;
-    padding: 32px;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
     max-width: 380px;
     width: 90%;
-    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.15);
-    animation: slideUpModal 0.3s ease;
-    position: relative;
+    animation: slideInNotification 0.35s ease-out;
+    font-size: 0.95rem;
+    color: #1a5a57;
 }
 
-.add-to-cart-modal-close {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    background: none;
-    border: none;
-    font-size: 28px;
-    color: #999;
-    cursor: pointer;
-    transition: color 0.2s;
-    width: 36px;
-    height: 36px;
+.gasgo-notification.error {
+    background: #ffe8e8;
+    border-color: #ffb3b3;
+    color: #8b0000;
+}
+
+.gasgo-notification.error .notification-icon {
+    background: #ff4444;
+}
+
+.notification-icon {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--gasgo-orange);
     display: flex;
     align-items: center;
     justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.3rem;
 }
 
-.add-to-cart-modal-close:hover {
+.notification-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.notification-text {
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.notification-link {
+    color: var(--gasgo-orange);
+    text-decoration: none;
+    font-weight: 600;
+    margin-left: 8px;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+}
+
+.notification-link:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+}
+
+.notification-error .notification-link {
+    color: #8b0000;
+}
+
+.notification-close {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 1.3rem;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.notification-close:hover {
     color: #333;
 }
 
-.modal-product-image {
-    width: 180px;
-    height: 180px;
-    margin: 0 auto;
-    display: block;
+.notification-error .notification-close {
+    color: #b30000;
 }
 
-.modal-footer {
-    display: flex;
-    gap: 12px;
-}
-
-@keyframes slideUpModal {
+@keyframes slideInNotification {
     from {
-        transform: translateY(30px);
+        transform: translateX(420px);
         opacity: 0;
     }
     to {
-        transform: translateY(0);
+        transform: translateX(0);
         opacity: 1;
     }
 }
 
+@keyframes slideOutNotification {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(420px);
+        opacity: 0;
+    }
+}
+
+.gasgo-notification.fade-out {
+    animation: slideOutNotification 0.35s ease-out forwards;
+}
+
 @media (max-width: 576px) {
-    .add-to-cart-modal-content {
-        padding: 24px;
-        max-width: 95%;
-    }
-    
-    .modal-footer {
-        flex-direction: column;
-    }
-    
-    .modal-footer button {
-        width: 100% !important;
-        margin: 0 !important;
+    .gasgo-notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        width: auto;
+        max-width: none;
     }
 }
 </style>

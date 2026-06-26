@@ -34,6 +34,7 @@ class HomepageSetting extends Model
         'contact_hours',
         'gcash_account_number',
         'gcash_account_name',
+        'delivery_fee',
     ];
 
     public static function singleton(): self
@@ -63,6 +64,7 @@ class HomepageSetting extends Model
             'contact_phone' => '+63 912 345 6789',
             'contact_email' => 'info@gasgo.com',
             'contact_hours' => 'Mon-Sun: 6AM - 10PM',
+            'delivery_fee' => 50.00,
         ]);
     }
 

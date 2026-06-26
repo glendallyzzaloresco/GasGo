@@ -521,9 +521,15 @@
                     <span class="fw-bold">₱{{ number_format($item->product->price * $item->quantity, 2) }}</span>
                 </div>
             @endforeach
-            <div class="d-flex justify-content-between align-items-center py-2" style="border-bottom:1px solid var(--admin-border);font-size:.88rem;">
-                <span>Delivery Fee</span>
-                <span class="fw-bold">₱{{ number_format($delivery->order->delivery_fee ?? 0, 2) }}</span>
+            @if($delivery->order->discount > 0)
+                <div class="d-flex justify-content-between align-items-center py-2" style="font-size:.88rem;">
+                    <span class="text-muted">Discount Applied</span>
+                    <span class="fw-bold text-danger">-₱{{ number_format($delivery->order->discount, 2) }}</span>
+                </div>
+            @endif
+            <div class="d-flex justify-content-between align-items-center py-2" style="font-size:.88rem;">
+                <span class="text-muted">Delivery Fee</span>
+                <span class="fw-bold">₱{{ number_format($delivery->order->delivery_fee, 2) }}</span>
             </div>
             <div class="d-flex justify-content-between align-items-center py-3" style="font-size:.95rem;border-top:2px solid var(--gasgo-blue);">
                 <span class="fw-bold" style="color:var(--gasgo-blue);">Total Amount</span>
@@ -594,9 +600,7 @@
                 <i class="fas fa-times-circle me-2"></i>Failed Delivery
             </button>
         @endif
-        <button class="action-btn" style="background:linear-gradient(135deg,var(--gasgo-blue),#2196f3);" data-bs-toggle="modal" data-bs-target="#proofModal">
-            <i class="fas fa-camera me-2"></i>Upload Proof of Delivery
-        </button>
+        
     </div>
 @else
     <div class="alert alert-{{ $delivery->status === 'delivered' ? 'success' : 'danger' }} text-center mt-3" style="border-radius:12px;">
@@ -607,35 +611,7 @@
 
 </div>
 
-<!-- Proof of Delivery Modal -->
-<div class="modal fade" id="proofModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius:16px;border:1px solid var(--admin-border);">
-            <div class="modal-header" style="border-bottom:none;padding:24px;">
-                <h6 class="modal-title fw-bold" style="color:var(--gasgo-blue);">Proof of Delivery</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="proofForm" enctype="multipart/form-data">
-                @csrf
-                <div class="modal-body" style="padding:0 24px 24px;">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold" style="font-size:.88rem;color:var(--gasgo-blue);">Take a Photo</label>
-                        <input type="file" name="proof_photo" class="form-control" accept="image/*" capture="environment" required style="border-radius:10px;border:1px solid var(--admin-border);">
-                        <small class="text-muted">Take a clear photo showing the delivered package or the recipient</small>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold" style="font-size:.88rem;color:var(--gasgo-blue);">Delivery Notes</label>
-                        <textarea name="delivery_notes" class="form-control" rows="3" placeholder="Add any special notes..." style="border-radius:10px;border:1px solid var(--admin-border);"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer" style="border-top:1px solid var(--admin-border);padding:16px 24px;">
-                    <button type="button" class="btn" data-bs-dismiss="modal" style="border-radius:10px;color:#666;border:1px solid #e0e0e0;">Cancel</button>
-                    <button type="submit" class="btn" style="background:var(--gasgo-orange);color:#fff;border-radius:10px;font-weight:600;border:none;">Upload Proof</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+
 
 @endsection
 

@@ -65,6 +65,12 @@ class OrderController extends Controller
             ? array_filter(array_map('intval', $selectedIds))
             : array_filter(array_map('intval', explode(',', (string) $selectedIds)));
 
+        if (! empty($selectedIds)) {
+            $request->session()->put('checkout_selected_items', array_values(array_unique($selectedIds)));
+        } else {
+            $selectedIds = array_filter(array_map('intval', (array) $request->session()->get('checkout_selected_items', [])));
+        }
+
         if (!empty($selectedIds)) {
             $cartItems = $cartItems->whereIn('product_id', $selectedIds);
         }
@@ -79,7 +85,7 @@ class OrderController extends Controller
         });
 
         $subtotal = $cartItems->sum(fn ($item) => $item->product->price * $item->quantity);
-        $deliveryFee = 50.00;
+        $deliveryFee = HomepageSetting::singleton()->delivery_fee ?? 50.00;
         $productFreebieOffset = 1000000;
 
         $tableFreebies = Freebie::query()
@@ -93,8 +99,7 @@ class OrderController extends Controller
             ->where('is_active', true)
             ->where('category', 'freebie')
             ->whereHas('inventory', function ($query) {
-                $query->where('status', 'active')
-                    ->where('quantity_on_hand', '>', 0);
+                $query->where('quantity_on_hand', '>', 0);
             })
             ->get()
             ->map(function ($product) use ($productFreebieOffset) {
@@ -192,6 +197,7 @@ class OrderController extends Controller
         }
 
         $validated = $request->validate([
+            'customer_name'    => 'required|string|max:255',
             'delivery_address' => 'required|string|max:500',
             'contact_number'   => 'required|string|max:20',
             'payment_method'   => 'required|in:cash,gcash',
@@ -203,12 +209,21 @@ class OrderController extends Controller
             'selected_freebie_id' => 'nullable|integer',
             'voucher_id' => 'nullable|integer|exists:user_vouchers,id',
             'selected_cart_ids' => 'nullable|string',
+            'selected_product_ids' => 'nullable|string',
             'proof_of_payment'  => $request->input('payment_method') === 'gcash' ? 'required|image|mimes:jpeg,png,gif,jpg|max:5120' : 'nullable|image|mimes:jpeg,png,gif,jpg|max:5120',
         ]);
 
         $cartItems = Cart::with('product')
             ->where('user_id', Auth::id())
             ->get();
+
+        $selectedProductIds = array_filter(array_map('intval', explode(',', (string) ($validated['selected_product_ids'] ?? ''))));
+        if (empty($selectedProductIds)) {
+            $selectedProductIds = array_filter(array_map('intval', (array) $request->session()->get('checkout_selected_items', [])));
+        }
+        if (! empty($selectedProductIds)) {
+            $cartItems = $cartItems->whereIn('product_id', $selectedProductIds);
+        }
 
         if ($cartItems->isEmpty()) {
             return redirect()->route('customer.cart')->with('error', 'Your cart is empty.');
@@ -240,7 +255,7 @@ class OrderController extends Controller
             }
         }
 
-        $smallRewardCount = 0;  // For freebies with required points (qty of tank products 1-9)
+        $smallRewardCount = 0;  // For freebies with required points (total qty of tank products)
         $freeRewardQuantity = 0; // For freebies with no required points (total quantity)
         $hasTankInOrder = false;
         foreach ($cartItems as $item) {
@@ -248,9 +263,9 @@ class OrderController extends Controller
             $totalQuantity = $quantity;
             $freeRewardQuantity += $totalQuantity; // Count all quantities for no-point freebies
             
-            // Only count tank products with qty 1-9 for freebie qualification
-            if ($item->product && strtolower($item->product->category) === 'tank' && $quantity >= 1 && $quantity <= 9) {
-                $smallRewardCount++;
+            // Count tank products by their total quantity for freebie qualification
+            if ($item->product && strtolower($item->product->category) === 'tank') {
+                $smallRewardCount += $quantity;  // Add the full quantity, not just 1
                 $hasTankInOrder = true;
             }
         }
@@ -313,9 +328,10 @@ class OrderController extends Controller
             $selectedCartIds = array_filter(array_map('intval', explode(',', $validated['selected_cart_ids'])));
         }
 
-        $order = DB::transaction(function () use ($validated, $cartItems, $smallRewardCount, $freeRewardQuantity, $selectedFreebieId, $isProductFreebieSelection, $selectedProductFreebieId, $selectedCartIds, $selectedVoucherId, $hasTankInOrder, $freebieRequiresPoints, $request) {
+        $deliveryFee = HomepageSetting::singleton()->delivery_fee ?? 50.00;
+
+        $order = DB::transaction(function () use ($validated, $cartItems, $smallRewardCount, $freeRewardQuantity, $selectedFreebieId, $isProductFreebieSelection, $selectedProductFreebieId, $selectedCartIds, $selectedVoucherId, $hasTankInOrder, $freebieRequiresPoints, $request, $deliveryFee) {
             $subtotal = 0;
-            $deliveryFee = 50.00;
             $orderItems = [];
             $hasRewardItems = false;
             $selectedFreebie = null;
@@ -468,17 +484,17 @@ class OrderController extends Controller
 
                 // Add freebie: 
                 // - If no required points: quantity = total quantity ordered
-                // - If has required points: quantity = 1 per tank product (1-9)
+                // - If has required points: quantity = 1 (single reward item regardless of tank qty)
                 $isTankProduct = $product && strtolower($product->category) === 'tank';
                 $shouldAddFreebie = false;
                 $freebieQuantityToAdd = 0;
                 
                 if ($selectedFreebieProduct !== null && !$freebieAdded) {
                     if ($freebieRequiresPoints) {
-                        // Requires points - only add on tank products with qty 1-9
-                        if ($isTankProduct && $quantity >= 1 && $quantity <= 9) {
+                        // Requires points - add once on any tank product, quantity 1
+                        if ($isTankProduct) {
                             $shouldAddFreebie = true;
-                            $freebieQuantityToAdd = 1; // One freebie per qualifying item count
+                            $freebieQuantityToAdd = 1; // One freebie regardless of tank quantity ordered
                         }
                     } else {
                         // No required points - add on first iteration with total quantity
@@ -520,9 +536,11 @@ class OrderController extends Controller
                 $inventory->decrement('quantity_on_hand', $quantity);
             }
 
-            // Deduct freebie stock based on quantity given
+            // Deduct freebie stock based on quantity added to order
             if ($freebieAdded) {
-                $deductQuantity = $freebieRequiresPoints ? $smallRewardCount : $freeRewardQuantity;
+                // If requires points: deduct 1 (single reward)
+                // If no required points: deduct based on total quantity
+                $deductQuantity = $freebieRequiresPoints ? 1 : $freeRewardQuantity;
                 if ($selectedFreebie) {
                     $selectedFreebie->decrement('stock', $deductQuantity);
                 }
@@ -557,6 +575,7 @@ class OrderController extends Controller
                 'discount'         => $voucherDiscount,
                 'delivery_fee'     => $deliveryFee,
                 'total_amount'     => max(0, $totalAmount), // Ensure no negative totals
+                'customer_name'    => $validated['customer_name'],
                 'delivery_address' => $validated['delivery_address'],
                 'contact_number'   => $validated['contact_number'],
                 'latitude'         => $validated['latitude'] ?? null,
@@ -627,6 +646,8 @@ class OrderController extends Controller
 
             return $order;
         });
+
+        $request->session()->forget('checkout_selected_items');
 
         return redirect()->route('customer.orders')->with('success', 'Order placed successfully! Order #' . $order->order_number);
     }
@@ -775,7 +796,11 @@ class OrderController extends Controller
     {
         $order->load(['user', 'orderItems.product', 'delivery', 'payment']);
 
-        return view('admin.order-detail', compact('order'));
+        $riders = \App\Models\Rider::with('user')
+            ->where('availability', 'available')
+            ->get();
+
+        return view('admin.order-detail', compact('order', 'riders'));
     }
 
     // Admin: update order status
@@ -800,7 +825,14 @@ class OrderController extends Controller
                 Payment::where('order_id', $order->id)->update(['status' => 'failed']);
             }
 
-            $order->update(['status' => $validated['status']]);
+            if ($validated['status'] === 'approved') {
+                $order->update([
+                    'status' => 'approved',
+                    'approved_at' => now(),
+                ]);
+            } else {
+                $order->update(['status' => $validated['status']]);
+            }
 
             if ($validated['status'] === 'delivered') {
                 $order->update(['delivered_at' => now()]);
@@ -832,6 +864,19 @@ class OrderController extends Controller
             'status' => 'required|in:pending,approved,assigned,out_for_delivery,delivered,cancelled',
         ]);
 
+        if ($validated['status'] === 'out_for_delivery') {
+            $orders = Order::whereIn('id', $validated['order_ids'])
+                ->where('status', 'assigned')
+                ->pluck('id')
+                ->all();
+
+            if (count($orders) !== count($validated['order_ids'])) {
+                return response()->json([
+                    'message' => 'Only assigned orders can be marked as out for delivery.',
+                ], 422);
+            }
+        }
+
         $updatedCount = 0;
         $updatedIds = [];
 
@@ -854,7 +899,14 @@ class OrderController extends Controller
                     Payment::where('order_id', $order->id)->update(['status' => 'failed']);
                 }
 
-                $order->update(['status' => $validated['status']]);
+                if ($validated['status'] === 'approved') {
+                    $order->update([
+                        'status' => 'approved',
+                        'approved_at' => now(),
+                    ]);
+                } else {
+                    $order->update(['status' => $validated['status']]);
+                }
 
                 if ($validated['status'] === 'delivered') {
                     $order->update(['delivered_at' => now()]);

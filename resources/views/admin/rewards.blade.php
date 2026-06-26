@@ -90,14 +90,25 @@
                         <small class="text-muted">Customer Voucher</small>
                     </div>
                 </div>
+                <p class="text-muted" style="font-size:0.92rem; margin-bottom: 12px;">{{ $voucher->description ?: 'No description provided.' }}</p>
                 <div class="d-flex justify-content-between mb-2" style="font-size:.85rem;">
                     <span class="text-muted">Unlock at:</span>
                     <span class="fw-bold" style="color:var(--gasgo-orange);">{{ $voucher->reward_points_required }} points</span>
                 </div>
                 <div class="d-flex justify-content-between mb-2" style="font-size:.85rem;">
+                    <span class="text-muted">Equivalent spend:</span>
+                    <span class="fw-bold">₱{{ number_format($voucher->reward_points_required * 100, 0) }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2" style="font-size:.85rem;">
                     <span class="text-muted">Discount:</span>
                     <span class="fw-bold">₱{{ $voucher->discount_amount }}</span>
                 </div>
+                @if($voucher->expires_at)
+                <div class="d-flex justify-content-between mb-2" style="font-size:.85rem;">
+                    <span class="text-muted">Expires at:</span>
+                    <span class="fw-bold">{{ $voucher->expires_at->format('M d, Y') }}</span>
+                </div>
+                @endif
                 <div class="d-flex justify-content-between mb-3" style="font-size:.85rem;">
                     <span class="text-muted">Status:</span>
                     <span class="badge {{ $voucher->is_active ? 'bg-success' : 'bg-secondary' }}">
@@ -117,6 +128,7 @@
                         data-points="{{ $voucher->reward_points_required }}"
                         data-amount="{{ $voucher->discount_amount }}"
                         data-is-active="{{ $voucher->is_active ? '1' : '0' }}"
+                        data-expires-at="{{ optional($voucher->expires_at)->format('Y-m-d') }}"
                     >Edit</button>
                     <form action="{{ route('admin.vouchers.destroy', $voucher) }}" method="POST" onsubmit="return confirm('Delete this voucher?');">
                         @csrf
@@ -167,8 +179,13 @@
                     
                     <div class="mb-3">
                         <label class="form-label fw-bold" style="font-size:.88rem;">Unlock at Points</label>
-                        <input type="number" class="form-control" name="reward_points_required" id="voucherPoints" style="border-radius:10px;" placeholder="e.g. 10" min="0" required>
-                        <small class="text-muted">Customers can claim this voucher after earning this many loyalty points (1 point = 1 delivered order)</small>
+                        <input type="number" class="form-control" name="reward_points_required" id="voucherPoints" style="border-radius:10px;" placeholder="e.g. 5000" min="0" required>
+                        <small class="text-muted">Points are based on delivered order spend: ₱100 spend = 1 point. Customers unlock this voucher when they reach the required point total.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" style="font-size:.88rem;">Expires At</label>
+                        <input type="date" class="form-control" name="expires_at" id="voucherExpiresAt" style="border-radius:10px;" placeholder="Optional expiry date">
+                        <small class="text-muted">Optional expiry date for this voucher.</small>
                     </div>
                     
                     <div class="form-check form-switch">
@@ -179,7 +196,7 @@
             </div>
             <div class="modal-footer" style="border-top:none;padding:0 24px 24px;">
                 <button class="btn" data-bs-dismiss="modal" style="border-radius:10px;">Cancel</button>
-                <button class="btn" type="submit" form="voucherForm" style="background:var(--gasgo-orange);color:#fff;border-radius:10px;font-weight:600;padding:10px 28px;">Save Voucher</button>
+                <button id="voucherFormSubmitBtn" class="btn" type="submit" form="voucherForm" style="background:var(--gasgo-orange);color:#fff;border-radius:10px;font-weight:600;padding:10px 28px;">Save Voucher</button>
             </div>
         </div>
     </div>
@@ -190,23 +207,27 @@
 <script>
 function openAddVoucher() {
     document.getElementById('voucherModalTitle').textContent = 'Add Voucher';
+    document.getElementById('voucherFormSubmitBtn').textContent = 'Save Voucher';
     document.getElementById('voucherForm').action = "{{ route('admin.vouchers.store') }}";
     document.getElementById('voucherFormMethod').value = 'POST';
     document.getElementById('voucherName').value = '';
     document.getElementById('voucherDescription').value = '';
     document.getElementById('voucherAmount').value = '';
     document.getElementById('voucherPoints').value = '';
+    document.getElementById('voucherExpiresAt').value = '';
     document.getElementById('voucherActive').checked = true;
 }
 
 function openEditVoucher(button) {
     document.getElementById('voucherModalTitle').textContent = 'Edit Voucher';
+    document.getElementById('voucherFormSubmitBtn').textContent = 'Update Voucher';
     document.getElementById('voucherForm').action = button.dataset.updateUrl;
     document.getElementById('voucherFormMethod').value = 'PUT';
     document.getElementById('voucherName').value = button.dataset.name || '';
     document.getElementById('voucherDescription').value = button.dataset.description || '';
     document.getElementById('voucherAmount').value = button.dataset.amount || '0';
     document.getElementById('voucherPoints').value = button.dataset.points || '0';
+    document.getElementById('voucherExpiresAt').value = button.dataset.expiresAt || '';
     document.getElementById('voucherActive').checked = (button.dataset.isActive === '1');
 }
 

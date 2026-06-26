@@ -355,9 +355,7 @@
                             </div>
                             <button type="submit" class="btn-auth"><i class="fas fa-user-plus me-2"></i>Register</button>
                         </form>
-                        <p class="text-center mt-3" style="font-size:.85rem;color:#888;">
-                            Your <strong style="color:var(--gasgo-orange);">Digital Loyalty Card</strong> will be activated immediately!
-                        </p>
+                        
                     </div>
                 </div>
             </div>

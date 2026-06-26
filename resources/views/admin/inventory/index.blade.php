@@ -858,11 +858,11 @@
             </div>
         @else
             <!-- UNIFIED PRODUCTS TABLE -->
-            <details class="inventory-section" open>
-                <summary style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);">
+            <div class="inventory-section">
+                <div style="padding: 14px 20px; color: #fff; font-weight: 700; font-size: 1.02rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);">
                     <span class="section-summary-left"><i class="fas fa-cubes"></i>All Products</span>
-                    <span class="section-summary-right">{{ $inventories->count() }} items <i class="fas fa-chevron-down section-chevron"></i></span>
-                </summary>
+                    <span class="section-summary-right">{{ $inventories->count() }} items</span>
+                </div>
                 <div class="section-body">
                 <div class="table-responsive">
                 <table class="table table-hover">
@@ -871,7 +871,7 @@
                             <th style="width: 25%;">Product Name</th>
                             <th style="width: 12%;">Category</th>
                             <th style="width: 12%;">Stock on Hand</th>
-                            <th style="width: 10%;">Reorder Level</th>
+                    
                             <th style="width: 12%;">Status</th>
                             <th style="width: 29%;">Actions</th>
                         </tr>
@@ -897,7 +897,7 @@
                                 if ($inventory->quantity_on_hand == 0) {
                                     $stockStatus = 'out-of-stock';
                                     $stockLabel = 'Out of Stock';
-                                } elseif ($inventory->quantity_on_hand <= $inventory->reorder_level) {
+                                } elseif ($inventory->quantity_on_hand <= 5) {
                                     $stockStatus = 'low-stock';
                                     $stockLabel = 'Low Stock';
                                 }
@@ -919,7 +919,7 @@
                                 <td class="font-weight-bold stock-on-hand">
                                     {{ $inventory->quantity_on_hand }}
                                 </td>
-                                <td>{{ $inventory->reorder_level }}</td>
+                                
                                 <td>
                                     <span class="stock-status-badge {{ $stockStatus }}" style="display: inline-block; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">
                                         {{ $stockLabel }}
@@ -941,25 +941,26 @@
                 </table>
                 </div>
                 </div>
-            </details>
+            </div>
 
             <!-- Freebies & Rewards Section -->
             @if($freebies && $freebies->count() > 0)
-            <details class="inventory-section">
-                <summary style="background: linear-gradient(135deg, #27ae60 0%, #1f8449 100%);">
-                    <span class="section-summary-left"><i class="fas fa-gift"></i>Freebies & Rewards</span>
-                    <span class="section-summary-right">{{ $freebies->count() }} items <i class="fas fa-chevron-down section-chevron"></i></span>
-                </summary>
+            <div class="inventory-section">
+                <div style="padding: 14px 20px; color: #fff; font-weight: 700; font-size: 1.02rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: linear-gradient(135deg, #27ae60 0%, #1f8449 100%);">
+                    <span class="section-summary-left"><i class="fas fa-gift"></i>Freebies</span>
+                    <span class="section-summary-right">{{ $freebies->count() }} items</span>
+                </div>
                 <div class="section-body">
+                <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
                         <tr style="background: linear-gradient(135deg, #27ae60 0%, #1f8449 100%); color: white;">
-                            <th style="width: 30%;">Name</th>
-                            <th style="width: 20%;">Category</th>
-                            <th style="width: 12%;">Stock</th>
+                            <th style="width: 25%;">Product Name</th>
+                            <th style="width: 15%;">Category</th>
+                            <th style="width: 12%;">Stock on Hand</th>
                             <th style="width: 12%;">Reward Points</th>
                             <th style="width: 12%;">Status</th>
-                            <th style="width: 14%;">Actions</th>
+                            <th style="width: 24%;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -986,16 +987,18 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <span style="color: #666; font-weight: 500;">{{ ucfirst($freebie->category ?? 'Reward') }}</span>
+                                    <span class="badge category-badge-freebie" style="font-size: 0.9rem; padding: 6px 12px;">
+                                        {{ ucfirst($freebie->category ?? 'Promotional Gift') }}
+                                    </span>
+                                </td>
+                                <td class="font-weight-bold stock-on-hand" style="font-weight: 700; color: #27ae60; font-size: 1.05rem;">
+                                    {{ $freebie->stock }}
+                                </td>
+                                <td style="color: #666; font-weight: 600;">
+                                    {{ $freebie->reward_points_required ?? 'N/A' }}
                                 </td>
                                 <td>
-                                    <span style="font-weight: 700; color: #27ae60; font-size: 1.05rem;">{{ $freebie->stock }}</span>
-                                </td>
-                                <td>
-                                    <span style="color: #666; font-weight: 600;">{{ $freebie->reward_points_required ?? 'N/A' }}</span>
-                                </td>
-                                <td>
-                                    <span class="stock-status-badge {{ $stockStatus }}">
+                                    <span class="stock-status-badge {{ $stockStatus }}" style="display: inline-block; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">
                                         {{ $stockLabel }}
                                     </span>
                                 </td>
@@ -1004,7 +1007,7 @@
                                         <a href="{{ route('admin.products', ['tab' => 'freebies']) }}" class="btn btn-sm btn-view" style="background: #2196f3; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;">
                                             <i class="fas fa-eye me-1"></i>View
                                         </a>
-                                        <button type="button" class="btn btn-sm" style="background: #27ae60; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;">
+                                        <button type="button" class="btn btn-sm" onclick="setAdjustFreebie('{{ $freebie->id }}', '{{ addslashes($freebie->name) }}')" data-bs-toggle="modal" data-bs-target="#adjustStockModal" style="background: #27ae60; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;">
                                             <i class="fas fa-plus me-1"></i>Add Stock
                                         </button>
                                     </div>
@@ -1014,7 +1017,8 @@
                     </tbody>
                 </table>
                 </div>
-            </details>
+                </div>
+            </div>
             @endif
         @endif
     </div>
@@ -1057,7 +1061,6 @@
                         <select name="type" class="form-select" required>
                             <option value="stock_in">Stock In (Restock/Refill)</option>
                             <option value="stock_out">Stock Out / Correction</option>
-                            <option value="sale">Sale</option>
                             <option value="damage">Damage / Loss</option>
                             <option value="return">Return from Customer</option>
                         </select>
@@ -1114,6 +1117,7 @@
             <form id="adjustStockForm" method="POST">
                 @csrf
                 <input type="hidden" name="inventory_id" id="adjustInventoryId">
+                <input type="hidden" name="freebie_id" id="adjustFreebieId">
                 
                 <div class="modal-body">
                     <div class="mb-3">
@@ -1125,7 +1129,6 @@
                             </optgroup>
                             <optgroup label="STOCK OUT (Reduce Inventory)">
                                 <option value="stock_out">Stock Out / Correction</option>
-                                <option value="sale">Sale</option>
                                 <option value="damage">Damage / Loss</option>
                                 <option value="return">Customer Return (Empty Tank - LPG Only)</option>
                             </optgroup>
@@ -1230,7 +1233,6 @@
                                 </optgroup>
                                 <optgroup label="STOCK OUT (Reduce Inventory)">
                                     <option value="stock_out">Stock Out / Correction</option>
-                                    <option value="sale">Sale</option>
                                     <option value="damage">Damage / Loss</option>
                                     <option value="return">Customer Return (Empty Tank - LPG Only)</option>
                                 </optgroup>
@@ -1422,6 +1424,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Function to set inventory for adjustment
 function setAdjustInventory(inventoryId, productName) {
     document.getElementById('adjustInventoryId').value = inventoryId;
+    document.getElementById('adjustFreebieId').value = '';
     document.getElementById('adjustProductName').textContent = productName;
     document.getElementById('adjustmentType').value = '';
     document.getElementById('quantityInput').value = '';
@@ -1429,8 +1432,31 @@ function setAdjustInventory(inventoryId, productName) {
     
     const movementDateInput = document.getElementById('movementDateTime');
     if (movementDateInput) {
-        // Set to server's current date/time using the same approach as Laravel
-        // Use now() which is already in server timezone
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        
+        const localDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+        movementDateInput.value = localDateTime;
+        movementDateInput.readOnly = false;
+        movementDateInput.value = localDateTime;
+        movementDateInput.readOnly = true;
+    }
+}
+
+function setAdjustFreebie(freebieId, productName) {
+    document.getElementById('adjustInventoryId').value = '';
+    document.getElementById('adjustFreebieId').value = freebieId;
+    document.getElementById('adjustProductName').textContent = productName;
+    document.getElementById('adjustmentType').value = 'stock_in';
+    document.getElementById('quantityInput').value = '';
+    document.getElementById('notesInput').value = '';
+    
+    const movementDateInput = document.getElementById('movementDateTime');
+    if (movementDateInput) {
         const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -1450,12 +1476,13 @@ function setAdjustInventory(inventoryId, productName) {
 document.getElementById('adjustStockForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const inventoryId = document.getElementById('adjustInventoryId').value;
+    const freebieId = document.getElementById('adjustFreebieId').value;
     const adjustmentType = document.getElementById('adjustmentType').value;
     const quantity = document.getElementById('quantityInput').value;
     
     // Validation
-    if (!inventoryId) {
-        alert('Error: Inventory ID not found');
+    if (!inventoryId && !freebieId) {
+        alert('Error: No item selected for stock adjustment');
         return;
     }
     if (!adjustmentType) {
@@ -1469,8 +1496,10 @@ document.getElementById('adjustStockForm').addEventListener('submit', function(e
     
     const formData = new FormData(this);
     
-    // Build the URL with inventory ID
-    const url = `{{ route('admin.inventory.adjust', ':id') }}`.replace(':id', inventoryId);
+    // Build the URL with inventory ID or freebie ID
+    const url = freebieId
+        ? `{{ route('admin.freebies.adjust-stock', ':id') }}`.replace(':id', freebieId)
+        : `{{ route('admin.inventory.adjust', ':id') }}`.replace(':id', inventoryId);
     
     fetch(url, {
         method: 'POST',

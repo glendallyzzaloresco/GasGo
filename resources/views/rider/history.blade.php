@@ -20,18 +20,7 @@
     </div>
 </div>
 
-<!-- Filter Buttons -->
-<div class="d-flex gap-2 mb-4 flex-wrap">
-    <button class="btn btn-sm" style="background:var(--gasgo-blue);color:#fff;border-radius:20px;font-weight:600;font-size:.82rem;border:none;">
-        <i class="fas fa-list me-1"></i>All Time
-    </button>
-    <button class="btn btn-sm" style="background:#fff;color:#666;border-radius:20px;font-weight:600;font-size:.82rem;border:1px solid #e0e0e0;">
-        <i class="fas fa-calendar me-1"></i>This Week
-    </button>
-    <button class="btn btn-sm" style="background:#fff;color:#666;border-radius:20px;font-weight:600;font-size:.82rem;border:1px solid #e0e0e0;">
-        <i class="fas fa-calendar-alt me-1"></i>This Month
-    </button>
-</div>
+
 
 <!-- Completed Deliveries -->
 <h5 class="fw-bold mb-3" style="color:var(--gasgo-blue);"><i class="fas fa-check-circle me-2" style="color:var(--gasgo-orange);"></i>Completed Deliveries</h5>
@@ -56,19 +45,14 @@
             &middot;
             <span style="color:var(--gasgo-orange);font-weight:600;">₱{{ number_format($delivery->order->total_amount, 2) }}</span>
         </div>
+        <div style="font-size:.82rem;color:#555;margin-bottom:8px;">
+            Delivery Fee: ₱{{ number_format($delivery->order->delivery_fee, 2) }}
+        </div>
         <div style="font-size:.85rem;color:#666;" class="mb-3">
             <i class="fas fa-map-marker-alt me-1" style="color:#888;"></i>{{ Str::limit($delivery->order->delivery_address, 50) }}
         </div>
 
-        <!-- Rating -->
-        <div style="font-size:.78rem;">
-            <i class="fas fa-star" style="color:#ffc107;"></i>
-            <i class="fas fa-star" style="color:#ffc107;"></i>
-            <i class="fas fa-star" style="color:#ffc107;"></i>
-            <i class="fas fa-star" style="color:#ffc107;"></i>
-            <i class="fas fa-star" style="color:#ffc107;"></i>
-            <span class="text-muted ms-2">"Great delivery!"</span>
-        </div>
+        
     </div>
 @empty
     <div class="text-center text-muted py-5">

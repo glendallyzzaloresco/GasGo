@@ -49,7 +49,7 @@ class DeliveryController extends Controller
 
         $orders = Order::query()
             ->whereIn('id', $requestedOrderIds)
-            ->whereIn('status', ['pending', 'approved'])
+            ->where('status', 'approved')
             ->whereDoesntHave('delivery')
             ->get();
 
@@ -139,6 +139,12 @@ class DeliveryController extends Controller
                 'delivered_at' => now(),
             ]);
 
+            // Update payment status to paid when delivery is completed
+            \App\Models\Payment::where('order_id', $delivery->order_id)->update([
+                'status' => 'paid',
+                'paid_at' => now(),
+            ]);
+
             // Create stock OUT movements for each order item (delivered tanks)
             // and increment empty_on_hand (tanks collected during exchange)
             DB::transaction(function () use ($delivery) {
@@ -202,6 +208,9 @@ class DeliveryController extends Controller
         if ($validated['status'] === 'failed') {
             // Update order status to cancelled when delivery fails
             $delivery->order->update(['status' => 'cancelled']);
+            
+            // Update payment status to failed when delivery fails
+            \App\Models\Payment::where('order_id', $delivery->order_id)->update(['status' => 'failed']);
         }
 
         $delivery->update($updateData);
