@@ -26,6 +26,15 @@
     .payment-option:hover, .payment-option.selected {
         border-color: var(--gasgo-orange); background: var(--gasgo-orange-light);
     }
+    .payment-option.disabled {
+        opacity: .55;
+        cursor: not-allowed;
+    }
+    .payment-option input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
     .payment-option .pay-icon {
         width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
         font-size: 1.2rem; color: white;
@@ -158,6 +167,10 @@
     @php
         $smallRewardCount = (int) ($rewardPreview['small_reward_count'] ?? 0);
         $freebieChoices = $availableFreebies ?? collect();
+        $paymentMethods = collect($homepageSettings->availablePaymentMethods())
+            ->filter(fn ($method) => ($method['enabled'] ?? true))
+            ->values();
+        $selectedPaymentMethodKey = old('payment_method', $paymentMethods->first()['key'] ?? 'cash');
         
         $resolveImageUrl = function (?string $path): ?string {
             if (! $path) {
@@ -231,6 +244,10 @@
                                 <p class="map-hint mb-0"><i class="fas fa-info-circle me-1"></i>Click on the map or drag the pin to set your exact delivery location</p>
                                       <button type="button" id="useMyLocationBtn" class="btn btn-sm mt-1" style="background:var(--gasgo-blue);color:white;border-radius:8px;font-size:.78rem;"><i class="fas fa-crosshairs me-1"></i>Use My Location</button>
                             </div>
+                            <div class="alert alert-info mt-3 mb-3" role="alert" style="border-radius: 12px;">
+                                <i class="fas fa-map-pin me-2"></i>
+                                <strong>Location required:</strong> Please pin your exact delivery location on the map before placing your order.
+                            </div>
                             <input type="hidden" name="latitude" id="latitude" value="{{ old('latitude') }}">
                             <input type="hidden" name="longitude" id="longitude" value="{{ old('longitude') }}">
                             <input type="hidden" name="address_full" id="addressFull" value="{{ old('address_full') }}">
@@ -243,71 +260,76 @@
                 <div class="checkout-card">
                     <h5><i class="fas fa-credit-card"></i>Payment Method</h5>
                     <div class="row g-3">
+                        @foreach ($paymentMethods as $method)
                         <div class="col-md-6">
-                                <div class="payment-option selected" data-payment-method="cash" style="cursor: pointer;">
-                                <div class="pay-icon cash"><i class="fas fa-money-bill-wave"></i></div>
+                            <label
+                                class="payment-option {{ $selectedPaymentMethodKey === $method['key'] ? 'selected' : '' }}"
+                                data-payment-method="{{ $method['key'] }}"
+                                data-label="{{ $method['label'] }}"
+                                data-description="{{ $method['description'] ?? '' }}"
+                                data-instructions="{{ $method['instructions'] ?? '' }}"
+                                data-account-name="{{ $method['account_name'] ?? '' }}"
+                                data-account-number="{{ $method['account_number'] ?? '' }}"
+                                data-requires-proof="{{ !empty($method['requires_proof']) ? '1' : '0' }}"
+                                style="position:relative;"
+                            >
+                                <input type="radio" name="payment_method" value="{{ $method['key'] }}" {{ $selectedPaymentMethodKey === $method['key'] ? 'checked' : '' }}>
+                                @if(!empty($method['image_url']))
+                                    <div class="pay-icon" style="background:white;overflow:hidden;padding:4px;">
+                                        <img src="{{ $method['image_url'] }}" alt="{{ $method['label'] }}" style="width:100%;height:100%;object-fit:contain;">
+                                    </div>
+                                @else
+                                    <div class="pay-icon {{ $method['color'] ?? 'info' }}"><i class="{{ $method['icon'] ?? 'fas fa-credit-card' }}"></i></div>
+                                @endif
                                 <div>
-                                    <div class="fw-bold">Cash on Delivery</div>
-                                    <small class="text-muted">Pay when you receive your order</small>
+                                    <div class="fw-bold">{{ $method['label'] }}</div>
+                                    <small class="text-muted">{{ $method['description'] ?: 'Select this method to see payment instructions.' }}</small>
                                 </div>
-                            </div>
+                            </label>
                         </div>
-                        <div class="col-md-6">
-                                <div class="payment-option" data-payment-method="gcash" style="cursor: pointer;">
-                                <div class="pay-icon gcash"><i class="fas fa-mobile-alt"></i></div>
-                                <div>
-                                    <div class="fw-bold">GCash</div>
-                                    <small class="text-muted">Pay via GCash e-wallet</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <input type="hidden" name="payment_method" id="paymentMethod" value="cash">
-
-                    <!-- GCash Account Details (shown when GCash is selected) -->
-
-                    <div id="gcashDetails" style="display:none; margin-top:20px; padding:16px; background:#e7fff0; border-radius:12px; border-left:4px solid #007dfe;">
-                        <h6 class="fw-bold mb-2" style="color:#007dfe;"><i class="fas fa-info-circle me-2"></i>GCash Account Details</h6>
-                        @if($homepageSettings->gcash_account_number && $homepageSettings->gcash_account_name)
-                            <p class="text-muted mb-2" style="font-size:.9rem;">Please transfer the total amount to the following GCash account:</p>
-                            <div class="p-3 bg-white rounded mb-3" style="border:1px solid #c8f4dd;">
-                                <div class="mb-2">
-                                    <span class="text-muted small">Account Name:</span>
-                                    <div class="fw-bold" style="color:#007dfe;">{{ $homepageSettings->gcash_account_name }}</div>
-                                </div>
-                                <div>
-                                    <span class="text-muted small">GCash Number:</span>
-                                    <div class="fw-bold" style="color:#007dfe; font-size:1.1rem;">{{ $homepageSettings->gcash_account_number }}</div>
-                                </div>
-                            </div>
-                            <div class="alert alert-info mb-0" style="font-size:.85rem;"><i class="fas fa-exclamation-circle me-2"></i>After payment, please upload a screenshot or photo of your proof of payment below.</div>
-                        @else
-                            <div class="alert alert-warning mb-0" style="font-size:.85rem;"><i class="fas fa-exclamation-triangle me-2"></i>GCash account details are not configured yet. Please contact the administrator or use Cash on Delivery.</div>
-                        @endif
+                        @endforeach
                     </div>
 
-                    <!-- GCash Proof of Payment Upload (shown when GCash is selected) -->
-                    @if($homepageSettings->gcash_account_number && $homepageSettings->gcash_account_name)
-                        <div id="gcashProofSection" style="display:none; margin-top:20px;">
-                            <div class="form-group">
-                                <label class="form-label fw-bold">Upload Proof of Payment <span class="text-danger">*</span> <small style="font-weight:400;"> (Only required for GCash)</small></label>
-                                <p class="text-muted small mb-2">Upload a screenshot or photo of your GCash payment transaction.</p>
-                                <div class="mb-2">
-                                    <input type="file" name="proof_of_payment" id="proofOfPayment" class="form-control form-control-gasgo @error('proof_of_payment') is-invalid @enderror" accept="image/*" data-required="false">
-                                    <small class="text-muted d-block mt-1">Accepted formats: JPG, PNG, GIF (Max 5MB)</small>
-                                    @error('proof_of_payment')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                                <div id="proofPreview" style="margin-top:10px;"></div>
+                    <div id="paymentMethodDetails" style="display:none; margin-top:20px; padding:16px; background:#e7fff0; border-radius:12px; border-left:4px solid #007dfe;">
+                        <h6 class="fw-bold mb-2" style="color:#007dfe;"><i class="fas fa-info-circle me-2"></i><span id="paymentMethodDetailsTitle">Payment Details</span></h6>
+                        <p class="text-muted mb-2" id="paymentMethodDetailsDescription" style="font-size:.9rem;"></p>
+                        <div class="p-3 bg-white rounded mb-3" id="paymentMethodDetailsMeta" style="border:1px solid #c8f4dd; display:none;"></div>
+                        <div class="alert alert-info mb-0" id="paymentMethodDetailsInstructions" style="font-size:.85rem; display:none;"></div>
+                    </div>
+
+                    <div id="paymentProofSection" style="display:none; margin-top:20px;">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Upload Proof of Payment <span class="text-danger">*</span> <small style="font-weight:400;"> (Only required for methods that need proof)</small></label>
+                            <p class="text-muted small mb-2">Upload a screenshot or photo of your payment transaction.</p>
+                            <div class="mb-2">
+                                <input type="file" name="proof_of_payment" id="proofOfPayment" class="form-control form-control-gasgo @error('proof_of_payment') is-invalid @enderror" accept="image/*" data-required="false">
+                                <small class="text-muted d-block mt-1">Accepted formats: JPG, PNG, GIF (Max 5MB)</small>
+                                @error('proof_of_payment')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
                             </div>
+                            <div id="proofPreview" style="margin-top:10px;"></div>
                         </div>
-                    @endif
+                    </div>
                 </div>
 
                 <!-- Urgent Order Option -->
                 <div class="checkout-card" style="background: linear-gradient(135deg, rgba(247, 148, 29, 0.05) 0%, rgba(33, 150, 243, 0.05) 100%); border: 2px solid #f0f0f0;">
                     <h5><i class="fas fa-bolt" style="color: var(--gasgo-orange);"></i>Delivery Options</h5>
+                    @if(!empty($hasCylinderProducts))
+                        <div class="mb-3">
+                            <label class="form-label">Cylinder Transaction Type</label>
+                            <select class="form-select form-control-gasgo" name="transaction_type" required>
+                                <option value="exchange" {{ old('transaction_type', 'exchange') === 'exchange' ? 'selected' : '' }}>Exchange</option>
+                                <option value="new_cylinder" {{ old('transaction_type') === 'new_cylinder' ? 'selected' : '' }}>New Cylinder</option>
+                            </select>
+                            <small class="text-muted d-block mt-1">
+                                Applies only to cylinder products. Non-cylinder items will be deducted normally.
+                            </small>
+                        </div>
+                    @else
+                        <input type="hidden" name="transaction_type" value="not_tank">
+                    @endif
                     <div style="display: flex; align-items: center; gap: 12px; padding: 16px; background: white; border-radius: 12px; border: 1px solid #eee;">
                         <input 
                             type="checkbox" 
@@ -402,9 +424,14 @@
                                         $pointsRequired = $freebie->reward_points_required ?? 0;
                                         $isUnlocked = $pointsRequired <= $totalCheckoutItems;
                                         $itemsNeeded = $pointsRequired - $totalCheckoutItems;
+                                        $isSelected = (string) old('selected_freebie_id') === (string) $freebie->id;
                                     @endphp
                                     <div class="col-lg-4 col-md-6">
-                                        <label class="freebie-option {{ (string) old('selected_freebie_id') === (string) $freebie->id ? 'selected' : '' }}" style="{{ !$isUnlocked ? 'opacity: 0.6; cursor: not-allowed; position: relative;' : '' }}">
+                                        @if($isSelected)
+                                        <label class="freebie-option selected" @if(!$isUnlocked) style="opacity: 0.6; cursor: not-allowed; position: relative;" @endif>
+                                        @else
+                                        <label class="freebie-option" @if(!$isUnlocked) style="opacity: 0.6; cursor: not-allowed; position: relative;" @endif>
+                                        @endif
                                             @if(!$isUnlocked)
                                                 <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.05); border-radius: 10px; z-index: 1; display: flex; align-items: center; justify-content: center;">
                                                     <div style="background: rgba(0,0,0,0.8); color: white; padding: 8px 12px; border-radius: 6px; font-size: 0.75rem; text-align: center; font-weight: 600;">
@@ -507,23 +534,102 @@
 function selectPayment(el, method) {
     document.querySelectorAll('.payment-option').forEach(o => o.classList.remove('selected'));
     el.classList.add('selected');
-    document.getElementById('paymentMethod').value = method;
+    const radio = el.querySelector('input[type="radio"]');
+    if (radio && !radio.disabled) {
+        radio.checked = true;
+    }
 
-    // Show/hide GCash details and proof upload
-    const gcashDetails = document.getElementById('gcashDetails');
-    const gcashProofSection = document.getElementById('gcashProofSection');
+    const paymentMethodDetails = document.getElementById('paymentMethodDetails');
+    const paymentMethodDetailsTitle = document.getElementById('paymentMethodDetailsTitle');
+    const paymentMethodDetailsDescription = document.getElementById('paymentMethodDetailsDescription');
+    const paymentMethodDetailsMeta = document.getElementById('paymentMethodDetailsMeta');
+    const paymentMethodDetailsInstructions = document.getElementById('paymentMethodDetailsInstructions');
+    const paymentProofSection = document.getElementById('paymentProofSection');
     const proofInput = document.getElementById('proofOfPayment');
+    const imageUrl = el.dataset.imageUrl || '';
+    const requiresProof = el.dataset.requiresProof === '1';
+    const label = el.dataset.label || method;
+    const description = el.dataset.description || '';
+    const instructions = el.dataset.instructions || '';
+    const accountName = el.dataset.accountName || '';
+    const accountNumber = el.dataset.accountNumber || '';
+
+    if (paymentMethodDetails && paymentMethodDetailsTitle && paymentMethodDetailsDescription && paymentMethodDetailsMeta && paymentMethodDetailsInstructions) {
+        paymentMethodDetails.style.display = method ? 'block' : 'none';
+        paymentMethodDetailsTitle.textContent = label;
+        paymentMethodDetailsDescription.textContent = description || 'Review the payment instructions below before placing your order.';
+
+        paymentMethodDetailsMeta.innerHTML = '';
+        const hasMeta = accountName || accountNumber;
+        if (hasMeta) {
+            paymentMethodDetailsMeta.style.display = 'block';
+            if (imageUrl) {
+                const imageWrap = document.createElement('div');
+                imageWrap.style.marginBottom = '10px';
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = label;
+                img.style.maxWidth = '90px';
+                img.style.maxHeight = '90px';
+                img.style.objectFit = 'contain';
+                img.style.border = '1px solid #ddd';
+                img.style.borderRadius = '8px';
+                img.style.padding = '4px';
+                img.style.background = '#fff';
+                imageWrap.appendChild(img);
+                paymentMethodDetailsMeta.appendChild(imageWrap);
+            }
+            if (accountName) {
+                const nameWrap = document.createElement('div');
+                const nameLabel = document.createElement('span');
+                nameLabel.className = 'text-muted small';
+                nameLabel.textContent = 'Account Name:';
+                const nameValue = document.createElement('div');
+                nameValue.className = 'fw-bold';
+                nameValue.style.color = '#007dfe';
+                nameValue.textContent = accountName;
+                nameWrap.appendChild(nameLabel);
+                nameWrap.appendChild(nameValue);
+                paymentMethodDetailsMeta.appendChild(nameWrap);
+            }
+            if (accountNumber) {
+                const numberWrap = document.createElement('div');
+                numberWrap.style.marginTop = '10px';
+                const numberLabel = document.createElement('span');
+                numberLabel.className = 'text-muted small';
+                numberLabel.textContent = 'Account Number / Reference:';
+                const numberValue = document.createElement('div');
+                numberValue.className = 'fw-bold';
+                numberValue.style.color = '#007dfe';
+                numberValue.style.fontSize = '1.1rem';
+                numberValue.textContent = accountNumber;
+                numberWrap.appendChild(numberLabel);
+                numberWrap.appendChild(numberValue);
+                paymentMethodDetailsMeta.appendChild(numberWrap);
+            }
+        } else {
+            paymentMethodDetailsMeta.style.display = 'none';
+        }
+
+        if (instructions) {
+            paymentMethodDetailsInstructions.style.display = 'block';
+            paymentMethodDetailsInstructions.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>' + instructions;
+        } else if (requiresProof) {
+            paymentMethodDetailsInstructions.style.display = 'block';
+            paymentMethodDetailsInstructions.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>After payment, please upload a screenshot or photo of your proof of payment below.';
+        } else {
+            paymentMethodDetailsInstructions.style.display = 'none';
+        }
+    }
     
-    if (method === 'gcash') {
-        if (gcashDetails) gcashDetails.style.display = 'block';
-        if (gcashProofSection) gcashProofSection.style.display = 'block';
+    if (requiresProof) {
+        if (paymentProofSection) paymentProofSection.style.display = 'block';
         if (proofInput) {
             proofInput.setAttribute('required', 'required');
             proofInput.setAttribute('data-required', 'true');
         }
     } else {
-        if (gcashDetails) gcashDetails.style.display = 'none';
-        if (gcashProofSection) gcashProofSection.style.display = 'none';
+        if (paymentProofSection) paymentProofSection.style.display = 'none';
         if (proofInput) {
             proofInput.removeAttribute('required');
             proofInput.setAttribute('data-required', 'false');
@@ -537,7 +643,8 @@ function validateCheckout() {
         let errors = [];
 
         const selectedCartIds = document.getElementById('selectedCartIds')?.value || '';
-        const paymentMethod = document.getElementById('paymentMethod')?.value || 'cash';
+        const selectedPaymentOption = document.querySelector('.payment-option.selected') || document.querySelector('input[name="payment_method"]:checked')?.closest('.payment-option');
+        const paymentMethod = document.querySelector('input[name="payment_method"]:checked')?.value || 'cash';
         const proofInput = document.getElementById('proofOfPayment');
         const customerName = (document.querySelector('[name="customer_name"]')?.value || '').trim();
         const contactNumber = (document.querySelector('[name="contact_number"]')?.value || '').trim();
@@ -572,10 +679,10 @@ function validateCheckout() {
             errors.push('⚠️ Your cart is empty. Please add items before placing an order.');
         }
 
-        // Check GCash proof upload if GCash is selected
-        if (paymentMethod === 'gcash') {
+        // Check proof upload if the selected method requires it
+        if (selectedPaymentOption && selectedPaymentOption.dataset.requiresProof === '1') {
             if (!proofInput || !proofInput.files || proofInput.files.length === 0) {
-                errors.push('⚠️ Please upload proof of payment for GCash transactions.');
+                errors.push('⚠️ Please upload proof of payment for the selected payment method.');
             } else {
                 const file = proofInput.files[0];
                 const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
@@ -1146,6 +1253,9 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     });
 
+    let selectedVoucherId = null;
+    let selectedVoucherDiscount = 0;
+
     const deliveryFee = parseFloat(document.getElementById('summaryDeliveryFee').dataset.value || '0');
 
     // Cart item selection handling - now includes all items by default (no checkbox selection)
@@ -1206,8 +1316,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     // ===== VOUCHER & FREEBIE MANAGEMENT =====
-    let selectedVoucherId = null;
-    let selectedVoucherDiscount = 0;
     const originalSubtotal = parseFloat(document.getElementById('summarySubtotal').textContent.replace('₱', '').replace(/,/g, ''));
 
     window.applyVoucher = function(voucherId, discountAmount) {
@@ -1350,10 +1458,31 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Payment method selection - handle clicks on payment options
         document.querySelectorAll('.payment-option').forEach(option => {
             option.addEventListener('click', function() {
-                    const method = this.dataset.paymentMethod;
+                const radio = this.querySelector('input[type="radio"]');
+                if (radio && radio.disabled) {
+                    return;
+                }
+
+                const method = this.dataset.paymentMethod;
                 selectPayment(this, method);
             });
+
+            const radio = option.querySelector('input[type="radio"]');
+            if (radio) {
+                radio.addEventListener('change', function() {
+                    if (this.disabled) {
+                        return;
+                    }
+
+                    selectPayment(option, this.value);
+                });
+            }
         });
+
+        const initialSelectedPayment = document.querySelector('.payment-option.selected');
+        if (initialSelectedPayment) {
+            selectPayment(initialSelectedPayment, initialSelectedPayment.dataset.paymentMethod);
+        }
 
         // Map search button
         const mapSearchBtn = document.getElementById('mapSearchBtn');

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Freebie;
 use App\Models\LoyaltyPoint;
+use App\Models\Order;
 use App\Models\UserVoucher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,14 +40,15 @@ class LoyaltyController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            $deliveredOrders = \App\Models\Order::where('user_id', $userId)
+            $deliveredOrders = \App\Models\Order::with('orderItems')
+                ->where('user_id', $userId)
                 ->where('status', 'delivered')
                 ->where('created_at', '>=', now()->subYear())
                 ->get();
 
             $completedOrders = $deliveredOrders->count();
-            $totalSpend = $deliveredOrders->sum(function ($order) {
-                return max(0, $order->total_amount);
+            $totalSpend = $deliveredOrders->sum(function (Order $order) {
+                return $this->calculateSpendFromOrder($order);
             });
 
             // SYNC POINTS: Ensure points reflect spend amount for each delivered order
@@ -117,7 +119,19 @@ class LoyaltyController extends Controller
                     'Automatically added at checkout when qualified',
                 ],
             ],
-            [
+        ];
+
+        // Check if LPG Tank freebie is active before adding bulk bonus promo
+        $lpgTankFreebie = Freebie::where('is_active', true)
+            ->where(function ($q) {
+                $q->where('name', 'like', '%LPG Tank%')
+                  ->orWhere('name', 'like', '%Free Tank%')
+                  ->orWhere('name', 'like', '%Free LPG%');
+            })
+            ->first();
+
+        if ($lpgTankFreebie) {
+            $promos[] = [
                 'id' => 'bulk_bonus',
                 'title' => 'Buy 20+ LPG Quantity → Free LPG Tank',
                 'badge' => 'BULK BONUS',
@@ -128,8 +142,8 @@ class LoyaltyController extends Controller
                     'Automatically added in checkout when qualified',
                     'Free tank delivered with your order',
                 ],
-            ],
-        ];
+            ];
+        }
 
         $loyaltySteps = [
             ['number' => 1, 'title' => 'Register / Login', 'icon' => 'fas fa-user-plus'],
@@ -298,13 +312,14 @@ class LoyaltyController extends Controller
             ->delete();
 
         // Get user's completed orders
-        $deliveredOrders = \App\Models\Order::where('user_id', $userId)
+        $deliveredOrders = \App\Models\Order::with('orderItems')
+            ->where('user_id', $userId)
             ->where('status', 'delivered')
             ->where('created_at', '>=', now()->subYear())
             ->get();
 
-        $totalSpend = $deliveredOrders->sum(function ($order) {
-            return max(0, ($order->subtotal - $order->discount));
+        $totalSpend = $deliveredOrders->sum(function (Order $order) {
+            return $this->calculateSpendFromOrder($order);
         });
 
         DB::transaction(function () use ($userId, $voucher) {
@@ -429,7 +444,7 @@ class LoyaltyController extends Controller
     private function syncPointsToDeliveredOrders(int $userId, $deliveredOrders): void
     {
         foreach ($deliveredOrders as $order) {
-            $orderSpend = max(0, $order->total_amount);
+            $orderSpend = $this->calculateSpendFromOrder($order);
             $pointsEarned = (int) floor($orderSpend / 100);
 
             if ($pointsEarned <= 0) {
@@ -453,6 +468,19 @@ class LoyaltyController extends Controller
                 ]
             );
         }
+    }
+
+    /**
+     * Calculate the amount that should count toward loyalty points for an order.
+     * Includes all paid items, so non-tank products contribute to the total spend too.
+     */
+    private function calculateSpendFromOrder(Order $order): float
+    {
+        $paidItemsTotal = $order->orderItems
+            ->where('is_reward', false)
+            ->sum('subtotal');
+
+        return max(0, (float) $paidItemsTotal + (float) $order->delivery_fee - (float) $order->discount);
     }
 
     // Calculate earned, redeemed, and balance for a given user

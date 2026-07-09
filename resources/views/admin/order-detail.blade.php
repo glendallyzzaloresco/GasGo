@@ -127,6 +127,10 @@
                         @endif
                     </div>
                 </div>
+                <div class="detail-col">
+                    <span class="detail-label">Transaction Type</span>
+                    <div class="detail-value">{{ ucfirst(str_replace('_', ' ', $order->transaction_type ?? 'exchange')) }}</div>
+                </div>
                 @if($order->delivery)
                     <div class="detail-col">
                         <span class="detail-label">Assigned Rider</span>
@@ -222,14 +226,56 @@
         <!-- Payment Information -->
         <div class="detail-card">
             <h5><i class="fas fa-credit-card"></i>Payment</h5>
+            @php
+                $homepageSettings = \App\Models\HomepageSetting::singleton();
+                $availablePaymentMethods = collect($homepageSettings->availablePaymentMethods());
+                $selectedPaymentMethod = $availablePaymentMethods->firstWhere('key', $order->payment_method);
+                $proofImageUrl = $order->payment && filled($order->payment->proof_of_payment)
+                    ? asset('storage/' . ltrim($order->payment->proof_of_payment, '/'))
+                    : null;
+            @endphp
+            
+            <!-- Payment Proof Image - Top Section -->
+            @if($proofImageUrl)
+                <div class="detail-row" style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #e9ecef;">
+                    <div class="detail-col" style="width: 100%;">
+                        <span class="detail-label">
+                            <i class="fas fa-receipt" style="color: var(--gasgo-orange); margin-right: 6px;"></i>Payment Proof
+                        </span>
+                        <div style="margin-top: 12px;">
+                            <img src="{{ $proofImageUrl }}" alt="Proof of Payment" class="proof-image" style="max-width: 100%; height: auto; cursor: pointer;" onclick="this.style.transform='scale(1.05)'; setTimeout(() => this.style.transform='scale(1)', 200);">
+                        </div>
+                    </div>
+                </div>
+            @endif
+            
             <div class="detail-row">
                 <div class="detail-col">
                     <span class="detail-label">Method</span>
-                    <span class="badge {{ $order->payment_method === 'gcash' ? 'bg-success' : 'bg-secondary' }}">
-                        {{ ucfirst($order->payment_method) }}
-                    </span>
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <span class="badge {{ $order->payment_method === 'gcash' ? 'bg-success' : 'bg-secondary' }}">
+                            {{ ucfirst($order->payment_method) }}
+                        </span>
+                        @if(!empty($selectedPaymentMethod['image_url']))
+                            <div style="width:64px;height:64px;border:1px solid #dee2e6;border-radius:12px;padding:6px;background:#fff;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+                                <img src="{{ $selectedPaymentMethod['image_url'] }}" alt="{{ $selectedPaymentMethod['label'] }}" style="width:100%;height:100%;object-fit:contain;">
+                            </div>
+                        @endif
+                    </div>
                 </div>
             </div>
+            @if($selectedPaymentMethod)
+                <div class="detail-row">
+                    <div class="detail-col">
+                        <span class="detail-label">Account Name</span>
+                        <div class="detail-value">{{ $selectedPaymentMethod['account_name'] ?: 'N/A' }}</div>
+                    </div>
+                    <div class="detail-col">
+                        <span class="detail-label">Account Number</span>
+                        <div class="detail-value">{{ $selectedPaymentMethod['account_number'] ?: 'N/A' }}</div>
+                    </div>
+                </div>
+            @endif
             <div class="detail-row">
                 <div class="detail-col">
                     <span class="detail-label">Subtotal</span>
@@ -256,15 +302,6 @@
                     <div class="detail-value" style="font-size: 1.3rem; font-weight: 700; color: var(--gasgo-orange);">₱{{ number_format($order->total_amount, 2) }}</div>
                 </div>
             </div>
-
-            @if($order->payment && $order->payment->proof_of_payment)
-                <div class="detail-row" style="border-top: 1px solid #e9ecef; padding-top: 16px; margin-top: 16px;">
-                    <div class="detail-col">
-                        <span class="detail-label">Proof of Payment</span>
-                        <img src="{{ asset('storage/' . $order->payment->proof_of_payment) }}" alt="Proof of Payment" class="proof-image">
-                    </div>
-                </div>
-            @endif
         </div>
 
         <!-- Actions -->
@@ -275,6 +312,15 @@
                 <form action="{{ route('admin.orders.status', $order) }}" method="POST">
                     @csrf
                     @method('PUT')
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Transaction Type</label>
+                        <select name="transaction_type" class="form-select" required>
+                            <option value="exchange" {{ ($order->transaction_type ?? 'exchange') === 'exchange' ? 'selected' : '' }}>Exchange</option>
+                            <option value="new_cylinder" {{ ($order->transaction_type ?? '') === 'new_cylinder' ? 'selected' : '' }}>New Cylinder</option>
+                            <option value="not_tank" {{ ($order->transaction_type ?? '') === 'not_tank' ? 'selected' : '' }}>Not Tank</option>
+                        </select>
+                        <small class="text-muted">Set this before approval to control inventory behavior at delivery completion.</small>
+                    </div>
                     <input type="hidden" name="status" value="approved">
                     <button type="submit" class="btn btn-gasgo w-100" style="background:#28a745; color:#fff; font-weight:700;">
                         <i class="fas fa-check me-2"></i>Approve Order

@@ -221,6 +221,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
         Route::get('/{inventory}/edit', [InventoryController::class, 'edit'])->name('admin.inventory.edit');
         Route::put('/{inventory}', [InventoryController::class, 'update'])->name('admin.inventory.update');
         Route::post('/{inventory}/adjust', [InventoryController::class, 'adjust'])->name('admin.inventory.adjust');
+        Route::post('/movements/{movement}/mark-returned', [InventoryController::class, 'markCylinderReturned'])->name('admin.inventory.movement.mark-returned');
 
         // Inventory Movements Ledger
         Route::get('/movements/index', [InventoryMovementController::class, 'index'])->name('admin.inventory.movements');
@@ -277,6 +278,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::post('/settings/homepage', [HomepageSettingController::class, 'update'])->name('admin.settings.homepage.update');
     Route::post('/settings/admin-users', [DashboardController::class, 'storeAdminUser'])->name('admin.settings.admin-users.store');
     Route::post('/settings/update-gcash', [DashboardController::class, 'updateGCash'])->name('admin.settings.update-gcash');
+    Route::post('/settings/update-payment-methods', [DashboardController::class, 'updatePaymentMethods'])->name('admin.settings.update-payment-methods');
     Route::post('/settings/update-delivery-fee', [DashboardController::class, 'updateDeliveryFee'])->name('admin.settings.update-delivery-fee');
     Route::post('/settings/clear-cache', function () {
         Artisan::call('cache:clear');

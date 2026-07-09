@@ -109,10 +109,10 @@
                         <div class="mb-3">
                             <label class="form-label">Empty Tanks Collected</label>
                             <div class="input-group">
-                                <input type="number" class="form-control" value="{{ $inventory->empty_on_hand }}" disabled>
+                                <input type="number" class="form-control" value="{{ $inventory->supportsEmptyCylinderTracking() ? $inventory->empty_on_hand : 0 }}" disabled>
                                 <span class="input-group-text">units</span>
                             </div>
-                            <small class="form-text text-muted">Read-only: Tracked from deliveries</small>
+                            <small class="form-text text-muted">{{ $inventory->supportsEmptyCylinderTracking() ? 'Read-only: Tracked from deliveries' : 'Not applicable for this product category' }}</small>
                         </div>
                     </div>
                 </div>

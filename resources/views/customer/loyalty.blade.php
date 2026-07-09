@@ -690,6 +690,10 @@ Generate the corrected controller/service logic and the template updates.S =====
                     </div>
                 </div>
 
+                <p class="text-muted mb-3" style="font-size: 0.9rem;">
+                    Points are based on your total delivered spend on tank products only.
+                </p>
+
                 @if ($balance < $nextMilestone)
                 <p style="font-weight: 600; color: var(--gasgo-blue);">Progress to Unlock Voucher</p>
                 <div class="progress-bar-gasgo" style="--fill-width: {{ ($balance / $nextMilestone) * 100 }}%;">
@@ -711,13 +715,15 @@ Generate the corrected controller/service logic and the template updates.S =====
     </div>
 
     <!-- AVAILABLE VOUCHERS - Only for logged-in users -->
-    <div class="mb-5" data-aos="fade-up">
-        <h3 class="section-title" style="font-size: 1.3rem;">
-            <i class="fas fa-ticket-alt me-2" style="color: var(--gasgo-orange);"></i>
-            Vouchers Available to Claim
-        </h3>
+    <div class="my-5">
+        <div data-aos="fade-up" class="mb-4">
+            <h2 class="section-title">
+                <i class="fas fa-ticket-alt me-2" style="color: var(--gasgo-orange);"></i>
+                Vouchers Available to Claim
+            </h2>
+        </div>
 
-        <div class="row">
+        <div class="row g-4">
             @forelse ($unlockedVouchers->where('isUnlocked', true) as $voucher)
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="voucher-card" style="background: linear-gradient(135deg, rgba(247, 148, 29, 0.08) 0%, rgba(15, 52, 96, 0.05) 100%); border: 2px solid var(--gasgo-orange); border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(247, 148, 29, 0.1); transition: all 0.3s ease;">
@@ -743,7 +749,7 @@ Generate the corrected controller/service logic and the template updates.S =====
                         <i class="fas fa-check me-1"></i> Claimed
                     </button>
                     @else
-                    <form action="{{ route('customer.loyalty.claimVoucher') }}" method="POST" style="display: inline-width: 100%;">
+                    <form action="{{ route('customer.loyalty.claimVoucher') }}" method="POST" style="width: 100%;">
                         @csrf
                         <input type="hidden" name="voucher_id" value="{{ $voucher->id }}">
                         <button type="submit" class="btn" style="width: 100%; background: linear-gradient(135deg, var(--gasgo-orange), #ff6b35); color: white; border: none; padding: 10px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease; cursor: pointer;">
@@ -859,8 +865,8 @@ Generate the corrected controller/service logic and the template updates.S =====
     @endif
 
     <!-- PROMOS TODAY -->
-    <div class="mb-5">
-        <div data-aos="fade-up">
+    <div class="my-5">
+        <div data-aos="fade-up" class="mb-4">
             <h2 class="section-title">
                 <i class="fas fa-star me-2" style="color: var(--gasgo-orange);"></i>Promos Today
             </h2>

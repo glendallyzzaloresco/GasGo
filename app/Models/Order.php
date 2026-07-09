@@ -12,6 +12,8 @@ class Order extends Model
     protected $fillable = [
         'user_id',
         'order_number',
+        'order_type',
+        'transaction_type',
         'subtotal',
         'discount',
         'delivery_fee',
@@ -37,6 +39,8 @@ class Order extends Model
             'discount' => 'decimal:2',
             'delivery_fee' => 'decimal:2',
             'total_amount' => 'decimal:2',
+            'order_type' => 'string',
+            'transaction_type' => 'string',
             'is_urgent' => 'boolean',
             'estimated_delivery_time' => 'datetime',
             'approved_at' => 'datetime',

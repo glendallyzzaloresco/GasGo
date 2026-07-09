@@ -212,7 +212,7 @@
                                         <h6 class="fw-bold mb-1">GCash Payment Account</h6>
                                         <p class="text-muted small mb-3">Configure GCash account details for customer payments.</p>
 
-                                        <form action="{{ route('admin.settings.update-gcash') }}" method="POST" class="row g-2">
+                                        <form action="{{ route('admin.settings.update-gcash') }}" method="POST" class="row g-2" enctype="multipart/form-data">
                                             @csrf
                                             <div class="col-12">
                                                 <label class="form-label small">GCash Account Number</label>
@@ -229,6 +229,18 @@
                                                 @enderror
                                             </div>
                                             <div class="col-12">
+                                                <label class="form-label small">GCash Image</label>
+                                                <input type="file" name="gcash_image" class="form-control form-control-sm @error('gcash_image') is-invalid @enderror" accept="image/*">
+                                                @if(!empty($homepageSettings->gcash_image_path))
+                                                    <div class="mt-2">
+                                                        <img src="{{ asset('storage/' . $homepageSettings->gcash_image_path) }}" alt="GCash Image" style="max-width:80px;max-height:80px;object-fit:contain;border:1px solid #ddd;border-radius:8px;padding:4px;background:#fff;">
+                                                    </div>
+                                                @endif
+                                                @error('gcash_image')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                            <div class="col-12">
                                                 <button type="submit" class="btn btn-success btn-sm">
                                                     <i class="fas fa-save me-1"></i>Save GCash Details
                                                 </button>
@@ -239,13 +251,82 @@
                             </div>
                         </div>
 
-                        {{-- Delivery Fee Setting --}}
-                        <div class="col-md-6">
+                        {{-- Additional Payment Methods --}}
+                        <div class="col-12">
                             <div class="border rounded-3 p-4">
-                                <div class="d-flex align-items-start gap-3">
-                                    <div style="width:48px;height:48px;background:#e0f7fa;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                        <i class="fas fa-dollar-sign" style="color:#007d8f;font-size:1.3rem;"></i>
+                                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+                                    <div>
+                                        <h6 class="fw-bold mb-1">Checkout Payment Methods</h6>
+                                        <p class="text-muted small mb-0">Add extra payment methods. Customers will see the method name, account name, account number, and proof upload like GCash.</p>
                                     </div>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="addPaymentMethodBtn">
+                                        <i class="fas fa-plus me-1"></i>Add Method
+                                    </button>
+                                </div>
+
+                                @php
+                                    $customPaymentMethods = old('payment_methods', $homepageSettings->payment_methods ?? []);
+                                    if (empty($customPaymentMethods)) {
+                                        $customPaymentMethods = [[
+                                            'label' => '',
+                                            'account_name' => '',
+                                            'account_number' => '',
+                                        ]];
+                                    }
+                                @endphp
+
+                                <form action="{{ route('admin.settings.update-payment-methods') }}" method="POST" id="paymentMethodsForm" enctype="multipart/form-data">
+                                    @csrf
+                                    <div id="paymentMethodsContainer" class="d-grid gap-3">
+                                        @foreach ($customPaymentMethods as $index => $method)
+                                            <div class="border rounded-3 p-3 payment-method-row" data-index="{{ $index }}">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <strong class="small text-uppercase text-muted">Method {{ $loop->iteration }}</strong>
+                                                    <button type="button" class="btn btn-link text-danger p-0 remove-payment-method-btn" {{ count($customPaymentMethods) === 1 ? 'disabled' : '' }}>
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                                <div class="row g-3">
+                                                    <div class="col-md-4">
+                                                        <label class="form-label small">Payment Method Name</label>
+                                                        <input type="text" name="payment_methods[{{ $index }}][label]" class="form-control form-control-sm payment-method-label" value="{{ old('payment_methods.' . $index . '.label', $method['label'] ?? '') }}" placeholder="Bank Transfer">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label small">Account Name</label>
+                                                        <input type="text" name="payment_methods[{{ $index }}][account_name]" class="form-control form-control-sm" value="{{ old('payment_methods.' . $index . '.account_name', $method['account_name'] ?? '') }}" placeholder="Optional">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label small">Account Number</label>
+                                                        <input type="text" name="payment_methods[{{ $index }}][account_number]" class="form-control form-control-sm" value="{{ old('payment_methods.' . $index . '.account_number', $method['account_number'] ?? '') }}" placeholder="Optional">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label small">Payment Image</label>
+                                                        <input type="file" name="payment_methods[{{ $index }}][image]" class="form-control form-control-sm" accept="image/*">
+                                                        <input type="hidden" name="payment_methods[{{ $index }}][existing_image]" value="{{ $method['image_path'] ?? '' }}">
+                                                        @if(!empty($method['image_path']))
+                                                            <div class="mt-2">
+                                                                <img src="{{ asset('storage/' . $method['image_path']) }}" alt="Payment Method Image" style="max-width:80px;max-height:80px;object-fit:contain;border:1px solid #ddd;border-radius:8px;padding:4px;background:#fff;">
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+
+                                    <div class="mt-3 d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-save me-1"></i>Save Payment Methods
+                                        </button>
+                                    </div>
+                                </form>
+
+                                    <div class="mt-3">
+                                        <div class="border rounded-3 p-4">
+                                            <div class="d-flex align-items-start gap-3">
+                                                <div style="width:48px;height:48px;background:#eaf7f9;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                                    <i class="fas fa-dollar-sign" style="color:#007d8f;font-size:1.3rem;"></i>
+                                                </div>
                                     <div class="flex-grow-1">
                                         <h6 class="fw-bold mb-1">Delivery Fee</h6>
                                         <p class="text-muted small mb-3">Set the default delivery fee used for every new order. Existing orders keep their current fee.</p>
@@ -265,6 +346,8 @@
                                                 </button>
                                             </div>
                                         </form>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -306,6 +389,88 @@ function togglePasswordVisibility(button, fieldId) {
     var el = document.getElementById('settingsData');
     var logTailUrl = el.dataset.logTailUrl;
     var logSize = parseFloat(el.dataset.logSize);
+
+    var paymentMethodsContainer = document.getElementById('paymentMethodsContainer');
+    var addPaymentMethodBtn = document.getElementById('addPaymentMethodBtn');
+    var paymentMethodTemplate = `
+        <div class="border rounded-3 p-3 payment-method-row" data-index="__INDEX__">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <strong class="small text-uppercase text-muted">Method __NUMBER__</strong>
+                <button type="button" class="btn btn-link text-danger p-0 remove-payment-method-btn"><i class="fas fa-trash"></i></button>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label small">Payment Method Name</label>
+                    <input type="text" name="payment_methods[__INDEX__][label]" class="form-control form-control-sm payment-method-label" placeholder="Bank Transfer">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small">Account Name</label>
+                    <input type="text" name="payment_methods[__INDEX__][account_name]" class="form-control form-control-sm" placeholder="Optional">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small">Account Number</label>
+                    <input type="text" name="payment_methods[__INDEX__][account_number]" class="form-control form-control-sm" placeholder="Optional">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small">Payment Image</label>
+                    <input type="file" name="payment_methods[__INDEX__][image]" class="form-control form-control-sm" accept="image/*">
+                    <input type="hidden" name="payment_methods[__INDEX__][existing_image]" value="">
+                </div>
+            </div>
+        </div>`;
+
+    function reindexPaymentMethodRows() {
+        if (!paymentMethodsContainer) {
+            return;
+        }
+
+        paymentMethodsContainer.querySelectorAll('.payment-method-row').forEach(function (row, index) {
+            row.dataset.index = index;
+            row.querySelector('.small.text-uppercase.text-muted').textContent = 'Method ' + (index + 1);
+
+            row.querySelectorAll('input, textarea').forEach(function (field) {
+                if (!field.name) {
+                    return;
+                }
+
+                field.name = field.name.replace(/payment_methods\[\d+\]/, 'payment_methods[' + index + ']');
+            });
+        });
+
+        paymentMethodsContainer.querySelectorAll('.remove-payment-method-btn').forEach(function (button) {
+            button.disabled = paymentMethodsContainer.querySelectorAll('.payment-method-row').length === 1;
+        });
+    }
+
+    if (addPaymentMethodBtn && paymentMethodsContainer) {
+        addPaymentMethodBtn.addEventListener('click', function () {
+            var index = paymentMethodsContainer.querySelectorAll('.payment-method-row').length;
+            var wrapper = document.createElement('div');
+            wrapper.innerHTML = paymentMethodTemplate
+                .replace(/__INDEX__/g, index)
+                .replace(/__NUMBER__/g, index + 1);
+
+            paymentMethodsContainer.appendChild(wrapper.firstElementChild);
+            reindexPaymentMethodRows();
+        });
+
+        paymentMethodsContainer.addEventListener('click', function (event) {
+            var button = event.target.closest('.remove-payment-method-btn');
+            if (!button) {
+                return;
+            }
+
+            var rows = paymentMethodsContainer.querySelectorAll('.payment-method-row');
+            if (rows.length === 1) {
+                return;
+            }
+
+            button.closest('.payment-method-row').remove();
+            reindexPaymentMethodRows();
+        });
+
+        reindexPaymentMethodRows();
+    }
 
     var logViewer = document.getElementById('logViewer');
     if (logViewer) {

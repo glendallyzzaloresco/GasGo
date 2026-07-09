@@ -18,6 +18,8 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class DashboardController extends Controller
 {
@@ -768,12 +770,75 @@ class DashboardController extends Controller
         $validated = $request->validate([
             'gcash_account_number' => 'nullable|string|max:255',
             'gcash_account_name' => 'nullable|string|max:255',
+            'gcash_image' => 'nullable|image|max:2048',
         ]);
 
         $homepageSettings = HomepageSetting::singleton();
+
+        if ($request->hasFile('gcash_image')) {
+            if (!empty($homepageSettings->gcash_image_path)) {
+                Storage::disk('public')->delete($homepageSettings->gcash_image_path);
+            }
+            $validated['gcash_image_path'] = $request->file('gcash_image')->store('payment-methods', 'public');
+        }
+
+        unset($validated['gcash_image']);
         $homepageSettings->update($validated);
 
         return back()->with('success', 'GCash account details updated successfully.');
+    }
+
+    public function updatePaymentMethods(Request $request)
+    {
+        $validated = $request->validate([
+            'payment_methods' => 'nullable|array',
+            'payment_methods.*.label' => 'nullable|string|max:100',
+            'payment_methods.*.account_name' => 'nullable|string|max:255',
+            'payment_methods.*.account_number' => 'nullable|string|max:255',
+            'payment_methods.*.existing_image' => 'nullable|string|max:255',
+            'payment_methods.*.image' => 'nullable|image|max:2048',
+        ]);
+
+        $uploadedMethods = $request->file('payment_methods', []);
+        $methods = collect($validated['payment_methods'] ?? [])
+            ->map(function ($method, $index) use ($uploadedMethods) {
+                $label = trim((string) ($method['label'] ?? ''));
+                $key = Str::of($label)
+                    ->lower()
+                    ->replaceMatches('/[^a-z0-9]+/', '_')
+                    ->trim('_')
+                    ->toString();
+
+                if ($key === '' || in_array($key, ['cash', 'gcash'], true)) {
+                    return null;
+                }
+
+                $imagePath = trim((string) ($method['existing_image'] ?? ''));
+                $uploadedImage = data_get($uploadedMethods, $index . '.image');
+                if ($uploadedImage) {
+                    if ($imagePath !== '') {
+                        Storage::disk('public')->delete($imagePath);
+                    }
+                    $imagePath = $uploadedImage->store('payment-methods', 'public');
+                }
+
+                return [
+                    'key' => $key,
+                    'label' => $label !== '' ? $label : Str::headline($key),
+                    'account_name' => trim((string) ($method['account_name'] ?? '')),
+                    'account_number' => trim((string) ($method['account_number'] ?? '')),
+                    'image_path' => $imagePath ?: null,
+                    'requires_proof' => true,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        $homepageSettings = HomepageSetting::singleton();
+        $homepageSettings->update(['payment_methods' => $methods]);
+
+        return back()->with('success', 'Payment methods updated successfully.');
     }
 
     public function updateDeliveryFee(Request $request)

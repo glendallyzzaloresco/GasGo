@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Restock;
 use App\Models\RestockItem;
+use App\Models\Inventory;
+use App\Models\StockMovement;
 use App\Models\Product;
-use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class RestockController extends Controller
 {
@@ -142,24 +144,45 @@ class RestockController extends Controller
         }
 
         try {
-            // Create inventory IN movements for each item
-            foreach ($restock->items as $item) {
-                InventoryService::stockIn(
-                    productId: $item->product_id,
-                    quantity: $item->quantity,
-                    movementDate: now(),
-                    referenceType: 'restock',
-                    referenceId: $restock->id,
-                    notes: "Restock from {$restock->supplier_name}",
-                    userId: Auth::id()
-                );
-            }
+            DB::transaction(function () use ($restock) {
+                $restock->loadMissing('items');
 
-            // Update restock status
-            $restock->update([
-                'status' => 'RECEIVED',
-                'received_at' => now(),
-            ]);
+                foreach ($restock->items as $item) {
+                    $inventory = Inventory::where('product_id', $item->product_id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (!$inventory) {
+                        throw new \RuntimeException("Inventory record missing for product ID {$item->product_id}.");
+                    }
+
+                    $quantity = (int) $item->quantity;
+                    $inventory->increment('quantity_on_hand', $quantity);
+                    $inventory->update(['last_restocked' => now()]);
+
+                    if (!$inventory->supportsEmptyCylinderTracking()) {
+                        $inventory->forceFill(['empty_on_hand' => $inventory->empty_on_hand]);
+                    }
+
+                    StockMovement::create([
+                        'inventory_id' => $inventory->id,
+                        'full_in' => $quantity,
+                        'full_out' => 0,
+                        'empty_in' => 0,
+                        'empty_out' => 0,
+                        'type' => 'stock_in',
+                        'reference' => 'RST-' . $restock->id,
+                        'notes' => "Restock received from {$restock->supplier_name}",
+                        'movement_date' => now(),
+                        'created_by' => Auth::id(),
+                    ]);
+                }
+
+                $restock->update([
+                    'status' => 'RECEIVED',
+                    'received_at' => now(),
+                ]);
+            });
 
             return response()->json([
                 'message' => 'Restock marked as received and inventory updated.',

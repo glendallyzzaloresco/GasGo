@@ -20,6 +20,7 @@ class Product extends Model
         'weight',
         'image',
         'is_active',
+        'is_cylinder',
     ];
 
     protected function casts(): array
@@ -29,6 +30,7 @@ class Product extends Model
             'cost_price' => 'decimal:2',
             'selling_price' => 'decimal:2',
             'is_active' => 'boolean',
+            'is_cylinder' => 'boolean',
         ];
     }
 
@@ -70,6 +72,40 @@ class Product extends Model
     public function isInStock()
     {
         return $this->inventory && $this->inventory->quantity_on_hand > 0 && $this->inventory->status === 'active' && !$this->inventory->isExpired();
+    }
+
+    /**
+     * Whether this product is a cylinder product.
+     */
+    public function getIsCylinderAttribute($value): bool
+    {
+        if (array_key_exists('is_cylinder', $this->attributes)) {
+            return (bool) $value;
+        }
+
+        return strcasecmp((string) ($this->category ?? ''), 'tank') === 0;
+    }
+
+    /**
+     * Whether this product is a cylinder product.
+     */
+    public function isCylinder(): bool
+    {
+        return $this->is_cylinder;
+    }
+
+    /**
+     * Apply the cylinder-product filter using is_cylinder when available.
+     */
+    public function scopeCylinder($query)
+    {
+        $table = $query->getModel()->getTable();
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'is_cylinder')) {
+            return $query->where('is_cylinder', true);
+        }
+
+        return $query->whereRaw('LOWER(category) = ?', ['tank']);
     }
 
     /**

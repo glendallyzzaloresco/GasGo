@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Delivery;
 use App\Models\Order;
-use App\Services\InventoryService;
+use App\Services\OrderInventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -105,9 +105,40 @@ class DeliveryController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $delivery->load(['order.orderItems', 'order.user']);
+        $delivery->load(['order.orderItems', 'order.user' => function ($query) {
+            $query->with('orders', 'loyaltyPoints');
+        }]);
 
-        return view('rider.delivery', compact('delivery'));
+        // Calculate customer stats similar to admin view
+        $customer = $delivery->order->user;
+        $totalOrders = $customer->orders->count();
+        $deliveredOrders = $customer->orders->where('status', 'delivered');
+        $productTotal = $deliveredOrders->sum(fn($order) => $order->fee_free_total);
+        $deliveryTotal = $deliveredOrders->sum('delivery_fee');
+        $totalSpent = $productTotal + $deliveryTotal;
+        $loyaltyPoints = $customer->loyaltyPoints->where('type', 'earned')->sum('points') - 
+                        $customer->loyaltyPoints->where('type', 'redeemed')->sum('points');
+        
+        // Determine loyalty tier based on points
+        if ($loyaltyPoints >= 300) {
+            $loyaltyTier = 'Gold';
+            $loyaltyBadge = 'bg-success';
+        } elseif ($loyaltyPoints >= 150) {
+            $loyaltyTier = 'Silver';
+            $loyaltyBadge = 'bg-primary';
+        } elseif ($loyaltyPoints > 0) {
+            $loyaltyTier = 'Member';
+            $loyaltyBadge = 'bg-secondary';
+        } else {
+            $loyaltyTier = null;
+            $loyaltyBadge = null;
+        }
+        
+        $lastOrder = $customer->orders->sortByDesc('created_at')->skip(1)->first();
+        
+        $customerStats = compact('totalOrders', 'totalSpent', 'loyaltyPoints', 'loyaltyTier', 'loyaltyBadge', 'lastOrder');
+
+        return view('rider.delivery', compact('delivery', 'customerStats'));
     }
 
     // Rider: update delivery status
@@ -133,75 +164,24 @@ class DeliveryController extends Controller
         }
 
         if ($validated['status'] === 'delivered') {
-            $updateData['delivered_at'] = now();
-            $delivery->order->update([
-                'status'       => 'delivered',
-                'delivered_at' => now(),
-            ]);
+            $shouldApplyInventory = $delivery->order->status !== 'delivered';
 
-            // Update payment status to paid when delivery is completed
-            \App\Models\Payment::where('order_id', $delivery->order_id)->update([
-                'status' => 'paid',
-                'paid_at' => now(),
-            ]);
+            DB::transaction(function () use ($delivery, &$updateData, $shouldApplyInventory) {
+                $updateData['delivered_at'] = now();
 
-            // Create stock OUT movements for each order item (delivered tanks)
-            // and increment empty_on_hand (tanks collected during exchange)
-            DB::transaction(function () use ($delivery) {
-                foreach ($delivery->order->orderItems as $item) {
-                    try {
-                        // Decrement full tanks (quantity_on_hand)
-                        InventoryService::stockOut(
-                            productId: $item->product_id,
-                            quantity: $item->quantity,
-                            movementDate: now(),
-                            referenceType: 'order',
-                            referenceId: $delivery->order_id,
-                            notes: 'Delivery completed - Full tank(s) delivered to customer',
-                            userId: Auth::id()
-                        );
-
-                        // Increment empty tanks collected (exchange-only) for tank-like categories.
-                        $product = $item->product;
-                        $category = strtolower((string) ($product->category ?? ''));
-                        if ($category !== '' && str_contains($category, 'tank')) {
-                            $inventory = \App\Models\Inventory::where('product_id', $item->product_id)
-                                ->lockForUpdate()
-                                ->first();
-                            if ($inventory) {
-                                $inventory->increment('empty_on_hand', $item->quantity);
-
-                                // Log the empty tank collection in inventory_movements
-                                \App\Models\InventoryMovement::create([
-                                    'product_id'     => $item->product_id,
-                                    'movement_date'  => now(),
-                                    'type'           => 'IN',
-                                    'quantity'       => $item->quantity,
-                                    'reference_type' => 'order_exchange',
-                                    'reference_id'   => $delivery->order_id,
-                                    'notes'          => 'Empty tank(s) collected during delivery exchange',
-                                    'created_by'     => Auth::id(),
-                                ]);
-
-                                // Log the empty tank collection in stock_movements for History tracking
-                                \App\Models\StockMovement::create([
-                                    'inventory_id'    => $inventory->id,
-                                    'movement_date'   => now(),
-                                    'type'            => 'empty_return',
-                                    'quantity_change' => -$item->quantity,
-                                    'reference'       => $delivery->order->order_number ?? 'ORD-' . $delivery->order_id,
-                                    'notes'           => 'Auto-logged from delivery by ' . (Auth::user()->name ?? 'Rider'),
-                                    'created_by'      => Auth::id(),
-                                ]);
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        // Log the error but don't fail the delivery update
-                        Log::warning(
-                            "Failed to record inventory movement for order {$delivery->order_id}, product {$item->product_id}: " . $e->getMessage()
-                        );
-                    }
+                if ($shouldApplyInventory) {
+                    OrderInventoryService::applyOnCompletion($delivery->order, Auth::id());
                 }
+
+                $delivery->order->update([
+                    'status'       => 'delivered',
+                    'delivered_at' => now(),
+                ]);
+
+                \App\Models\Payment::where('order_id', $delivery->order_id)->update([
+                    'status' => 'paid',
+                    'paid_at' => now(),
+                ]);
             });
         }
 

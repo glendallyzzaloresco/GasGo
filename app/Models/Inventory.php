@@ -66,4 +66,20 @@ class Inventory extends Model
     {
         return $this->expiry_date && $this->expiry_date->isPast();
     }
+
+    /**
+     * Determine whether a product can track empty cylinders.
+     */
+    public function supportsEmptyCylinderTracking(): bool
+    {
+        return $this->product?->isCylinder() ? true : false;
+    }
+
+    /**
+     * Return the empty cylinder value for display purposes.
+     */
+    public function getDisplayEmptyOnHandAttribute(): int
+    {
+        return $this->supportsEmptyCylinderTracking() ? (int) ($this->empty_on_hand ?? 0) : 0;
+    }
 }

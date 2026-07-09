@@ -10,12 +10,14 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Services\OrderInventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
@@ -79,9 +81,9 @@ class OrderController extends Controller
             return redirect()->route('customer.cart')->with('error', 'No items selected for checkout.');
         }
 
-        // Check if order contains any tank products
-        $hasTankProducts = $cartItems->contains(function ($item) {
-            return $item->product && strtolower($item->product->category) === 'tank';
+        // Check if order contains any cylinder products
+        $hasCylinderProducts = $cartItems->contains(function ($item) {
+            return $item->product?->isCylinder();
         });
 
         $subtotal = $cartItems->sum(fn ($item) => $item->product->price * $item->quantity);
@@ -145,18 +147,18 @@ class OrderController extends Controller
         $totalCheckoutItems = $rewardPreview['total_items'];
 
         // Separate freebies into unlocked (available) and locked (requires more items)
-        // Only show freebies with required points if order contains tanks
-        $unlockedFreebies = $allFreebies->filter(function ($freebie) use ($totalCheckoutItems, $hasTankProducts) {
-            // If freebie has required points and order has no tanks, exclude it
-            if ($freebie->reward_points_required > 0 && !$hasTankProducts) {
+        // Only show freebies with required points if order contains cylinder products
+        $unlockedFreebies = $allFreebies->filter(function ($freebie) use ($totalCheckoutItems, $hasCylinderProducts) {
+            // If freebie has required points and order contains no cylinder products, exclude it
+            if ($freebie->reward_points_required > 0 && !$hasCylinderProducts) {
                 return false;
             }
             return $freebie->reward_points_required <= $totalCheckoutItems;
         })->values();
 
-        $lockedFreebies = $allFreebies->filter(function ($freebie) use ($totalCheckoutItems, $hasTankProducts) {
-            // If freebie has required points and order has no tanks, exclude it
-            if ($freebie->reward_points_required > 0 && !$hasTankProducts) {
+        $lockedFreebies = $allFreebies->filter(function ($freebie) use ($totalCheckoutItems, $hasCylinderProducts) {
+            // If freebie has required points and order contains no cylinder products, exclude it
+            if ($freebie->reward_points_required > 0 && !$hasCylinderProducts) {
                 return false;
             }
             return $freebie->reward_points_required > $totalCheckoutItems;
@@ -186,7 +188,7 @@ class OrderController extends Controller
             ->take(1)
             ->get();
 
-        return view('customer.checkout', compact('cartItems', 'subtotal', 'deliveryFee', 'rewardPreview', 'availableFreebies', 'unlockedFreebies', 'lockedFreebies', 'totalCheckoutItems', 'homepageSettings', 'availableVouchers'));
+        return view('customer.checkout', compact('cartItems', 'subtotal', 'deliveryFee', 'rewardPreview', 'availableFreebies', 'unlockedFreebies', 'lockedFreebies', 'totalCheckoutItems', 'homepageSettings', 'availableVouchers', 'hasCylinderProducts'));
     }
 
     // Customer: place an order from cart
@@ -196,22 +198,59 @@ class OrderController extends Controller
             return redirect()->guest(route('customer.login'))->with('error', 'Please log in before placing an order.');
         }
 
+        $homepageSettings = HomepageSetting::singleton();
+        $availableMethods = collect($homepageSettings->availablePaymentMethods());
+        $paymentMethodKeys = $availableMethods->pluck('key')->all();
+
         $validated = $request->validate([
             'customer_name'    => 'required|string|max:255',
             'delivery_address' => 'required|string|max:500',
             'contact_number'   => 'required|string|max:20',
-            'payment_method'   => 'required|in:cash,gcash',
+            'payment_method'   => ['required', 'string', Rule::in($paymentMethodKeys)],
+            'transaction_type' => 'nullable|in:exchange,new_cylinder,not_tank',
             'notes'            => 'nullable|string|max:500',
             'is_urgent'        => 'nullable|boolean',
-            'latitude'         => 'nullable|numeric',
-            'longitude'        => 'nullable|numeric',
+            'latitude'         => 'required|numeric',
+            'longitude'        => 'required|numeric',
             'address_full'     => 'nullable|string|max:500',
             'selected_freebie_id' => 'nullable|integer',
             'voucher_id' => 'nullable|integer|exists:user_vouchers,id',
             'selected_cart_ids' => 'nullable|string',
             'selected_product_ids' => 'nullable|string',
-            'proof_of_payment'  => $request->input('payment_method') === 'gcash' ? 'required|image|mimes:jpeg,png,gif,jpg|max:5120' : 'nullable|image|mimes:jpeg,png,gif,jpg|max:5120',
         ]);
+
+        $selectedPaymentMethod = $availableMethods->firstWhere('key', $validated['payment_method']);
+
+        if (! $selectedPaymentMethod) {
+            return back()
+                ->withInput()
+                ->with('error', 'The selected payment method is no longer available.');
+        }
+
+        if (($selectedPaymentMethod['requires_proof'] ?? false) && ! $request->hasFile('proof_of_payment')) {
+            return back()
+                ->withInput()
+                ->with('error', 'Please upload proof of payment for the selected payment method.');
+        }
+
+        if (($selectedPaymentMethod['requires_proof'] ?? false)) {
+            $proofValidated = $request->validate([
+                'proof_of_payment' => 'required|image|mimes:jpeg,png,gif,jpg|max:5120',
+            ]);
+        } else {
+            $proofValidated = $request->validate([
+                'proof_of_payment' => 'nullable|image|mimes:jpeg,png,gif,jpg|max:5120',
+            ]);
+        }
+        
+        // Merge proof_of_payment into validated array
+        $validated = array_merge($validated, $proofValidated);
+
+        if (($validated['payment_method'] === 'gcash') && (!filled($homepageSettings->gcash_account_number) || !filled($homepageSettings->gcash_account_name))) {
+            return back()
+                ->withInput()
+                ->with('error', 'GCash payment is not configured yet. Please use Cash on Delivery or ask the administrator to set up the GCash account details.');
+        }
 
         $cartItems = Cart::with('product')
             ->where('user_id', Auth::id())
@@ -224,6 +263,10 @@ class OrderController extends Controller
         if (! empty($selectedProductIds)) {
             $cartItems = $cartItems->whereIn('product_id', $selectedProductIds);
         }
+
+        $hasCylinderProducts = $cartItems->contains(function ($item) {
+            return $item->product?->isCylinder();
+        });
 
         if ($cartItems->isEmpty()) {
             return redirect()->route('customer.cart')->with('error', 'Your cart is empty.');
@@ -255,24 +298,24 @@ class OrderController extends Controller
             }
         }
 
-        $smallRewardCount = 0;  // For freebies with required points (total qty of tank products)
+        $smallRewardCount = 0;  // For freebies with required points (total qty of cylinder products)
         $freeRewardQuantity = 0; // For freebies with no required points (total quantity)
-        $hasTankInOrder = false;
+        $hasCylinderInOrder = false;
         foreach ($cartItems as $item) {
             $quantity = (int) $item->quantity;
             $totalQuantity = $quantity;
             $freeRewardQuantity += $totalQuantity; // Count all quantities for no-point freebies
             
-            // Count tank products by their total quantity for freebie qualification
-            if ($item->product && strtolower($item->product->category) === 'tank') {
+            // Count cylinder products by their total quantity for freebie qualification
+            if ($item->product?->isCylinder()) {
                 $smallRewardCount += $quantity;  // Add the full quantity, not just 1
-                $hasTankInOrder = true;
+                $hasCylinderInOrder = true;
             }
         }
         
-        // Check if selected freebie requires points - only clear if it DOES have required points and no tanks
+        // Check if selected freebie requires points - only clear if it DOES have required points and no cylinder products
         $selectedFreebieId = isset($validated['selected_freebie_id']) ? (int) $validated['selected_freebie_id'] : null;
-        if ($selectedFreebieId !== null && !$hasTankInOrder) {
+        if ($selectedFreebieId !== null && !$hasCylinderInOrder) {
             $productFreebieOffset = 1000000;
             $isProductFreebie = $selectedFreebieId >= $productFreebieOffset;
             
@@ -328,9 +371,15 @@ class OrderController extends Controller
             $selectedCartIds = array_filter(array_map('intval', explode(',', $validated['selected_cart_ids'])));
         }
 
+        $transactionType = $validated['transaction_type'] ?? ($hasCylinderProducts ? 'exchange' : 'not_tank');
+
+        if ($hasCylinderProducts && !in_array($transactionType, ['exchange', 'new_cylinder'], true)) {
+            return redirect()->route('customer.checkout')->with('error', 'Please choose a valid transaction type for cylinder products.');
+        }
+
         $deliveryFee = HomepageSetting::singleton()->delivery_fee ?? 50.00;
 
-        $order = DB::transaction(function () use ($validated, $cartItems, $smallRewardCount, $freeRewardQuantity, $selectedFreebieId, $isProductFreebieSelection, $selectedProductFreebieId, $selectedCartIds, $selectedVoucherId, $hasTankInOrder, $freebieRequiresPoints, $request, $deliveryFee) {
+        $order = DB::transaction(function () use ($validated, $cartItems, $smallRewardCount, $freeRewardQuantity, $selectedFreebieId, $isProductFreebieSelection, $selectedProductFreebieId, $selectedCartIds, $selectedVoucherId, $hasCylinderInOrder, $freebieRequiresPoints, $request, $deliveryFee, $transactionType) {
             $subtotal = 0;
             $orderItems = [];
             $hasRewardItems = false;
@@ -353,8 +402,8 @@ class OrderController extends Controller
                         $freebieRequiresPoints = $freebieCheck->reward_points_required > 0;
                         
                         if ($freebieRequiresPoints) {
-                            // Requires points - must have tanks
-                            $shouldProcessFreebie = $hasTankInOrder && $smallRewardCount > 0;
+                            // Requires points - must have cylinder products
+                            $shouldProcessFreebie = $hasCylinderInOrder && $smallRewardCount > 0;
                         } else {
                             // No required points - always allow
                             $shouldProcessFreebie = true;
@@ -485,16 +534,16 @@ class OrderController extends Controller
                 // Add freebie: 
                 // - If no required points: quantity = total quantity ordered
                 // - If has required points: quantity = 1 (single reward item regardless of tank qty)
-                $isTankProduct = $product && strtolower($product->category) === 'tank';
+                $isCylinderProduct = $product?->isCylinder();
                 $shouldAddFreebie = false;
                 $freebieQuantityToAdd = 0;
                 
                 if ($selectedFreebieProduct !== null && !$freebieAdded) {
                     if ($freebieRequiresPoints) {
-                        // Requires points - add once on any tank product, quantity 1
-                        if ($isTankProduct) {
+                        // Requires points - add once on any cylinder product, quantity 1
+                        if ($isCylinderProduct) {
                             $shouldAddFreebie = true;
-                            $freebieQuantityToAdd = 1; // One freebie regardless of tank quantity ordered
+                            $freebieQuantityToAdd = 1; // One freebie regardless of cylinder quantity ordered
                         }
                     } else {
                         // No required points - add on first iteration with total quantity
@@ -532,8 +581,6 @@ class OrderController extends Controller
                     $freebieAdded = true; // Mark that freebie has been added
                 }
 
-                // Deduct stock only for regular items
-                $inventory->decrement('quantity_on_hand', $quantity);
             }
 
             // Deduct freebie stock based on quantity added to order
@@ -547,6 +594,19 @@ class OrderController extends Controller
 
                 if ($selectedFreebieInventory) {
                     $selectedFreebieInventory->decrement('quantity_on_hand', $deductQuantity);
+
+                    \App\Models\StockMovement::create([
+                        'inventory_id' => $selectedFreebieInventory->id,
+                        'full_in' => 0,
+                        'full_out' => $deductQuantity,
+                        'empty_in' => 0,
+                        'empty_out' => 0,
+                        'type' => 'sale',
+                        'reference' => 'FREEBIE-CHECKOUT',
+                        'notes' => 'Freebie stock deducted during checkout.',
+                        'movement_date' => now(),
+                        'created_by' => Auth::id(),
+                    ]);
                 }
             }
 
@@ -571,6 +631,8 @@ class OrderController extends Controller
             $order = Order::create([
                 'user_id'          => Auth::id(),
                 'order_number'     => 'GG-' . strtoupper(Str::random(8)),
+                'order_type'       => 'online',
+                'transaction_type' => $transactionType,
                 'subtotal'         => $subtotal,
                 'discount'         => $voucherDiscount,
                 'delivery_fee'     => $deliveryFee,
@@ -749,11 +811,6 @@ class OrderController extends Controller
                     continue;
                 }
 
-                if ($item->product_id) {
-                    Inventory::query()
-                        ->where('product_id', $item->product_id)
-                        ->increment('quantity_on_hand', (int) $item->quantity);
-                }
             }
 
             // Revert any used vouchers back to unused state
@@ -808,9 +865,14 @@ class OrderController extends Controller
     {
         $validated = $request->validate([
             'status' => 'required|in:pending,approved,assigned,out_for_delivery,delivered,cancelled',
+            'transaction_type' => 'nullable|in:exchange,new_cylinder,refill,not_tank',
         ]);
 
         DB::transaction(function () use ($order, $validated) {
+            if (!empty($validated['transaction_type']) && $order->status !== 'delivered') {
+                $order->update(['transaction_type' => $validated['transaction_type']]);
+            }
+
             // If order is being cancelled, revert any used vouchers and update payment status to failed
             if ($validated['status'] === 'cancelled') {
                 \App\Models\UserVoucher::where('order_id', $order->id)
@@ -825,6 +887,8 @@ class OrderController extends Controller
                 Payment::where('order_id', $order->id)->update(['status' => 'failed']);
             }
 
+            $previousStatus = $order->status;
+
             if ($validated['status'] === 'approved') {
                 $order->update([
                     'status' => 'approved',
@@ -835,6 +899,9 @@ class OrderController extends Controller
             }
 
             if ($validated['status'] === 'delivered') {
+                if ($previousStatus !== 'delivered') {
+                    OrderInventoryService::applyOnCompletion($order, Auth::id());
+                }
                 $order->update(['delivered_at' => now()]);
                 // Update payment status to paid when order is delivered
                 Payment::where('order_id', $order->id)->update([
@@ -905,10 +972,14 @@ class OrderController extends Controller
                         'approved_at' => now(),
                     ]);
                 } else {
+                    $previousStatus = $order->status;
                     $order->update(['status' => $validated['status']]);
                 }
 
                 if ($validated['status'] === 'delivered') {
+                    if (($previousStatus ?? null) !== 'delivered') {
+                        OrderInventoryService::applyOnCompletion($order, Auth::id());
+                    }
                     $order->update(['delivered_at' => now()]);
                     // Update payment status to paid when order is delivered
                     Payment::where('order_id', $order->id)->update([

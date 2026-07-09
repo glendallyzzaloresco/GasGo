@@ -232,6 +232,7 @@
                         data-selling-price="{{ $product->selling_price ?? $product->price ?? 0 }}"
                         data-stock="{{ $qty }}"
                         data-weight="{{ $product->weight }}"
+                        data-is-cylinder="{{ $product->is_cylinder ? '1' : '0' }}"
                         data-is-active="{{ $product->is_active ? '1' : '0' }}"
                         data-update-url="{{ route('admin.products.update', $product) }}"
                     ><i class="fas fa-edit me-1"></i>Edit</button>
@@ -299,6 +300,7 @@
                         data-selling-price="{{ $product->selling_price ?? $product->price ?? 0 }}"
                         data-stock="{{ $qty }}"
                         data-weight="{{ $product->weight }}"
+                        data-is-cylinder="{{ $product->is_cylinder ? '1' : '0' }}"
                         data-is-active="{{ $product->is_active ? '1' : '0' }}"
                         data-update-url="{{ route('admin.products.update', $product) }}"
                     ><i class="fas fa-edit me-1"></i>Edit</button>
@@ -366,6 +368,7 @@
                         data-selling-price="{{ $product->selling_price ?? $product->price ?? 0 }}"
                         data-stock="{{ $qty }}"
                         data-weight="{{ $product->weight }}"
+                        data-is-cylinder="{{ $product->is_cylinder ? '1' : '0' }}"
                         data-is-active="{{ $product->is_active ? '1' : '0' }}"
                         data-update-url="{{ route('admin.products.update', $product) }}"
                     ><i class="fas fa-edit me-1"></i>Edit</button>
@@ -536,6 +539,12 @@
                                 <option value="freebie">Freebie</option>
                             </select>
                         </div>
+                        <div class="col-md-6 d-flex align-items-center">
+                            <div class="form-check form-switch ms-3 mt-2">
+                                <input class="form-check-input" type="checkbox" id="productIsCylinder" name="is_cylinder" value="1">
+                                <label class="form-check-label" for="productIsCylinder">Cylinder product</label>
+                            </div>
+                        </div>
                         <div class="col-12">
                             <label class="mb-1">Description</label>
                             <textarea class="form-control" name="description" id="productDescription" rows="3" placeholder="Product description..."></textarea>
@@ -598,7 +607,11 @@
                             <label class="mb-1">Freebie Image</label>
                             <input type="file" class="form-control" name="image" accept="image/*">
                         </div>
-                        <div class="col-12">
+                        <div class="col-md-6">
+                            <label class="mb-1">Stock</label>
+                            <input type="number" class="form-control" name="stock" id="freebieStock" placeholder="Quantity available" value="0" min="0" required>
+                        </div>
+                        <div class="col-md-6">
                             <label class="mb-1">Redemption Type</label>
                             <select class="form-select" name="redemption_type" id="freebieRedemptionType" required>
                                 <option value="loyalty_points">Loyalty Points</option>
@@ -712,6 +725,7 @@
         document.getElementById('productName').value = '';
         const defaultCategoryOption = document.querySelector('#productCategory option');
         document.getElementById('productCategory').value = defaultCategoryOption ? defaultCategoryOption.value : '';
+        document.getElementById('productIsCylinder').checked = false;
         document.getElementById('productDescription').value = '';
         document.getElementById('productCostPrice').value = '';
         document.getElementById('productSellingPrice').value = '';
@@ -725,6 +739,7 @@
         document.getElementById('productFormMethod').value = 'PUT';
         document.getElementById('productName').value = button.dataset.name || '';
         document.getElementById('productCategory').value = button.dataset.category || 'tank';
+        document.getElementById('productIsCylinder').checked = button.dataset.isCylinder === '1';
         document.getElementById('productDescription').value = button.dataset.description || '';
         document.getElementById('productCostPrice').value = button.dataset.costPrice || '';
         document.getElementById('productSellingPrice').value = button.dataset.sellingPrice || '';
@@ -752,6 +767,7 @@
         document.getElementById('freebieRewardPoints').value = '0';
         document.getElementById('freebieCategory').value = 'Promotional Gifts';
         document.getElementById('freebieRedemptionType').value = 'promotional';
+        document.getElementById('freebieStock').value = '0';
         document.getElementById('freebieActive').checked = true;
     }
 
@@ -764,6 +780,7 @@
         document.getElementById('freebieRewardPoints').value = button.dataset.rewardPoints || '0';
         document.getElementById('freebieCategory').value = button.dataset.category || 'Promotional Gifts';
         document.getElementById('freebieRedemptionType').value = button.dataset.redemptionType || 'promotional';
+        document.getElementById('freebieStock').value = button.dataset.stock || '0';
         document.getElementById('freebieActive').checked = (button.dataset.isActive === '1');
     }
 

@@ -463,6 +463,23 @@
             width: 100%;
         }
     }
+
+    /* Badge Status Styles */
+    .badge-status {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: .85rem;
+    }
+    .badge-status.badge-pending { background: #fff3cd; color: #856404; }
+    .badge-status.badge-approved { background: #cfe2ff; color: #084298; }
+    .badge-status.badge-assigned { background: #d1ecf1; color: #0c5460; }
+    .badge-status.badge-out_for_delivery { background: #fff3cd; color: #856404; }
+    .badge-status.badge-delivered { background: #d4edda; color: #155724; }
+    .badge-status.badge-cancelled { background: #f8d7da; color: #721c24; }
+    .badge-status.badge-failed { background: #f8d7da; color: #721c24; }
+
 </style>
 @endsection
 
@@ -474,9 +491,64 @@
     <div class="order-head mb-4">
         <div>
             <h6 class="mb-1" style="color:var(--gasgo-blue);font-weight:700;">Order #{{ $delivery->order->order_number }}</h6>
-            <small class="text-muted">Assigned {{ $delivery->assigned_at?->diffForHumans() ?? 'recently' }}</small>
+            <small class="text-muted">{{ $delivery->order->created_at->format('F j, Y - g:i A') }}</small>
         </div>
         <span class="badge-status badge-{{ $delivery->status }}">{{ str_replace('_', ' ', ucfirst($delivery->status)) }}</span>
+    </div>
+
+    <!-- Order Status & Details Card -->
+    <div style="background: linear-gradient(135deg, #f0f4ff 0%, #f5f9ff 100%); border-radius: 14px; padding: 16px; margin-bottom: 20px; border: 1px solid rgba(26, 109, 176, 0.2);">
+        <h6 style="color: var(--gasgo-blue); font-weight: 700; margin-bottom: 12px; font-size: 0.9rem;">
+            <i class="fas fa-info-circle me-2" style="color: var(--gasgo-orange);"></i>Order Details
+        </h6>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px;">
+            <!-- Order Status -->
+            <div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; margin-bottom: 6px;">
+                    <i class="fas fa-clipboard-check me-1" style="color: var(--gasgo-orange);"></i>Current Status
+                </div>
+                <div>
+                    <span class="badge badge-{{ $delivery->order->status }}" style="font-size: 0.85rem; font-weight: 600;">
+                        {{ ucfirst(str_replace('_', ' ', $delivery->order->status)) }}
+                    </span>
+                    @if($delivery->order->is_urgent)
+                        <span class="badge bg-danger ms-2" style="font-size: 0.75rem;">
+                            <i class="fas fa-bolt me-1"></i>URGENT
+                        </span>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Transaction Type -->
+            <div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; margin-bottom: 6px;">
+                    <i class="fas fa-exchange-alt me-1" style="color: var(--gasgo-orange);"></i>Transaction Type
+                </div>
+                <div style="font-size: 0.95rem; font-weight: 600; color: var(--gasgo-blue);">
+                    {{ ucfirst(str_replace('_', ' ', $delivery->order->transaction_type ?? 'Exchange')) }}
+                </div>
+            </div>
+
+            <!-- Order Date -->
+            <div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; margin-bottom: 6px;">
+                    <i class="fas fa-calendar me-1" style="color: var(--gasgo-orange);"></i>Order Date
+                </div>
+                <div style="font-size: 0.95rem; color: #333;">
+                    {{ $delivery->order->created_at->format('M d, Y') }}
+                </div>
+            </div>
+
+            <!-- Assigned Since -->
+            <div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; margin-bottom: 6px;">
+                    <i class="fas fa-clock me-1" style="color: var(--gasgo-orange);"></i>Assigned
+                </div>
+                <div style="font-size: 0.95rem; color: #333;">
+                    {{ $delivery->assigned_at?->diffForHumans() ?? 'Recently' }}
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Customer Info -->
@@ -492,6 +564,8 @@
             </a>
         </div>
     </div>
+
+    
 
     <!-- Delivery Address -->
     <div class="address-section">
@@ -517,20 +591,33 @@
         <div style="background:var(--admin-bg);border-radius:10px;padding:12px;">
             @foreach($delivery->order->orderItems as $item)
                 <div class="d-flex justify-content-between align-items-center py-2" style="border-bottom:1px solid var(--admin-border);font-size:.88rem;">
-                    <span>{{ $item->product->name }} <strong>×{{ $item->quantity }}</strong></span>
+                    <span>{{ $item->product->name }} <strong>×{{ $item->quantity }}</strong>
+                        @if($item->is_reward)
+                            <span class="badge bg-success ms-1" style="font-size: 0.7rem;">REWARD</span>
+                        @endif
+                    </span>
                     <span class="fw-bold">₱{{ number_format($item->product->price * $item->quantity, 2) }}</span>
                 </div>
             @endforeach
+            
+            <!-- Price Breakdown -->
+            <div class="d-flex justify-content-between align-items-center py-2" style="font-size:.88rem;border-top:1px solid var(--admin-border);margin-top:8px;padding-top:12px;">
+                <span class="text-muted">Subtotal</span>
+                <span class="fw-bold">₱{{ number_format($delivery->order->subtotal, 2) }}</span>
+            </div>
+            
             @if($delivery->order->discount > 0)
                 <div class="d-flex justify-content-between align-items-center py-2" style="font-size:.88rem;">
-                    <span class="text-muted">Discount Applied</span>
+                    <span class="text-danger">Discount Applied</span>
                     <span class="fw-bold text-danger">-₱{{ number_format($delivery->order->discount, 2) }}</span>
                 </div>
             @endif
+            
             <div class="d-flex justify-content-between align-items-center py-2" style="font-size:.88rem;">
                 <span class="text-muted">Delivery Fee</span>
                 <span class="fw-bold">₱{{ number_format($delivery->order->delivery_fee, 2) }}</span>
             </div>
+            
             <div class="d-flex justify-content-between align-items-center py-3" style="font-size:.95rem;border-top:2px solid var(--gasgo-blue);">
                 <span class="fw-bold" style="color:var(--gasgo-blue);">Total Amount</span>
                 <span class="fw-bold" style="color:var(--gasgo-orange);font-size:1.1rem;">₱{{ number_format($delivery->order->total_amount, 2) }}</span>

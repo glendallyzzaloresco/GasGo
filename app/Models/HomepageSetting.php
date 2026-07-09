@@ -34,7 +34,13 @@ class HomepageSetting extends Model
         'contact_hours',
         'gcash_account_number',
         'gcash_account_name',
+        'gcash_image_path',
+        'payment_methods',
         'delivery_fee',
+    ];
+
+    protected $casts = [
+        'payment_methods' => 'array',
     ];
 
     public static function singleton(): self
@@ -66,6 +72,65 @@ class HomepageSetting extends Model
             'contact_hours' => 'Mon-Sun: 6AM - 10PM',
             'delivery_fee' => 50.00,
         ]);
+    }
+
+    /**
+     * Return built-in and custom payment methods for checkout.
+     */
+    public function availablePaymentMethods(): array
+    {
+        $methods = [
+            [
+                'key' => 'cash',
+                'label' => 'Cash on Delivery',
+                'description' => 'Pay when you receive your order',
+                'icon' => 'fas fa-money-bill-wave',
+                'color' => 'cash',
+                'requires_proof' => false,
+                'instructions' => 'No upload required.',
+            ],
+        ];
+
+        if (filled($this->gcash_account_number) && filled($this->gcash_account_name)) {
+            $methods[] = [
+                'key' => 'gcash',
+                'label' => 'GCash',
+                'description' => 'Pay via GCash e-wallet',
+                'icon' => 'fas fa-mobile-alt',
+                'color' => 'gcash',
+                'requires_proof' => true,
+                'account_name' => $this->gcash_account_name,
+                'account_number' => $this->gcash_account_number,
+                'image_url' => $this->resolveAssetUrl($this->gcash_image_path),
+                'instructions' => 'After payment, upload a screenshot or photo of your proof of payment.',
+            ];
+        }
+
+        foreach ((array) ($this->payment_methods ?? []) as $method) {
+            if (!is_array($method)) {
+                continue;
+            }
+
+            $key = strtolower(trim((string) ($method['key'] ?? '')));
+            if ($key === '' || in_array($key, ['cash', 'gcash'], true)) {
+                continue;
+            }
+
+            $methods[] = [
+                'key' => $key,
+                'label' => trim((string) ($method['label'] ?? ucfirst(str_replace('_', ' ', $key)))),
+                'account_name' => trim((string) ($method['account_name'] ?? '')),
+                'account_number' => trim((string) ($method['account_number'] ?? '')),
+                'requires_proof' => true,
+                'image_url' => $this->resolveAssetUrl($method['image_path'] ?? null),
+                'description' => trim((string) ($method['account_name'] ?? '') . ' ' . (string) ($method['account_number'] ?? '')),
+                'icon' => 'fas fa-credit-card',
+                'color' => 'info',
+                'instructions' => 'After payment, upload proof of payment before placing your order.',
+            ];
+        }
+
+        return $methods;
     }
 
     public function getNavbarLogoUrlAttribute(): string

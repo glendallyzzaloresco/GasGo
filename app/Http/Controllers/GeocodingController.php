@@ -16,6 +16,11 @@ class GeocodingController extends Controller
         ];
     }
 
+    // private function geoapifyKey(): string
+    // {
+    //     return env('GEOAPIFY_API_KEY');
+    // }
+
     public function search(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -104,6 +109,13 @@ class GeocodingController extends Controller
                     'lon' => $lng,
                     'zoom' => $zoom,
                 ]);
+            $response = Http::timeout(8)
+                ->get('https://api.geoapify.com/v1/geocode/reverse', [
+                'lat' => $lat,
+                'lon' => $lng,
+                'format' => 'json',
+                'apiKey' => $this->geoapifyKey(),
+            ]);
 
             if (! $response->successful()) {
                 return response()->json([
@@ -116,11 +128,42 @@ class GeocodingController extends Controller
             }
 
             $payload = $response->json();
-            $address = is_array($payload['address'] ?? null) ? $payload['address'] : null;
+            $address = is_array($payload['address'] ?? null) 
+            ? $payload['address'] 
+            : null;
+            $payload = $response->json();
+
+            $feature = $payload['features'][0]['properties'] ?? null;
+
+            if (!$feature) {
+               return response()->json([
+               'display_name' => null,
+               'address' => null,
+               'street' => null,
+               'suburb' => null,
+               'city' => null,
+                ], 200);
+               }
 
             $street = null;
             $suburb = null;
             $city = null;
+
+            $street = $feature['street'] ?? null;
+
+                if (!empty($feature['housenumber'])) {
+                $street = $feature['housenumber'] . ' ' . $street;
+            }
+
+            $suburb = $feature['suburb']
+            ?? $feature['district']
+            ?? $feature['neighbourhood']
+            ?? null;
+
+            $city = $feature['city']
+            ?? $feature['town']
+            ?? $feature['county']
+            ?? null;
 
             if ($address) {
                 $street = trim((($address['house_number'] ?? '') . ' ' . ($address['road'] ?? '')));
@@ -144,7 +187,9 @@ class GeocodingController extends Controller
 
             return response()->json([
                 'display_name' => $payload['display_name'] ?? null,
-                'address' => $address,
+                // 'display_name' => $feature['formatted'] ?? null,
+               'address' => $address,
+            //   'address' => $feature,
                 'street' => $street,
                 'suburb' => $suburb,
                 'city' => $city,

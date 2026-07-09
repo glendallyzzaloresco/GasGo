@@ -164,6 +164,52 @@
         background: #f39c12;
     }
 
+    /* Movement History Styles */
+    .movement-filter-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #f0f4ff 100%);
+        border-left: 4px solid var(--gasgo-blue);
+    }
+
+    .movement-filter-card .form-label {
+        font-weight: 600;
+        color: #2f4a63;
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+    }
+
+    .movement-filter-card .form-control,
+    .movement-filter-card .form-select {
+        border-radius: 8px;
+        border: 1px solid #d5e8f7;
+        font-size: 0.9rem;
+    }
+
+    .movement-filter-card .form-control:focus,
+    .movement-filter-card .form-select:focus {
+        border-color: var(--gasgo-blue);
+        box-shadow: 0 0 0 3px rgba(26, 109, 176, 0.1);
+    }
+
+    .movement-table {
+        font-size: 0.9rem;
+    }
+
+    .movement-table thead th {
+        background: linear-gradient(135deg, #f0f4ff 0%, #e3f2fd 100%);
+        color: var(--gasgo-blue);
+        font-weight: 700;
+        border-bottom: 2px solid #d5e8f7;
+    }
+
+    .movement-table tbody tr:hover {
+        background-color: rgba(26, 109, 176, 0.05);
+    }
+
+    .movement-table .badge {
+        font-size: 0.75rem;
+        padding: 6px 10px;
+    }
+
     @media (max-width: 991px) {
         .summary-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -294,12 +340,17 @@
                     </span>
                 </div>
                 
-                @if(strtolower($inventory->product->category) === 'tank')
+                @if($inventory->supportsEmptyCylinderTracking())
                 <div class="detail-row">
                     <span class="detail-label">Empty Tanks Collected</span>
                     <span class="detail-value fw-bold text-warning">
                         {{ $inventory->empty_on_hand ?? 0 }} units
                     </span>
+                </div>
+                @else
+                <div class="detail-row">
+                    <span class="detail-label">Empty Tanks Collected</span>
+                    <span class="detail-value text-muted">N/A</span>
                 </div>
                 @endif
                 
@@ -411,5 +462,170 @@
         </div>
     </div>
 
-</div>
-@endsection
+    <!-- Inventory Movement History -->
+    <div class="row mt-4">
+        <div class="col-lg-12">
+            <div class="details-card">
+                <h5 class="mb-4"><i class="fas fa-history me-2"></i>Movement History</h5>
+                
+                <!-- Date Filter -->
+                <div class="card mb-4 movement-filter-card">
+                    <div class="card-body">
+                        <form method="GET" action="{{ route('admin.inventory.show', $inventory) }}" class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label for="movement_date_from" class="form-label">
+                                    <i class="fas fa-calendar me-1"></i>From Date
+                                </label>
+                                <input type="date" name="movement_date_from" id="movement_date_from" class="form-control" 
+                                    value="{{ request('movement_date_from') }}">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label for="movement_date_to" class="form-label">
+                                    <i class="fas fa-calendar me-1"></i>To Date
+                                </label>
+                                <input type="date" name="movement_date_to" id="movement_date_to" class="form-control" 
+                                    value="{{ request('movement_date_to') }}">
+                            </div>
+
+                            <div class="col-md-2">
+                                <label for="movement_type" class="form-label">Type</label>
+                                <select name="movement_type" id="movement_type" class="form-select">
+                                    <option value="">All Types</option>
+                                    <option value="purchase" {{ request('movement_type') === 'purchase' ? 'selected' : '' }}>Purchase</option>
+                                    <option value="sale" {{ request('movement_type') === 'sale' ? 'selected' : '' }}>Sale</option>
+                                    <option value="adjustment" {{ request('movement_type') === 'adjustment' ? 'selected' : '' }}>Adjustment</option>
+                                    <option value="damage" {{ request('movement_type') === 'damage' ? 'selected' : '' }}>Damage</option>
+                                    <option value="return" {{ request('movement_type') === 'return' ? 'selected' : '' }}>Return</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4 d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-grow-1">
+                                    <i class="fas fa-search me-1"></i> Filter
+                                </button>
+                                @if(request()->anyFilled(['movement_date_from', 'movement_date_to', 'movement_type']))
+                                    <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-secondary">
+                                        <i class="fas fa-times me-1"></i> Clear
+                                    </a>
+                                @endif
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Movements Table -->
+                @if(isset($movements) && $movements->count() > 0)
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 movement-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 15%;">Date/Time</th>
+                                    <th style="width: 15%;">Type</th>
+                                    <th style="width: 12%;" class="text-center">Quantity</th>
+                                    <th style="width: 15%;">Reference</th>
+                                    <th style="width: 12%;">Ref. ID</th>
+                                    <th style="width: 20%;">Notes</th>
+                                    <th style="width: 11%;">Created By</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($movements as $movement)
+                                    <tr>
+                                        <td>
+                                            @php $movementDate = $movement->movement_date ?? $movement->created_at; @endphp
+                                            <small class="d-block text-muted">{{ $movementDate?->format('M d, Y') ?? '-' }}</small>
+                                            <small>{{ $movementDate?->format('h:i A') ?? '-' }}</small>
+                                        </td>
+                                        <td>
+                                            @php
+                                                $movementType = strtolower((string) $movement->type);
+                                                $typeClass = 'bg-secondary';
+                                                if (in_array($movementType, ['stock_in', 'purchase'], true)) {
+                                                    $typeClass = 'bg-success';
+                                                } elseif (in_array($movementType, ['stock_out', 'sale', 'damage'], true)) {
+                                                    $typeClass = 'bg-danger';
+                                                } elseif ($movementType === 'return') {
+                                                    $typeClass = 'bg-warning text-dark';
+                                                }
+                                            @endphp
+                                            <span class="badge {{ $typeClass }}">{{ strtoupper(str_replace('_', ' ', (string) $movement->type)) }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            @php $qty = (int) $movement->quantity_change; @endphp
+                                            <strong class="{{ $qty >= 0 ? 'text-success' : 'text-danger' }}">{{ $qty > 0 ? '+' : '' }}{{ $qty }}</strong>
+                                        </td>
+                                        <td>
+                                            @if($movement->reference)
+                                                <span class="badge bg-info text-white">{{ $movement->reference }}</span>
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">—</small>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">{{ $movement->notes ?? '—' }}</small>
+                                        </td>
+                                        <td>
+                                            <small>{{ $movement->creator->name ?? 'System' }}</small>
+                                            @php
+                                                // Try to resolve an order and customer for sale movements referencing an order
+                                                $order = null;
+                                                $customerName = null;
+                                                if ($movement->reference) {
+                                                    $order = \App\Models\Order::where('order_number', $movement->reference)
+                                                        ->orWhere('id', (int) filter_var($movement->reference, FILTER_SANITIZE_NUMBER_INT))
+                                                        ->with('user')
+                                                        ->first();
+                                                }
+                                                if ($order && $order->user) {
+                                                    $customerName = $order->user->name;
+                                                }
+                                            @endphp
+                                            @if($customerName)
+                                                <div class="mt-1"><small class="text-muted">Customer: <strong>{{ $customerName }}</strong></small></div>
+                                            @endif
+                                            {{-- Show mark returned button only for new_cylinder sale movements on cylinder products --}}
+                                            @php
+                                                $notesLower = strtolower((string) $movement->notes);
+                                                $isSaleType = ($movement->type === 'sale' || strtolower((string) $movement->type) === 'sale');
+                                                $notesIndicateNew = str_contains($notesLower, 'new_cylinder') || str_contains($notesLower, 'new cylinder');
+                                                $isCylinderProduct = ($movement->inventory?->product?->isCylinder() ?? false);
+
+                                                // Fallback: resolve related order's transaction_type
+                                                $orderTransactionIsNew = false;
+                                                if (empty($notesIndicateNew) && isset($order) && $order) {
+                                                    $orderTransactionIsNew = (($order->transaction_type ?? '') === 'new_cylinder');
+                                                }
+
+                                                $showMarkReturned = $isSaleType && $isCylinderProduct && ($notesIndicateNew || $orderTransactionIsNew);
+                                            @endphp
+                                            @if($showMarkReturned)
+                                                <div class="mt-2">
+                                                    <form method="POST" action="{{ route('admin.inventory.movement.mark-returned', $movement) }}">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Mark Returned</button>
+                                                    </form>
+                                                </div>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        @if(request()->anyFilled(['movement_date_from', 'movement_date_to', 'movement_type']))
+                            No movements found for the selected filters.
+                        @else
+                            No movement history available for this product.
+                        @endif
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>

@@ -9,6 +9,7 @@ use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Carbon\Carbon;
 
@@ -134,27 +135,76 @@ class InventoryController extends Controller
             ->get();
         
         // Today's total stock received
-        $totalStockReceived = $stockReceived->sum('quantity_change');
+        $totalStockReceived = $stockReceived->sum('full_in');
+
+        $tankMovementQuery = StockMovement::query()
+            ->whereHas('inventory.product', function ($query) {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'is_cylinder')) {
+                    $query->where('is_cylinder', true);
+                } else {
+                    $query->whereRaw('LOWER(category) = ?', ['tank']);
+                }
+            })
+            ->whereBetween(DB::raw('COALESCE(movement_date, created_at)'), [$today, $todayEnd]);
+
+        $dailyMovementTotals = (clone $tankMovementQuery)
+            ->selectRaw('COALESCE(SUM(full_in), 0) as full_in')
+            ->selectRaw('COALESCE(SUM(full_out), 0) as full_out')
+            ->selectRaw('COALESCE(SUM(empty_in), 0) as empty_in')
+            ->selectRaw('COALESCE(SUM(empty_out), 0) as empty_out')
+            ->first();
 
         // Recent stock movement history across all products (for inventory page overview)
-        $recentStockMovements = StockMovement::with(['inventory.product', 'creator'])
-            ->orderByRaw('COALESCE(movement_date, created_at) DESC')
-            ->limit(20)
-            ->get();
+        $movementsQuery = StockMovement::with(['inventory.product', 'creator'])
+            ->orderByRaw('COALESCE(movement_date, created_at) DESC');
+
+        // Apply movement history filters
+        if ($request->filled('movement_date_from')) {
+            $movementsQuery->whereDate('movement_date', '>=', $request->input('movement_date_from'));
+        }
+
+        if ($request->filled('movement_date_to')) {
+            $movementsQuery->whereDate('movement_date', '<=', $request->input('movement_date_to'));
+        }
+
+        if ($request->filled('movement_type')) {
+            $movementsQuery->where('type', $request->input('movement_type'));
+        }
+
+        if ($request->filled('movement_search')) {
+            $search = '%' . $request->input('movement_search') . '%';
+            $movementsQuery->where(function ($q) use ($search) {
+                $q->where('reference', 'like', $search)
+                  ->orWhere('notes', 'like', $search);
+            });
+        }
+
+        $recentStockMovements = $movementsQuery->limit(20)->get();
         
-        // Get current empty tanks count for tank products with latest delivery date
+        // Get current empty tanks count for cylinder products with latest delivery date
         $deliveryDates = \Illuminate\Support\Facades\DB::table('deliveries')
             ->join('orders', 'deliveries.order_id', '=', 'orders.id')
             ->join('order_items', 'orders.id', '=', 'order_items.order_id')
             ->join('products', 'order_items.product_id', '=', 'products.id')
-            ->where('deliveries.status', 'delivered')
-            ->where('products.category', 'Tank')
+            ->where('deliveries.status', 'delivered');
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'is_cylinder')) {
+            $deliveryDates->where('products.is_cylinder', true);
+        } else {
+            $deliveryDates->whereRaw('LOWER(products.category) = ?', ['tank']);
+        }
+
+        $deliveryDates = $deliveryDates
             ->selectRaw('products.id as product_id, MAX(deliveries.updated_at) as latest_delivery_date')
             ->groupBy('products.id')
             ->pluck('latest_delivery_date', 'product_id');
         
         $emptyTanksReturned = Inventory::whereHas('product', function($q) {
-            $q->where('category', 'Tank');
+            if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'is_cylinder')) {
+                $q->where('is_cylinder', true);
+            } else {
+                $q->whereRaw('LOWER(category) = ?', ['tank']);
+            }
         })
         ->where('empty_on_hand', '>', 0)
         ->with('product')
@@ -175,7 +225,11 @@ class InventoryController extends Controller
         
         $emptyTankReturnsQuery = Inventory::with('product')
             ->whereHas('product', function($q) {
-                $q->where('category', 'Tank');
+                if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'is_cylinder')) {
+                    $q->where('is_cylinder', true);
+                } else {
+                    $q->whereRaw('LOWER(category) = ?', ['tank']);
+                }
             })
             ->where('empty_on_hand', '>', 0);
 
@@ -221,6 +275,7 @@ class InventoryController extends Controller
             'freebies',
             'emptyTanksReturned',
             'stockReceived',
+            'dailyMovementTotals',
             'recentStockMovements',
             'emptyTankReturnsByDate',
             'selectedEmptyDate',
@@ -233,11 +288,33 @@ class InventoryController extends Controller
     /**
      * Show inventory details and history
      */
-    public function show(Inventory $inventory)
+    public function show(Inventory $inventory, Request $request)
     {
-        $inventory->load('product', 'movements.creator');
+        $inventory->load('product');
 
-        return view('admin.inventory.show', compact('inventory'));
+        // Build query for movements with filters
+        $movementsQuery = $inventory->movements()->with('creator');
+
+        // Filter by date range
+        if ($request->filled('movement_date_from')) {
+            $movementsQuery->whereDate('movement_date', '>=', $request->input('movement_date_from'));
+        }
+
+        if ($request->filled('movement_date_to')) {
+            $movementsQuery->whereDate('movement_date', '<=', $request->input('movement_date_to'));
+        }
+
+        // Filter by type
+        if ($request->filled('movement_type')) {
+            $movementsQuery->where('type', $request->input('movement_type'));
+        }
+
+        // Get movements ordered by date descending
+        $movements = $movementsQuery->orderBy('movement_date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('admin.inventory.show', compact('inventory', 'movements'));
     }
 
     /**
@@ -279,33 +356,124 @@ class InventoryController extends Controller
             'movement_date' => 'nullable|string',
         ]);
 
+        $isCylinderProduct = $inventory->product?->isCylinder() ? true : false;
+
+        if (!$isCylinderProduct && $request->filled('empty_on_hand')) {
+            throw new \RuntimeException('Empty cylinder counts can only be modified for cylinder products.');
+        }
+
         // Always use server's current time for consistency
         $movementDate = now();
         
         $quantityChange = $validated['quantity_change'];
         $type = $validated['type'];
 
-        // For Stock In: add to inventory, update last_restocked
-        // For Stock Out types: subtract from inventory
-        if ($type === 'stock_in') {
-            $inventory->increment('quantity_on_hand', $quantityChange);
-            $inventory->update(['last_restocked' => $movementDate]);
-        } else {
-            // Stock Out: subtract quantity
-            $inventory->decrement('quantity_on_hand', $quantityChange);
-        }
+        DB::transaction(function () use ($inventory, $type, $quantityChange, $movementDate, $validated, $isCylinderProduct) {
+            $inventory = Inventory::whereKey($inventory->id)->lockForUpdate()->firstOrFail();
 
-        // Record movement with positive quantity for tracking
-        StockMovement::create([
-            'inventory_id' => $inventory->id,
-            'quantity_change' => $type === 'stock_in' ? $quantityChange : -$quantityChange,
-            'type' => $type,
-            'notes' => $validated['notes'],
-            'movement_date' => $movementDate,
-            'created_by' => Auth::id(),
-        ]);
+            $emptyOutQuantity = 0;
+
+            if ($type === 'stock_in') {
+                $inventory->increment('quantity_on_hand', $quantityChange);
+                $inventory->update(['last_restocked' => $movementDate]);
+
+                if ($isCylinderProduct) {
+                    $emptyOutQuantity = min($quantityChange, max((int) $inventory->empty_on_hand, 0));
+                    if ($emptyOutQuantity > 0) {
+                        $inventory->decrement('empty_on_hand', $emptyOutQuantity);
+                    }
+                }
+            } else {
+                if ((int) $inventory->quantity_on_hand < $quantityChange) {
+                    throw new \RuntimeException('Insufficient stock for this adjustment.');
+                }
+                $inventory->decrement('quantity_on_hand', $quantityChange);
+            }
+
+            if (!$isCylinderProduct) {
+                $inventory->forceFill(['empty_on_hand' => $inventory->empty_on_hand]);
+            }
+
+            StockMovement::create([
+                'inventory_id' => $inventory->id,
+                'full_in' => $type === 'stock_in' || $type === 'return' ? $quantityChange : 0,
+                'full_out' => $type === 'stock_in' || $type === 'return' ? 0 : $quantityChange,
+                'empty_in' => 0,
+                'empty_out' => $emptyOutQuantity,
+                'type' => $type,
+                'notes' => $validated['notes'],
+                'movement_date' => $movementDate,
+                'created_by' => Auth::id(),
+            ]);
+        });
 
         return back()->with('success', 'Stock adjusted successfully. Movement recorded.');
+    }
+
+    /**
+     * Mark a previously completed "new_cylinder" movement as returned.
+     * Creates an empty_in StockMovement and increments inventory.empty_on_hand.
+     */
+    public function markCylinderReturned(Request $request, \App\Models\StockMovement $movement)
+    {
+        $user = Auth::user();
+
+        // Only allow admin users
+        if (!$user || $user->role !== 'admin') {
+            abort(403, 'Unauthorized');
+        }
+
+        // Ensure this movement refers to a sale and mentions new_cylinder
+        $notes = strtolower((string) $movement->notes);
+        if (str_contains($notes, 'new_cylinder') === false && str_contains($notes, 'new cylinder') === false) {
+            return redirect()->back()->with('error', 'This movement is not a new cylinder delivery.');
+        }
+
+        $inventory = $movement->inventory;
+        if (!$inventory || !$inventory->product?->isCylinder()) {
+            return redirect()->back()->with('error', 'Return tracking only applies to cylinder products.');
+        }
+
+        // Determine quantity that was sent as full_out for this movement
+        $quantity = (int) max(0, $movement->full_out ?? 0);
+        if ($quantity <= 0) {
+            return redirect()->back()->with('error', 'No quantity found to mark as returned.');
+        }
+
+        // Idempotency: do not create duplicate return records for same reference
+        $existingReturn = \App\Models\StockMovement::query()
+            ->where('inventory_id', $inventory->id)
+            ->where(function ($q) use ($movement) {
+                $q->where('reference', $movement->reference)
+                  ->orWhere('notes', 'like', '%returned for ' . $movement->reference . '%');
+            })
+            ->where('empty_in', '>', 0)
+            ->exists();
+
+        if ($existingReturn) {
+            return redirect()->back()->with('info', 'Return already recorded for this delivery.');
+        }
+
+        DB::transaction(function () use ($inventory, $quantity, $movement, $user) {
+            // Update inventory empty_on_hand (customer returned empties)
+            $inventory->increment('empty_on_hand', $quantity);
+
+            // Create stock movement for the returned empty cylinders
+            \App\Models\StockMovement::create([
+                'inventory_id' => $inventory->id,
+                'full_in' => 0,
+                'full_out' => 0,
+                'empty_in' => $quantity,
+                'empty_out' => 0,
+                'type' => 'return',
+                'reference' => $movement->reference,
+                'notes' => 'Empty returned for ' . ($movement->reference ?? 'order'),
+                'movement_date' => now(),
+                'created_by' => $user->id,
+            ]);
+        });
+
+        return redirect()->back()->with('success', 'Marked returned: ' . $quantity . ' empty cylinder(s).');
     }
 
     /**

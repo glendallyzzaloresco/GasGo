@@ -9,6 +9,7 @@ use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class ProductController extends Controller
@@ -93,6 +94,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name'           => 'required|string|max:255',
             'category'       => 'required|in:tank,accessories,appliances,freebie',
+            'is_cylinder'    => 'nullable|boolean',
             'description'    => 'nullable|string',
             'price'          => 'nullable|numeric|min:0',
             'cost_price'     => 'required|numeric|min:0',
@@ -104,6 +106,11 @@ class ProductController extends Controller
         ]);
 
         $validated['category'] = strtolower((string) $validated['category']);
+        if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'is_cylinder')) {
+            $validated['is_cylinder'] = $request->boolean('is_cylinder');
+        } else {
+            unset($validated['is_cylinder']);
+        }
         $validated['is_active'] = $request->boolean('is_active');
         $validated['stock'] = (int) ($validated['stock'] ?? 0);
         // If price is not provided, use selling_price as the price
@@ -133,14 +140,17 @@ class ProductController extends Controller
                 try {
                     StockMovement::create([
                         'inventory_id' => $inventory->id,
-                        'quantity_change' => (int) $validated['stock'],
+                        'full_in' => (int) $validated['stock'],
+                        'full_out' => 0,
+                        'empty_in' => 0,
+                        'empty_out' => 0,
                         'type' => 'stock_in',
                         'notes' => 'Initial stock - product created',
                         'movement_date' => now(),
                         'created_by' => Auth::check() ? Auth::id() : 1,
                     ]);
                 } catch (\Exception $e) {
-                    \Log::error('StockMovement creation failed: ' . $e->getMessage());
+                    Log::error('StockMovement creation failed: ' . $e->getMessage());
                 }
             }
         });
@@ -160,6 +170,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name'           => 'required|string|max:255',
             'category'       => 'required|in:tank,accessories,appliances,freebie',
+            'is_cylinder'    => 'nullable|boolean',
             'description'    => 'nullable|string',
             'price'          => 'nullable|numeric|min:0',
             'cost_price'     => 'required|numeric|min:0',
@@ -171,6 +182,11 @@ class ProductController extends Controller
         ]);
 
         $validated['category'] = strtolower((string) $validated['category']);
+        if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'is_cylinder')) {
+            $validated['is_cylinder'] = $request->boolean('is_cylinder');
+        } else {
+            unset($validated['is_cylinder']);
+        }
         $validated['is_active'] = $request->boolean('is_active');
         // If price is not provided, use selling_price as the price
         if (!isset($validated['price']) || is_null($validated['price'])) {
@@ -211,14 +227,17 @@ class ProductController extends Controller
                     try {
                         StockMovement::create([
                             'inventory_id' => $inventory->id,
-                            'quantity_change' => $difference,
+                            'full_in' => $difference > 0 ? $difference : 0,
+                            'full_out' => $difference < 0 ? abs($difference) : 0,
+                            'empty_in' => 0,
+                            'empty_out' => 0,
                             'type' => $movementType,
                             'notes' => $difference > 0 ? 'Stock adjustment - increased via product edit' : 'Stock adjustment - decreased via product edit',
                             'movement_date' => now(),
                             'created_by' => Auth::check() ? Auth::id() : 1,
                         ]);
                     } catch (\Exception $e) {
-                        \Log::error('StockMovement creation failed: ' . $e->getMessage());
+                        Log::error('StockMovement creation failed: ' . $e->getMessage());
                     }
                 }
             }
