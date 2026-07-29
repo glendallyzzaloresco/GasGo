@@ -24,7 +24,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        View::composer(['layouts.customer', 'welcome', 'customer.*'], function ($view) {
+        View::composer(['layouts.customer', 'layouts.admin', 'welcome', 'customer.*', 'admin.*'], function ($view) {
             $defaults = (object) [
                 'brand_name_primary' => 'Gas',
                 'brand_name_accent' => 'Go',

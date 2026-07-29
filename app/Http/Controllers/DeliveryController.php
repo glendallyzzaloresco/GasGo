@@ -229,7 +229,7 @@ class DeliveryController extends Controller
         return response()->json(['message' => 'Location updated.']);
     }
 
-    // Rider: broadcast current GPS location to all active deliveries
+    // Rider: broadcast real GPS location to riders table and all active deliveries
     public function updateRiderLiveLocation(Request $request)
     {
         $validated = $request->validate([
@@ -237,17 +237,28 @@ class DeliveryController extends Controller
             'longitude' => 'required|numeric',
         ]);
 
-        $updated = Delivery::query()
-            ->where('rider_id', Auth::id())
+        $lat = (float) $validated['latitude'];
+        $lng = (float) $validated['longitude'];
+
+        // 1. Update the Rider's real-time location in riders table
+        \App\Models\Rider::where('user_id', Auth::id())->update([
+            'current_latitude'  => $lat,
+            'current_longitude' => $lng,
+        ]);
+
+        // 2. Update all active deliveries for this rider in deliveries table
+        $updatedCount = Delivery::where('rider_id', Auth::id())
             ->whereNotIn('status', ['delivered', 'failed'])
             ->update([
-                'latitude' => $validated['latitude'],
-                'longitude' => $validated['longitude'],
+                'latitude'  => $lat,
+                'longitude' => $lng,
             ]);
 
         return response()->json([
-            'message' => 'Live location updated.',
-            'updated_deliveries' => $updated,
+            'message' => 'Real location updated in riders and deliveries table.',
+            'latitude' => $lat,
+            'longitude' => $lng,
+            'updated_deliveries' => $updatedCount,
         ]);
     }
 

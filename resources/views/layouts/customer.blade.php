@@ -17,14 +17,18 @@
     
     <style>
         :root {
-            --gasgo-blue: #1a6db0;
-            --gasgo-blue-dark: #145a8f;
-            --gasgo-blue-light: #e8f4fc;
-            --gasgo-orange: #f7941d;
-            --gasgo-orange-dark: #e07d0a;
-            --gasgo-orange-light: #fff5e6;
-            --gasgo-gradient: linear-gradient(135deg, #1a6db0 0%, #2196f3 100%);
-            --gasgo-gradient-orange: linear-gradient(135deg, #f7941d 0%, #ff6b35 100%);
+            --color-primary: #1a6db0;
+            --color-accent: #f7941d;
+            --color-background: #f8f9fa;
+            --sidebar-bg: #111b35;
+            --gasgo-blue: var(--color-primary);
+            --gasgo-blue-dark: var(--color-primary);
+            --gasgo-blue-light: var(--color-background);
+            --gasgo-orange: var(--color-accent);
+            --gasgo-orange-dark: var(--color-accent);
+            --gasgo-orange-light: var(--color-background);
+            --gasgo-gradient: linear-gradient(135deg, var(--color-primary) 0%, #2196f3 100%);
+            --gasgo-gradient-orange: linear-gradient(135deg, var(--color-accent) 0%, #ff6b35 100%);
         }
         
         * {
@@ -35,7 +39,7 @@
         }
         
         body {
-            background-color: #f8f9fa;
+            background-color: var(--color-background);
             overflow-x: hidden;
             position: relative;
             
@@ -830,7 +834,7 @@
     <nav class="navbar navbar-expand-lg navbar-gasgo">
         <div class="container">
             <a class="navbar-brand" href="{{ url('/') }}">
-                <img src="{{ $homepageSettings->navbar_logo_url }}" alt="{{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }} Icon">
+                <img data-theme-logo src="{{ $homepageSettings->navbar_logo_url }}" alt="{{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }} Icon">
                 <span class="brand-text">{{ $homepageSettings->brand_name_primary ?? 'Gas' }}<span class="go">{{ $homepageSettings->brand_name_accent ?? 'Go' }}</span></span>
             </a>
             
@@ -917,7 +921,7 @@
         <div class="container">
             <div class="row g-4">
                 <div class="col-lg-4 col-md-3">
-                    <img src="{{ $homepageSettings->footer_logo_url }}" alt="{{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }}" class="footer-logo">
+                    <img data-theme-logo src="{{ $homepageSettings->footer_logo_url }}" alt="{{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }}" class="footer-logo">
                     <p class="footer-desc">
                         {{ $homepageSettings->footer_description ?? 'Your trusted partner for fast, reliable LPG delivery. Track your orders in real-time and earn loyalty & promos with every purchase.' }}
                     </p>
@@ -1020,6 +1024,7 @@
     
     <!-- AJAX Utilities -->
     <script src="{{ asset('js/ajax-utils.js') }}"></script>
+    <script src="{{ asset('js/theme-loader.js') }}"></script>
     
     @stack('scripts')
     @yield('scripts')

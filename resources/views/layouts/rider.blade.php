@@ -10,19 +10,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --gasgo-blue: #1a6db0;
-            --gasgo-blue-dark: #145a8f;
-            --gasgo-blue-light: #e8f4fc;
-            --gasgo-orange: #f7941d;
-            --gasgo-orange-dark: #e07d0a;
-            --gasgo-orange-light: #fff5e6;
+            --color-primary: #1a6db0;
+            --color-accent: #f7941d;
+            --color-background: #f4f7fb;
+            --sidebar-bg: #111b35;
+            --gasgo-blue: var(--color-primary);
+            --gasgo-blue-dark: var(--color-primary);
+            --gasgo-blue-light: var(--color-background);
+            --gasgo-orange: var(--color-accent);
+            --gasgo-orange-dark: var(--color-accent);
+            --gasgo-orange-light: var(--color-background);
             --sidebar-width: 260px;
-            --admin-bg: #f4f7fb;
+            --admin-bg: var(--color-background);
             --admin-border: #e8eef5;
         }
         * { font-family: 'Poppins', sans-serif; }
         body {
-            background: radial-gradient(circle at top right, #ffffff 0%, var(--admin-bg) 48%, #edf2f8 100%);
+            background: radial-gradient(circle at top right, #ffffff 0%, var(--color-background) 48%, #edf2f8 100%);
         }
 
         /* ===== SIDEBAR ===== */
@@ -328,7 +332,7 @@
     <!-- Sidebar -->
     <aside class="rider-sidebar" id="riderSidebar">
         <div class="sidebar-brand">
-            <img src="{{ asset('images/gasgo_logo-removebg-preview.png') }}" alt="GasGo">
+            <img data-theme-logo src="{{ asset('images/gasgo_logo-removebg-preview.png') }}" alt="GasGo">
             <h4>Gas<span>Go</span> Rider</h4>
         </div>
         <div class="sidebar-section">Menu</div>
@@ -396,6 +400,7 @@
     </main>
 
     <script src="{{ asset('bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ asset('js/theme-loader.js') }}"></script>
     <script>
         const sidebar = document.getElementById('riderSidebar');
         const overlay = document.getElementById('sidebarOverlay');

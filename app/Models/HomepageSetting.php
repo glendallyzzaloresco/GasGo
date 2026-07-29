@@ -37,6 +37,10 @@ class HomepageSetting extends Model
         'gcash_image_path',
         'payment_methods',
         'delivery_fee',
+        'primary_color',
+        'accent_color',
+        'background_color',
+        'sidebar_bg_color',
     ];
 
     protected $casts = [
@@ -71,6 +75,10 @@ class HomepageSetting extends Model
             'contact_email' => 'info@gasgo.com',
             'contact_hours' => 'Mon-Sun: 6AM - 10PM',
             'delivery_fee' => 50.00,
+            'primary_color' => '#1a6db0',
+            'accent_color' => '#f7941d',
+            'background_color' => '#f4f7fb',
+            'sidebar_bg_color' => '#111b35',
         ]);
     }
 

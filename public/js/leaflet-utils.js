@@ -275,34 +275,31 @@ async function fetchOSRMRoute(waypoints) {
  */
 function initLeafletMap(elementId, lat, lng, zoom = 13) {
     const element = document.getElementById(elementId);
-    
+
     if (!element) {
         console.error(`Map element with ID "${elementId}" not found`);
         return null;
     }
-    
-    const rect = element.getBoundingClientRect();
-    console.log(`Creating Leaflet map in element "${elementId}":`, {
-        width: rect.width,
-        height: rect.height,
-        offsetWidth: element.offsetWidth,
-        offsetHeight: element.offsetHeight
-    });
-    
-    // Ensure element has visible dimensions
-    if (element.offsetHeight === 0 || element.offsetWidth === 0) {
-        console.warn('Warning: Map element has zero dimensions');
-    }
-    
+
+    // Force explicit pixel dimensions so Leaflet can always calculate tile positions
+    element.style.width  = element.style.width  || '100%';
+    element.style.height = '500px';
+    element.style.display = 'block';
+
+    console.log(`Creating Leaflet map in #${elementId}: ${element.offsetWidth}×${element.offsetHeight}px`);
+
     try {
-        const map = L.map(elementId).setView([lat, lng], zoom);
+        const map = L.map(elementId, { preferCanvas: false }).setView([lat, lng], zoom);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             maxZoom: 19,
             minZoom: 3
         }).addTo(map);
-        
+
+        // Force tile refresh after a short delay
+        setTimeout(() => { map.invalidateSize(true); }, 300);
+
         console.log('Leaflet map created successfully');
         return map;
     } catch (error) {

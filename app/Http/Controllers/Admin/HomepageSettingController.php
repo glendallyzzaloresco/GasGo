@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\HomepageSetting;
+use App\Models\SiteTheme;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -39,6 +40,10 @@ class HomepageSettingController extends Controller
             'contact_phone' => 'nullable|string|max:80',
             'contact_email' => 'nullable|email|max:120',
             'contact_hours' => 'nullable|string|max:120',
+            'primary_color' => 'nullable|string|size:7',
+            'accent_color' => 'nullable|string|size:7',
+            'background_color' => 'nullable|string|size:7',
+            'sidebar_bg_color' => 'nullable|string|size:7',
             'navbar_logo' => 'nullable|image|max:2048',
             'footer_logo' => 'nullable|image|max:2048',
             'home_hero_image' => 'nullable|image|max:4096',
@@ -68,6 +73,10 @@ class HomepageSettingController extends Controller
             'contact_phone' => $validated['contact_phone'] ?? null,
             'contact_email' => $validated['contact_email'] ?? null,
             'contact_hours' => $validated['contact_hours'] ?? null,
+            'primary_color' => $validated['primary_color'] ?? '#1a6db0',
+            'accent_color' => $validated['accent_color'] ?? '#f7941d',
+            'background_color' => $validated['background_color'] ?? '#f4f7fb',
+            'sidebar_bg_color' => $validated['sidebar_bg_color'] ?? '#111b35',
         ];
 
         if ($request->boolean('remove_navbar_logo')) {
@@ -111,6 +120,22 @@ class HomepageSettingController extends Controller
         }
 
         $settings->update($payload);
+
+        $themePayload = [
+            'primaryColor' => $payload['primary_color'] ?? '#1a6db0',
+            'accentColor' => $payload['accent_color'] ?? '#f7941d',
+            'backgroundColor' => $payload['background_color'] ?? '#f4f7fb',
+            'sidebarBackground' => $payload['sidebar_bg_color'] ?? '#111b35',
+            'footerDescription' => $payload['footer_description'] ?? null,
+            'contactAddress' => $payload['contact_address'] ?? null,
+            'contactPhone' => $payload['contact_phone'] ?? null,
+        ];
+
+        if (! empty($payload['navbar_logo_path'])) {
+            $themePayload['logoUrl'] = Storage::disk('public')->url($payload['navbar_logo_path']);
+        }
+
+        SiteTheme::query()->updateOrCreate(['id' => 1], $themePayload);
 
         return redirect()->route('admin.settings.homepage')->with('success', 'Homepage settings updated successfully.');
     }

@@ -27,14 +27,14 @@
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h5 class="mb-0 fw-bold">
-                <i class="fas fa-palette me-2" style="color:var(--gasgo-orange);"></i>Customer/Guest Homepage Controls
+                <i class="fas fa-palette me-2" style="color:var(--gasgo-orange);"></i>Homepage Controls
             </h5>
             <a href="{{ route('admin.settings') }}" class="btn btn-sm btn-outline-secondary">
                 <i class="fas fa-arrow-left me-1"></i>Back to Settings
             </a>
         </div>
         <div class="card-body">
-            <form action="{{ route('admin.settings.homepage.update') }}" method="POST" enctype="multipart/form-data">
+            <form id="siteThemeForm" action="{{ route('admin.settings.homepage.update') }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
                 <div class="row g-4">
@@ -147,8 +147,27 @@
                         @endif
                     </div>
 
-                    <div class="col-12">
-                        <label class="form-label fw-semibold">Footer Description</label>
+                    <div class="col-12">                        <label class="form-label fw-semibold">Primary Color</label>
+                        <input type="color" name="primary_color" class="form-control form-control-color" value="{{ old('primary_color', $settings->primary_color ?? '#1a6db0') }}" title="Choose primary color">
+                        <div class="form-text">Used for primary buttons, accents, and highlights.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Accent Color</label>
+                        <input type="color" name="accent_color" class="form-control form-control-color" value="{{ old('accent_color', $settings->accent_color ?? '#f7941d') }}" title="Choose accent color">
+                        <div class="form-text">Used for secondary accents and status highlights.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Background Color</label>
+                        <input type="color" name="background_color" class="form-control form-control-color" value="{{ old('background_color', $settings->background_color ?? '#f4f7fb') }}" title="Choose background color">
+                        <div class="form-text">Page background for admin/customer areas.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Sidebar Background</label>
+                        <input type="color" name="sidebar_bg_color" class="form-control form-control-color" value="{{ old('sidebar_bg_color', $settings->sidebar_bg_color ?? '#111b35') }}" title="Choose sidebar background color">
+                        <div class="form-text">Sidebar background color for admin navigation.</div>
+                    </div>
+
+                    <div class="col-12">                        <label class="form-label fw-semibold">Footer Description</label>
                         <textarea name="footer_description" rows="4" class="form-control">{{ old('footer_description', $settings->footer_description) }}</textarea>
                     </div>
 
@@ -179,4 +198,60 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('siteThemeForm');
+        if (!form) {
+            return;
+        }
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const basePath = window.location.pathname.includes('/public/')
+            ? window.location.pathname.split('/public/')[0] + '/public'
+            : '';
+        const themeApiUrl = basePath + '/api/theme';
+
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const formData = new FormData(form);
+            const navbarLogo = formData.get('navbar_logo');
+
+            if (navbarLogo instanceof File && navbarLogo.size > 0) {
+                formData.set('logo', navbarLogo);
+            }
+
+            formData.set('primaryColor', formData.get('primary_color') || '#1a6db0');
+            formData.set('accentColor', formData.get('accent_color') || '#f7941d');
+            formData.set('backgroundColor', formData.get('background_color') || '#f4f7fb');
+            formData.set('sidebarBackground', formData.get('sidebar_bg_color') || '#111b35');
+            formData.set('footerDescription', formData.get('footer_description') || '');
+            formData.set('contactAddress', formData.get('contact_address') || '');
+            formData.set('contactPhone', formData.get('contact_phone') || '');
+
+            try {
+                const response = await fetch(themeApiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error('Theme API update failed.');
+                }
+
+                form.submit();
+            } catch (error) {
+                console.error(error);
+                alert('Theme update could not be synced. Please try again.');
+            }
+        });
+    });
+</script>
 @endsection

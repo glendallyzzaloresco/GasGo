@@ -569,15 +569,48 @@
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
                     riderPosition = {
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude
+                        latitude: lat,
+                        longitude: lng
                     };
+                    // Send real location update to server
+                    sendLocationToServer(lat, lng);
                     // Optionally restart navigation with updated position
                     startNavigation();
+                },
+                function(error) {
+                    console.error('Continuous geolocation error:', error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
                 }
             );
         }
+    }
+
+    function sendLocationToServer(lat, lng) {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        if (!csrfToken) return;
+
+        fetch('/rider/location/live', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ latitude: lat, longitude: lng })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Location updated during navigation:', data);
+        })
+        .catch(err => console.error('Live location update failed during navigation:', err));
     }
 
     function markAsArrived() {

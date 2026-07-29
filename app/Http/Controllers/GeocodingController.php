@@ -16,10 +16,10 @@ class GeocodingController extends Controller
         ];
     }
 
-    // private function geoapifyKey(): string
-    // {
-    //     return env('GEOAPIFY_API_KEY');
-    // }
+    private function geoapifyKey(): ?string
+    {
+        return env('GEOAPIFY_API_KEY');
+    }
 
     public function search(Request $request): JsonResponse
     {
@@ -98,8 +98,53 @@ class GeocodingController extends Controller
         $lat = (float) $validated['lat'];
         $lng = (float) $validated['lng'];
         $zoom = (int) ($validated['zoom'] ?? 18);
+        $apiKey = $this->geoapifyKey();
 
         try {
+            // 1. Try Geoapify Reverse Geocoding if API key is provided
+            if (! empty($apiKey)) {
+                $response = Http::timeout(8)
+                    ->get('https://api.geoapify.com/v1/geocode/reverse', [
+                        'lat' => $lat,
+                        'lon' => $lng,
+                        'format' => 'json',
+                        'apiKey' => $apiKey,
+                    ]);
+
+                if ($response->successful()) {
+                    $payload = $response->json();
+                    $feature = $payload['results'][0] ?? $payload['features'][0]['properties'] ?? null;
+
+                    if ($feature) {
+                        $street = $feature['street'] ?? null;
+                        if (! empty($feature['housenumber'])) {
+                            $street = $feature['housenumber'] . ' ' . $street;
+                        }
+
+                        $suburb = $feature['suburb']
+                            ?? $feature['district']
+                            ?? $feature['neighbourhood']
+                            ?? $feature['village']
+                            ?? null;
+
+                        $city = $feature['city']
+                            ?? $feature['town']
+                            ?? $feature['municipality']
+                            ?? $feature['county']
+                            ?? null;
+
+                        return response()->json([
+                            'display_name' => $feature['formatted'] ?? $feature['address_line1'] ?? null,
+                            'address' => $feature,
+                            'street' => $street,
+                            'suburb' => $suburb,
+                            'city' => $city,
+                        ], 200);
+                    }
+                }
+            }
+
+            // 2. Fallback to OpenStreetMap Nominatim
             $response = Http::withHeaders($this->nominatimHeaders())
                 ->timeout(8)
                 ->get('https://nominatim.openstreetmap.org/reverse', [
@@ -109,63 +154,11 @@ class GeocodingController extends Controller
                     'lon' => $lng,
                     'zoom' => $zoom,
                 ]);
-            $response = Http::timeout(8)
-                ->get('https://api.geoapify.com/v1/geocode/reverse', [
-                'lat' => $lat,
-                'lon' => $lng,
-                'format' => 'json',
-                'apiKey' => $this->geoapifyKey(),
-            ]);
 
-            if (! $response->successful()) {
-                return response()->json([
-                    'display_name' => null,
-                    'address' => null,
-                    'street' => null,
-                    'suburb' => null,
-                    'city' => null,
-                ], 200);
-            }
+            if ($response->successful()) {
+                $payload = $response->json();
+                $address = is_array($payload['address'] ?? null) ? $payload['address'] : [];
 
-            $payload = $response->json();
-            $address = is_array($payload['address'] ?? null) 
-            ? $payload['address'] 
-            : null;
-            $payload = $response->json();
-
-            $feature = $payload['features'][0]['properties'] ?? null;
-
-            if (!$feature) {
-               return response()->json([
-               'display_name' => null,
-               'address' => null,
-               'street' => null,
-               'suburb' => null,
-               'city' => null,
-                ], 200);
-               }
-
-            $street = null;
-            $suburb = null;
-            $city = null;
-
-            $street = $feature['street'] ?? null;
-
-                if (!empty($feature['housenumber'])) {
-                $street = $feature['housenumber'] . ' ' . $street;
-            }
-
-            $suburb = $feature['suburb']
-            ?? $feature['district']
-            ?? $feature['neighbourhood']
-            ?? null;
-
-            $city = $feature['city']
-            ?? $feature['town']
-            ?? $feature['county']
-            ?? null;
-
-            if ($address) {
                 $street = trim((($address['house_number'] ?? '') . ' ' . ($address['road'] ?? '')));
                 if ($street === '') {
                     $street = $address['road'] ?? $address['pedestrian'] ?? $address['residential'] ?? null;
@@ -183,16 +176,22 @@ class GeocodingController extends Controller
                     ?? $address['municipality']
                     ?? $address['county']
                     ?? null;
+
+                return response()->json([
+                    'display_name' => $payload['display_name'] ?? null,
+                    'address' => $address,
+                    'street' => $street,
+                    'suburb' => $suburb,
+                    'city' => $city,
+                ], 200);
             }
 
             return response()->json([
-                'display_name' => $payload['display_name'] ?? null,
-                // 'display_name' => $feature['formatted'] ?? null,
-               'address' => $address,
-            //   'address' => $feature,
-                'street' => $street,
-                'suburb' => $suburb,
-                'city' => $city,
+                'display_name' => null,
+                'address' => null,
+                'street' => null,
+                'suburb' => null,
+                'city' => null,
             ], 200);
         } catch (\Throwable $exception) {
             return response()->json([

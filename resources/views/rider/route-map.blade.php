@@ -29,7 +29,12 @@
         background: #1a2744;
         border-radius: 16px;
         overflow: hidden;
-        position: relative;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 500px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        border: 1px solid rgba(255,255,255,0.08);
     }
 
     .map-header {
@@ -39,6 +44,7 @@
         padding: 16px 20px;
         background: linear-gradient(135deg, #1a2744, #243656);
         border-bottom: 1px solid rgba(255,255,255,0.1);
+        flex-shrink: 0;
     }
 
     .map-title {
@@ -113,8 +119,11 @@
 
     #liveRouteMap {
         width: 100%;
-        height: calc(100% - 70px);
-        min-height: 400px;
+        flex: 1;
+        height: 100% !important;
+        min-height: 450px;
+        display: block;
+        background: #e8f4f8;
     }
 
     /* Tasks Panel */
@@ -561,7 +570,7 @@
                 </button>
             </div>
         </div>
-        <div id="liveRouteMap"></div>
+        <div id="liveRouteMap" style="width:100%;height:500px;min-height:500px;display:block;background:#e8f4f8;"></div>
     </div>
 
     <!-- Tasks Panel -->
@@ -692,14 +701,20 @@
     let watchId = null;
     let riderPosition = null;
 
-    // Initialize map on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        initRouteMap();
+    // Initialize map — runs immediately after scripts parse (DOM is already ready at this point)
+    function onPageReady() {
         bindTaskActions();
-        publishCurrentLocationOnce();
-        // Auto-start tracking when page loads
-        startTracking();
-    });
+        setTimeout(function() {
+            initRouteMap();
+            publishCurrentLocationOnce();
+        }, 50);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', onPageReady);
+    } else {
+        onPageReady();
+    }
 
     function bindTaskActions() {
         document.querySelectorAll('.task-card').forEach(function (task) {
@@ -802,18 +817,30 @@
             drawDeliverySequenceLine(coordinates.map(c => [c.lat, c.lng]));
         }
 
-        // Fit map to show all deliveries
-        if (coordinates.length > 0) {
+        // Fit map to show all deliveries safely
+        if (coordinates.length > 1) {
             const bounds = L.latLngBounds(coordinates.map(c => [c.lat, c.lng]));
             routeMap.fitBounds(bounds, { padding: [50, 50] });
+        } else if (coordinates.length === 1) {
+            routeMap.setView([coordinates[0].lat, coordinates[0].lng], 14);
         }
+
+        // Force Leaflet to recalculate tile grid after CSS has painted
+        [100, 300, 600, 1000].forEach(delay => {
+            setTimeout(() => {
+                if (routeMap) routeMap.invalidateSize(true);
+            }, delay);
+        });
     }
 
     // Draw line connecting all delivery points in sequence using OSRM routing
     function drawDeliverySequenceLine(coords) {
         if (!routeMap || coords.length < 2) return;
         
-        // Remove existing sequence line
+        // Remove existing sequence lines
+        if (window.deliverySequenceBgLine) {
+            routeMap.removeLayer(window.deliverySequenceBgLine);
+        }
         if (window.deliverySequenceLine) {
             routeMap.removeLayer(window.deliverySequenceLine);
         }
@@ -832,20 +859,29 @@
                     const route = data.routes[0];
                     const routeCoords = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
                     
-                    // Draw road-based delivery sequence line
-                    window.deliverySequenceLine = L.polyline(routeCoords, {
+                    // Soft neon-blue background glow line
+                    window.deliverySequenceBgLine = L.polyline(routeCoords, {
                         color: '#3498db',
-                        weight: 3,
-                        opacity: 0.5,
+                        weight: 10,
+                        opacity: 0.25,
+                        lineCap: 'round',
+                        lineJoin: 'round'
+                    }).addTo(routeMap);
+
+                    // Solid core route line
+                    window.deliverySequenceLine = L.polyline(routeCoords, {
+                        color: '#2980b9',
+                        weight: 5,
+                        opacity: 0.9,
                         lineCap: 'round',
                         lineJoin: 'round'
                     }).addTo(routeMap);
                 } else {
                     // Fallback: simple line between all stops
                     window.deliverySequenceLine = L.polyline(coords, {
-                        color: '#95a5a6',
-                        weight: 2,
-                        opacity: 0.3,
+                        color: '#3498db',
+                        weight: 3,
+                        opacity: 0.6,
                         dashArray: '5,5',
                         lineCap: 'round'
                     }).addTo(routeMap);
@@ -892,6 +928,11 @@
         }
     }
 
+    function processLocation(lat, lng) {
+        // Return 100% real location from device GPS sensor
+        return { lat, lng };
+    }
+
     function startTracking() {
         if (!navigator.geolocation) {
             showAlert('error', 'Geolocation is not supported by your browser');
@@ -900,7 +941,7 @@
 
         isTracking = true;
 
-        // Immediately get one precise location
+        // Immediately request permission & get precise real device location
         navigator.geolocation.getCurrentPosition(
             function(position) {
                 const lat = position.coords.latitude;
@@ -908,20 +949,18 @@
                 riderPosition = { lat, lng };
                 updateRiderMarker(lat, lng);
                 sendLocationToServer(lat, lng);
-                showAlert('success', 'Location tracking started!');
+                showAlert('success', 'GPS Location active (Real Device GPS)');
             },
             function(error) {
                 console.error('Initial location error:', error);
                 let errorMsg = 'Location tracking failed.';
-                
                 if (error.code === error.PERMISSION_DENIED) {
-                    errorMsg = 'Location permission denied! Click the 🔒 lock icon in your address bar and enable location access.';
+                    errorMsg = 'Location permission denied! Click the 🔒 lock icon in your address bar to allow location access.';
                 } else if (error.code === error.POSITION_UNAVAILABLE) {
-                    errorMsg = 'Location information unavailable. GPS may not be available.';
+                    errorMsg = 'Location unavailable. Please check GPS settings.';
                 } else if (error.code === error.TIMEOUT) {
-                    errorMsg = 'Location request timed out. Please try again.';
+                    errorMsg = 'Location request timed out.';
                 }
-                
                 showAlert('error', errorMsg);
                 isTracking = false;
             },
@@ -932,13 +971,12 @@
             }
         );
 
-        // Then watch for continuous updates
+        // Continuous watch position
         watchId = navigator.geolocation.watchPosition(
             function(position) {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
                 riderPosition = { lat, lng };
-
                 updateRiderMarker(lat, lng);
                 sendLocationToServer(lat, lng);
             },
@@ -1037,7 +1075,6 @@
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
                 riderPosition = { lat, lng };
-
                 updateRiderMarker(lat, lng);
                 sendLocationToServer(lat, lng);
             },

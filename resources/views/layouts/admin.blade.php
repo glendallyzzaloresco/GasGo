@@ -10,19 +10,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --gasgo-blue: #1a6db0;
-            --gasgo-blue-dark: #145a8f;
-            --gasgo-blue-light: #e8f4fc;
-            --gasgo-orange: #f7941d;
-            --gasgo-orange-dark: #e07d0a;
-            --gasgo-orange-light: #fff5e6;
+            --color-primary: {{ $homepageSettings->primary_color ?? '#1a6db0' }};
+            --color-accent: {{ $homepageSettings->accent_color ?? '#f7941d' }};
+            --color-background: {{ $homepageSettings->background_color ?? '#f4f7fb' }};
+            --sidebar-bg: {{ $homepageSettings->sidebar_bg_color ?? '#111b35' }};
+            --gasgo-blue: var(--color-primary);
+            --gasgo-blue-dark: var(--color-primary);
+            --gasgo-blue-light: var(--color-background);
+            --gasgo-orange: var(--color-accent);
+            --gasgo-orange-dark: var(--color-accent);
+            --gasgo-orange-light: var(--color-background);
             --sidebar-width: 260px;
-            --admin-bg: #f4f7fb;
+            --admin-bg: var(--color-background);
             --admin-border: #e8eef5;
         }
         * { font-family: 'Poppins', sans-serif; }
         body {
-            background: radial-gradient(circle at top right, #ffffff 0%, var(--admin-bg) 48%, #edf2f8 100%);
+            background: radial-gradient(circle at top right, #ffffff 0%, var(--color-background) 48%, #edf2f8 100%);
         }
 
         /* ===== SIDEBAR ===== */
@@ -31,7 +35,7 @@
             height: 100vh;
             position: fixed;
             top: 0; left: 0;
-            background: linear-gradient(180deg, #111b35 0%, #17254a 55%, #1a2f63 100%);
+            background: linear-gradient(180deg, var(--sidebar-bg) 0%, rgba(23,37,74,.9) 55%, rgba(26,47,99,.95) 100%);
             color: #fff;
             z-index: 1040;
             transition: transform .3s;
@@ -466,8 +470,8 @@
     <!-- Sidebar -->
     <aside class="admin-sidebar" id="adminSidebar">
         <div class="sidebar-brand">
-            <img src="{{ asset('images/gasgo_logo-removebg-preview.png') }}" alt="GasGo">
-            <h4>Gas<span>Go</span> Admin</h4>
+            <img data-theme-logo src="{{ $homepageSettings->navbar_logo_url ?? asset('images/gasgo_logo-removebg-preview.png') }}" alt="{{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }}">
+            <h4>{{ $homepageSettings->brand_name_primary ?? 'Gas' }}<span>{{ $homepageSettings->brand_name_accent ?? 'Go' }}</span> Admin</h4>
         </div>
         <div class="sidebar-section">Main</div>
         <ul class="sidebar-menu">
@@ -486,7 +490,7 @@
         </ul>
         <div class="sidebar-section">Reports</div>
         <ul class="sidebar-menu">
-            <li><a href="{{ url('/admin/reports') }}" class="@yield('nav-reports')"><i class="fas fa-chart-bar"></i>Sales Reports</a></li>
+            <li><a href="{{ url('/admin/reports') }}" class="@yield('nav-reports')"><i class="fas fa-chart-bar"></i>Sales Reports & Sales Forecast</a></li>
             <li><a href="{{ url('/admin/users') }}" class="@yield('nav-users')"><i class="fas fa-users-cog"></i>User Management</a></li>
         </ul>
         <div class="sidebar-section">Maintenance</div>
@@ -557,6 +561,7 @@
     </main>
 
     <script src="{{ asset('bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ asset('js/theme-loader.js') }}"></script>
     <script>
         const sidebar = document.getElementById('adminSidebar');
         const overlay = document.getElementById('sidebarOverlay');

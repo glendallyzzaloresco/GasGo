@@ -743,9 +743,14 @@ class OrderController extends Controller
 
         if ($order->delivery && $order->delivery->rider) {
             $riderName = $order->delivery->rider->name;
-            $riderPhone = $order->delivery->rider->phone;
-            $riderLat = $order->delivery->latitude;
-            $riderLng = $order->delivery->longitude;
+            $riderLat = $order->delivery->latitude ?? $order->delivery->rider->rider?->current_latitude;
+            $riderLng = $order->delivery->longitude ?? $order->delivery->rider->rider?->current_longitude;
+
+            // Default to GasGo Store Hub if location not yet updated by rider
+            if (empty($riderLat) || empty($riderLng)) {
+                $riderLat = 16.0196129;
+                $riderLng = 120.3593023;
+            }
 
             // Get all active deliveries for this rider (waypoints)
             $allDeliveries = \App\Models\Delivery::with('order')

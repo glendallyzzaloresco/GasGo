@@ -58,17 +58,54 @@
 
     /* Map */
     .map-container {
-        border-radius: 16px; height: 380px; overflow: hidden; position: relative;
-        background: var(--gasgo-blue-light);
+        border-radius: 20px; height: 480px; overflow: hidden; position: relative;
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+        border: 1px solid rgba(0,0,0,0.08);
     }
     #trackingMap { width: 100%; height: 100%; }
     .map-overlay {
         position: absolute; top: 0; left: 0; right: 0; bottom: 0;
         display: flex; align-items: center; justify-content: center; flex-direction: column;
-        color: var(--gasgo-blue); z-index: 10; background: var(--gasgo-blue-light);
+        color: var(--gasgo-blue); z-index: 10; background: rgba(248, 249, 250, 0.95);
+        backdrop-filter: blur(8px);
     }
-    .map-overlay i { font-size: 3rem; margin-bottom: 10px; }
+    .map-overlay i { font-size: 3.5rem; margin-bottom: 15px; color: var(--gasgo-orange); }
     .map-overlay.hidden { display: none; }
+
+    /* Rider marker animation - Grab/Foodpanda style */
+    .rider-marker-pulsing {
+        position: relative;
+        width: 60px;
+        height: 60px;
+        background: #f7941d;
+        border: 3px solid #ffffff;
+        border-radius: 50%;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+    }
+    .rider-marker-pulsing::before {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: rgba(247, 148, 29, 0.4);
+        animation: grabPulse 1.8s infinite ease-out;
+        z-index: -1;
+    }
+    @keyframes grabPulse {
+        0% {
+            transform: scale(1);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(2.2);
+            opacity: 0;
+        }
+    }
 
     /* Rider Card */
     .rider-card {
@@ -99,16 +136,6 @@
     .status-out_for_delivery { background: #fff5e6; color: #e07d0a; }
     .status-delivered { background: #d4edda; color: #155724; }
     .status-cancelled { background: #f8d7da; color: #721c24; }
-
-    /* Rider marker animation */
-    @keyframes riderPulse {
-        0%, 100% {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 0 0 rgba(247, 148, 29, 0.7);
-        }
-        50% {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 0 20px rgba(247, 148, 29, 0);
-        }
-    }
 </style>
 @endsection
 
@@ -159,8 +186,8 @@
                 data-order-status="{{ $order->status }}"
                 data-order-lat="{{ $order->latitude ?? '15.7968' }}"
                 data-order-lng="{{ $order->longitude ?? '120.5631' }}"
-                data-delivery-lat="{{ ($order->delivery && $order->delivery->latitude) ? $order->delivery->latitude : '' }}"
-                data-delivery-lng="{{ ($order->delivery && $order->delivery->longitude) ? $order->delivery->longitude : '' }}"
+                data-delivery-lat="{{ ($order->delivery && $order->delivery->latitude) ? $order->delivery->latitude : ($order->delivery && $order->delivery->rider && $order->delivery->rider->rider && $order->delivery->rider->rider->current_latitude ? $order->delivery->rider->rider->current_latitude : '16.0196129') }}"
+                data-delivery-lng="{{ ($order->delivery && $order->delivery->longitude) ? $order->delivery->longitude : ($order->delivery && $order->delivery->rider && $order->delivery->rider->rider && $order->delivery->rider->rider->current_longitude ? $order->delivery->rider->rider->current_longitude : '120.3593023') }}"
                 data-status-url="{{ route('customer.tracking.status', $order) }}">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="fw-bold mb-0" style="color:var(--gasgo-blue);">
@@ -436,12 +463,14 @@
     const statusUrl = trackingEl.dataset.statusUrl;
     
     // Parse coordinates
+    const orderLat = trackingEl.dataset.orderLat ? parseFloat(trackingEl.dataset.orderLat) : null;
+    const orderLng = trackingEl.dataset.orderLng ? parseFloat(trackingEl.dataset.orderLng) : null;
     const deliveryLat = trackingEl.dataset.deliveryLat ? parseFloat(trackingEl.dataset.deliveryLat) : null;
     const deliveryLng = trackingEl.dataset.deliveryLng ? parseFloat(trackingEl.dataset.deliveryLng) : null;
     const hasDeliveryCoords = (deliveryLat && deliveryLng) ? true : false;
     
-    const deliveryInitLat = deliveryLat || (trackingEl.dataset.orderLat ? parseFloat(trackingEl.dataset.orderLat) : null);
-    const deliveryInitLng = deliveryLng || (trackingEl.dataset.orderLng ? parseFloat(trackingEl.dataset.orderLng) : null);
+    const deliveryInitLat = deliveryLat || orderLat;
+    const deliveryInitLng = deliveryLng || orderLng;
 
     const statusOrder = ['pending', 'approved', 'assigned', 'out_for_delivery', 'delivered'];
     const statusBadgeLabels = {
@@ -459,14 +488,17 @@
     let routeLine = null;
     let currentStatus = orderStatus;
 
-    // Wait for Google Maps to load
+    // Initialize map immediately on load if rider is assigned/active
     window.addEventListener('load', function() {
-        // Don't initialize map until order is out for delivery
         const msg = document.getElementById('mapMessage');
-        if (orderStatus === 'pending' || orderStatus === 'approved' || orderStatus === 'assigned') {
-            msg.textContent = 'Rider location will appear once the order is out for delivery';
-        } else if (orderStatus === 'out_for_delivery') {
-            msg.textContent = 'Loading map...';
+        if (orderStatus === 'pending' || orderStatus === 'approved') {
+            msg.textContent = 'Rider location will appear once a rider is assigned';
+        } else if (['assigned', 'picked_up', 'out_for_delivery'].includes(orderStatus)) {
+            if (deliveryInitLat && deliveryInitLng) {
+                initMap(deliveryInitLat, deliveryInitLng);
+            } else {
+                msg.textContent = 'Loading map...';
+            }
         }
         
         // Start polling updates immediately if order is active
@@ -483,25 +515,15 @@
         // Initialize Leaflet map
         map = initLeafletMap('trackingMap', lat, lng, 15);
 
-        // Rider marker - use simple div with emoji
-        const riderDiv = document.createElement('div');
-        riderDiv.style.width = '80px';
-        riderDiv.style.height = '80px';
-        riderDiv.style.background = '#f7941d';
-        riderDiv.style.borderRadius = '50%';
-        riderDiv.style.display = 'flex';
-        riderDiv.style.alignItems = 'center';
-        riderDiv.style.justifyContent = 'center';
-        riderDiv.style.border = '4px solid white';
-        riderDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-        riderDiv.style.fontSize = '45px';
-        riderDiv.textContent = '🚚';
+        // Rider marker - Grab/Foodpanda style pulsing marker
+        const riderHtml = `<div class="rider-marker-pulsing">🛵</div>`;
 
         riderMarker = L.marker([lat, lng], {
             icon: L.divIcon({
-                html: riderDiv.outerHTML,
-                iconSize: [80, 80],
-                iconAnchor: [40, 40]
+                html: riderHtml,
+                iconSize: [60, 60],
+                iconAnchor: [30, 30],
+                className: ''
             })
         }).addTo(map);
         riderMarker.bindPopup('<div style="padding:8px;"><b>Rider Location</b><br><small>Live tracking</small></div>');
@@ -554,14 +576,27 @@
                     const route = data.routes[0];
                     const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
                     
+                    if (window.routeBgLine) {
+                        map.removeLayer(window.routeBgLine);
+                    }
                     if (routeLine) {
                         map.removeLayer(routeLine);
                     }
                     
+                    // Soft neon-green glow background line
+                    window.routeBgLine = L.polyline(coordinates, {
+                        color: '#00b14f',
+                        weight: 12,
+                        opacity: 0.2,
+                        lineCap: 'round',
+                        lineJoin: 'round'
+                    }).addTo(map);
+
+                    // Solid bright-green foreground line
                     routeLine = L.polyline(coordinates, {
-                        color: '#f7941d',
-                        weight: 6,
-                        opacity: 0.9,
+                        color: '#00b14f',
+                        weight: 5,
+                        opacity: 0.95,
                         lineCap: 'round',
                         lineJoin: 'round'
                     }).addTo(map);
@@ -578,17 +613,29 @@
     }
 
     function drawDirectLine(fromLat, fromLng, toLat, toLng) {
+        if (window.routeBgLine) {
+            map.removeLayer(window.routeBgLine);
+        }
         if (routeLine) {
             map.removeLayer(routeLine);
         }
         
+        window.routeBgLine = L.polyline(
+            [[fromLat, fromLng], [toLat, toLng]],
+            {
+                color: '#00b14f',
+                weight: 12,
+                opacity: 0.2
+            }
+        ).addTo(map);
+
         routeLine = L.polyline(
             [[fromLat, fromLng], [toLat, toLng]],
             {
-                color: '#f7941d',
-                weight: 6,
-                opacity: 0.9,
-                dashArray: '5, 5'
+                color: '#00b14f',
+                weight: 5,
+                opacity: 0.95,
+                dashArray: '5, 8'
             }
         ).addTo(map);
         console.log('Direct line drawn (fallback)');
@@ -645,12 +692,12 @@
         }
 
         // Calculate and display distance
-        if (data.rider_lat && data.rider_lng && deliveryLat && deliveryLng) {
+        if (data.rider_lat && data.rider_lng && orderLat && orderLng) {
             const distance = calculateDistance(
                 parseFloat(data.rider_lat),
                 parseFloat(data.rider_lng),
-                deliveryLat,
-                deliveryLng
+                orderLat,
+                orderLng
             );
             
             const distanceEl = document.getElementById('distanceIndicator');
@@ -660,9 +707,9 @@
             }
         }
 
-        const canShowRiderMap = data.status === 'out_for_delivery';
+        const canShowRiderMap = ['assigned', 'picked_up', 'out_for_delivery'].includes(data.status);
 
-        // Initialize map only when order is out for delivery
+        // Initialize map when rider is assigned/active
         if (canShowRiderMap && data.rider_lat && data.rider_lng) {
             if (!map) {
                 initMap(parseFloat(data.rider_lat), parseFloat(data.rider_lng));
@@ -682,7 +729,7 @@
             msg.textContent = 'This order was cancelled';
         } else if (!canShowRiderMap) {
             overlay.classList.remove('hidden');
-            msg.textContent = 'Rider location will appear once the order is out for delivery';
+            msg.textContent = 'Rider location will appear once a rider is assigned';
         } else if (!data.rider_lat || !data.rider_lng) {
             overlay.classList.remove('hidden');
             msg.textContent = 'Waiting for rider location update...';
@@ -715,7 +762,7 @@
         return R * c;
     }
 
-    // Poll for updates (increased frequency to 5 seconds for live tracking)
+    // Poll for updates (increased frequency to 2 seconds for live tracking)
     function pollStatus() {
         if (currentStatus === 'delivered' || currentStatus === 'cancelled') return;
 
@@ -730,8 +777,8 @@
         })
         .catch(() => {});
 
-        // Poll every 5 seconds instead of 10 for better real-time tracking
-        setTimeout(pollStatus, 5000);
+        // Poll every 2 seconds instead of 5 for better real-time tracking
+        setTimeout(pollStatus, 2000);
     }
 
     // Start polling immediately (not after delay) for live tracking
@@ -745,12 +792,12 @@
             if (!data.error) {
                 updateUI(data);
                 // Then continue polling
-                setTimeout(pollStatus, 5000);
+                setTimeout(pollStatus, 2000);
             }
         })
         .catch(() => {
             // If first poll fails, still start polling
-            setTimeout(pollStatus, 5000);
+            setTimeout(pollStatus, 2000);
         });
     }
 

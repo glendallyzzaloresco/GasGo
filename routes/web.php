@@ -9,6 +9,7 @@ use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\Admin\HomepageSettingController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\SiteThemeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
@@ -22,6 +23,11 @@ use App\Http\Controllers\RestockController;
 
 Route::get('/geocode/search', [GeocodingController::class, 'search'])->name('geocode.search');
 Route::get('/geocode/reverse', [GeocodingController::class, 'reverse'])->name('geocode.reverse');
+
+Route::get('/api/theme', [SiteThemeController::class, 'index'])->name('api.theme.index');
+Route::put('/api/theme', [SiteThemeController::class, 'update'])
+    ->middleware(['auth'])
+    ->name('api.theme.update');
 
 Route::get('/', function () {
     if (\Illuminate\Support\Facades\Auth::check()) {
@@ -269,6 +275,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
 
     // Reports & Customers (static views for now)
     Route::get('/reports', [DashboardController::class, 'reports'])->name('admin.reports');
+    Route::get('/reports/sales-forecast', [DashboardController::class, 'reports'])->name('admin.reports.sales-forecast');
     Route::get('/customers', [DashboardController::class, 'customers'])->name('admin.customers');
     Route::get('/users', [DashboardController::class, 'users'])->name('admin.users');
 
