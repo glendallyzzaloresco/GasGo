@@ -11,7 +11,7 @@
     }
     .page-header::after {
         content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 60px;
-        background: #f8f9fa; clip-path: ellipse(55% 100% at 50% 100%);
+        background: #ffffff; clip-path: ellipse(55% 100% at 50% 100%);
     }
 
     .filter-bar {
@@ -283,7 +283,7 @@
 <section class="page-header">
     <div class="container text-center">
         <h1 class="fw-bold" data-aos="fade-up">Product Catalog</h1>
-        <p class="mb-0" style="opacity:.9;" data-aos="fade-up" data-aos-delay="100">Browse our LPG tanks and accessories</p>
+        <p class="mb-0" style="opacity:.9;" data-aos="fade-up" data-aos-delay="100">Browse our {{ strtolower($homepageSettings->industry_noun ?? 'quality products') }} and catalog</p>
     </div>
 </section>
 
@@ -293,9 +293,14 @@
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <span class="fw-bold text-muted me-2"><i class="fas fa-filter me-1"></i>Filter:</span>
             <a href="{{ route('customer.products') }}" class="filter-btn {{ !request('category') ? 'active' : '' }}">All</a>
-            <a href="{{ route('customer.products', ['category' => 'tank']) }}" class="filter-btn {{ strtolower(request('category')) === 'tank' ? 'active' : '' }}">LPG Tanks</a>
-            <a href="{{ route('customer.products', ['category' => 'accessories']) }}" class="filter-btn {{ strtolower(request('category')) === 'accessories' ? 'active' : '' }}">Accessories</a>
-            <a href="{{ route('customer.products', ['category' => 'appliances']) }}" class="filter-btn {{ strtolower(request('category')) === 'appliances' ? 'active' : '' }}">Appliances</a>
+            @if(isset($categories) && count($categories) > 0)
+                @foreach($categories as $cat)
+                    <a href="{{ route('customer.products', ['category' => strtolower($cat)]) }}" class="filter-btn {{ strtolower(request('category')) === strtolower($cat) ? 'active' : '' }}">{{ ucfirst($cat) }}</a>
+                @endforeach
+            @else
+                <a href="{{ route('customer.products', ['category' => 'tank']) }}" class="filter-btn {{ strtolower(request('category')) === 'tank' ? 'active' : '' }}">Primary</a>
+                <a href="{{ route('customer.products', ['category' => 'accessories']) }}" class="filter-btn {{ strtolower(request('category')) === 'accessories' ? 'active' : '' }}">Accessories</a>
+            @endif
             <div class="ms-auto">
                 <input type="text" class="form-control form-control-gasgo" placeholder="Search products..." id="searchProduct" onkeyup="searchProducts(this.value)" style="padding:10px 18px;font-size:.9rem;">
             </div>
@@ -306,36 +311,17 @@
     <div class="row g-4" id="productGrid">
         @forelse($products as $index => $product)
             @php
-                $productCategory = strtolower((string) ($product->category ?? 'accessory'));
-                
-                // Map database category to display category
-                $categoryMap = [
-                    'tank' => 'lpg',
-                    'lpg' => 'lpg',
-                    'tanks' => 'lpg',
-                    'appliance' => 'appliances',
-                    'appliances' => 'appliances',
-                    'accessory' => 'accessories',
-                    'accessories' => 'accessories',
-                    'freebie' => 'accessories'
-                ];
-                
-                $category = $categoryMap[$productCategory] ?? 'accessories';
+                $rawCat = $product->category ? trim($product->category) : ($homepageSettings->industry_noun ?? 'Product');
+                $categorySlug = strtolower($rawCat);
                 
                 $inStock = (int) ($product->quantity_on_hand ?? 0) > 0;
                 $img = $product->resolved_image;
             @endphp
-            <div class="col-lg-3 col-md-6 product-item" data-category="{{ $category }}" data-name="{{ $product->name }}" data-aos="fade-up" data-aos-delay="{{ (($index % 6) + 1) * 100 }}">
+            <div class="col-lg-3 col-md-6 product-item" data-category="{{ $categorySlug }}" data-name="{{ $product->name }}" data-aos="fade-up" data-aos-delay="{{ (($index % 6) + 1) * 100 }}">
                 <a href="{{ route('customer.product.show', $product->id) }}" style="text-decoration: none; color: inherit;">
                     <div class="product-card">
                         <div class="product-img">
-                            @if($category === 'lpg')
-                                <span class="product-badge">LPG</span>
-                            @elseif($category === 'appliances')
-                                <span class="product-badge" style="background: #e74c3c;">Appliances</span>
-                            @else
-                                <span class="product-badge accessory">Accessory</span>
-                            @endif
+                            <span class="product-badge">{{ ucfirst($rawCat) }}</span>
                             @if($img)
                                 <img src="{{ $img }}" alt="{{ $product->name }}" class="img-fluid">
                             @else
@@ -344,7 +330,7 @@
                         </div>
                         <div class="product-body">
                             <h5>{{ $product->name }}</h5>
-                            <p class="product-weight"><i class="fas fa-weight-hanging me-1"></i>{{ $product->weight ?: ucfirst($category) }}</p>
+                            <p class="product-weight"><i class="fas fa-weight-hanging me-1"></i>{{ $product->weight ?: ucfirst($rawCat) }}</p>
                             <p class="product-stock {{ $inStock ? 'in' : 'out' }}"><i class="fas {{ $inStock ? 'fa-check-circle' : 'fa-times-circle' }} me-1"></i>{{ $inStock ? 'In Stock' : 'Out of Stock' }}</p>
                             <hr>
                             <div class="d-flex justify-content-between align-items-center gap-2" style="margin-bottom: 12px;">

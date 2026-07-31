@@ -10,7 +10,7 @@
     }
     .page-header::after {
         content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 60px;
-        background: #f8f9fa; clip-path: ellipse(55% 100% at 50% 100%);
+        background: #ffffff; clip-path: ellipse(55% 100% at 50% 100%);
     }
 
     .tracking-card {
@@ -515,18 +515,10 @@
         // Initialize Leaflet map
         map = initLeafletMap('trackingMap', lat, lng, 15);
 
-        // Rider marker - Grab/Foodpanda style pulsing marker
-        const riderHtml = `<div class="rider-marker-pulsing">🛵</div>`;
-
-        riderMarker = L.marker([lat, lng], {
-            icon: L.divIcon({
-                html: riderHtml,
-                iconSize: [60, 60],
-                iconAnchor: [30, 30],
-                className: ''
-            })
-        }).addTo(map);
-        riderMarker.bindPopup('<div style="padding:8px;"><b>Rider Location</b><br><small>Live tracking</small></div>');
+        // Rider marker - Foodpanda 3D style motorbike marker with direction rotation
+        riderMarker = createRiderMotorbikeMarker(lat, lng, currentRiderHeading);
+        riderMarker.addTo(map);
+        riderMarker.bindPopup('<div style="padding:8px;text-align:center;"><b>🛵 Delivery Rider</b><br><small style="color:#27ae60;font-weight:600;">Live tracking</small></div>');
 
         // Destination marker - use the delivery coordinates from order
         const destLat = parseFloat(trackingEl.dataset.orderLat);
@@ -641,20 +633,39 @@
         console.log('Direct line drawn (fallback)');
     }
 
+    let lastRiderPosition = null;
+    let currentRiderHeading = 0;
+
     function updateRiderPosition(lat, lng) {
         if (!map) {
             initMap(lat, lng);
-        } else if (riderMarker) {
-            smoothMoveMarker(riderMarker, lat, lng, 2000); // 2 second smooth animation
-            map.panTo([lat, lng]); // Pan to rider location without zooming
+            return;
+        }
 
-            // Update route line to delivery address
-            const destLat = parseFloat(trackingEl.dataset.orderLat);
-            const destLng = parseFloat(trackingEl.dataset.orderLng);
-            
-            if (destLat && destLng && !isNaN(destLat) && !isNaN(destLng)) {
-                drawDeliveryRoute(lat, lng, destLat, destLng);
+        // Calculate heading if moved
+        if (lastRiderPosition) {
+            const dist = calculateDistance(lastRiderPosition.lat, lastRiderPosition.lng, lat, lng);
+            if (dist > 0.002) {
+                currentRiderHeading = calculateBearing(lastRiderPosition.lat, lastRiderPosition.lng, lat, lng);
             }
+        }
+        lastRiderPosition = { lat, lng };
+
+        if (riderMarker) {
+            smoothMoveMarker(riderMarker, lat, lng, 1800, currentRiderHeading);
+            map.panTo([lat, lng], { animate: true, duration: 1.5 });
+        } else {
+            riderMarker = createRiderMotorbikeMarker(lat, lng, currentRiderHeading);
+            riderMarker.addTo(map);
+            riderMarker.bindPopup('<div style="padding:8px;text-align:center;"><b>🛵 Delivery Rider</b><br><small style="color:#27ae60;font-weight:600;">On the way</small></div>');
+        }
+
+        // Update route line to delivery address
+        const destLat = parseFloat(trackingEl.dataset.orderLat);
+        const destLng = parseFloat(trackingEl.dataset.orderLng);
+        
+        if (destLat && destLng && !isNaN(destLat) && !isNaN(destLng)) {
+            drawDeliveryRoute(lat, lng, destLat, destLng);
         }
     }
 

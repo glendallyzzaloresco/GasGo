@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'GasGo - LPG Delivery')</title>
+    <title>@yield('title', trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) . ' - ' . ($homepageSettings->hero_title_highlight ?? 'Delivery'))</title>
     
     <!-- Bootstrap CSS -->
     <link href="{{ asset('bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
@@ -17,10 +17,10 @@
     
     <style>
         :root {
-            --color-primary: #1a6db0;
-            --color-accent: #f7941d;
-            --color-background: #f8f9fa;
-            --sidebar-bg: #111b35;
+            --color-primary: {{ $homepageSettings->primary_color ?? '#1a6db0' }};
+            --color-accent: {{ $homepageSettings->accent_color ?? '#f7941d' }};
+            --color-background: {{ $homepageSettings->background_color ?? '#f8f9fa' }};
+            --sidebar-bg: {{ $homepageSettings->sidebar_bg_color ?? '#111b35' }};
             --gasgo-blue: var(--color-primary);
             --gasgo-blue-dark: var(--color-primary);
             --gasgo-blue-light: var(--color-background);
@@ -39,10 +39,9 @@
         }
         
         body {
-            background-color: var(--color-background);
+            background-color: var(--color-background, #f8f9fa);
             overflow-x: hidden;
             position: relative;
-            
         }
         .hero-section,
         .promo-banner,
@@ -959,7 +958,7 @@
             </div>
             
             <div class="footer-bottom">
-                <p>&copy; 2026 GasGo. All rights reserved. | <a href="#" class="text-decoration-none" style="color: var(--gasgo-orange);">Privacy Policy</a> | <a href="#" class="text-decoration-none" style="color: var(--gasgo-orange);">Terms of Service</a></p>
+                <p>&copy; {{ date('Y') }} {{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }}. All rights reserved. | <a href="#" class="text-decoration-none" style="color: var(--gasgo-orange);">Privacy Policy</a> | <a href="#" class="text-decoration-none" style="color: var(--gasgo-orange);">Terms of Service</a></p>
             </div>
         </div>
     </footer>

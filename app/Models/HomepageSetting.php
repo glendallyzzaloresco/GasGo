@@ -41,6 +41,11 @@ class HomepageSetting extends Model
         'accent_color',
         'background_color',
         'sidebar_bg_color',
+        'industry_noun',
+        'how_it_works_title',
+        'how_it_works_subtitle',
+        'why_choose_title',
+        'why_choose_subtitle',
     ];
 
     protected $casts = [
@@ -59,17 +64,17 @@ class HomepageSetting extends Model
             'brand_name_primary' => 'Gas',
             'brand_name_accent' => 'Go',
             'hero_title_prefix' => 'Fast, Reliable',
-            'hero_title_highlight' => 'LPG Delivery',
+            'hero_title_highlight' => 'Delivery Service',
             'hero_title_suffix' => 'to Your Door',
-            'hero_subtitle' => 'Fast, reliable LPG delivery right to your door. Earn loyalty rewards with every order.',
+            'hero_subtitle' => 'Fast, reliable delivery right to your door. Track your orders in real-time and earn rewards.',
             'hero_primary_button_label' => 'Browse Products',
             'products_section_title' => 'Our Products',
-            'products_section_subtitle' => 'Choose from our range of LPG tanks and accessories',
+            'products_section_subtitle' => 'Choose from our wide range of quality products',
             'products_view_all_label' => 'View All Products',
             'promo_title' => 'New User? Get FREE Delivery on Your First Order!',
             'promo_subtitle' => 'Register now and start earning loyalty points with every purchase.',
             'promo_button_label' => 'Register Now',
-            'footer_description' => 'Your trusted partner for fast, reliable LPG delivery. Track your orders in real-time and earn rewards with every purchase.',
+            'footer_description' => 'Your trusted partner for fast, reliable delivery. Track your orders in real-time and earn rewards with every purchase.',
             'contact_address' => 'PNR Site Estacion San Miguel Calasiao Pangasinan',
             'contact_phone' => '+63 912 345 6789',
             'contact_email' => 'info@gasgo.com',
@@ -79,6 +84,11 @@ class HomepageSetting extends Model
             'accent_color' => '#f7941d',
             'background_color' => '#f4f7fb',
             'sidebar_bg_color' => '#111b35',
+            'industry_noun' => 'Products',
+            'how_it_works_title' => 'How It Works',
+            'how_it_works_subtitle' => 'Order in 4 easy steps',
+            'why_choose_title' => 'Why Choose Us',
+            'why_choose_subtitle' => 'We make delivery convenient, safe, and rewarding',
         ]);
     }
 

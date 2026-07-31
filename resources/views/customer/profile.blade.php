@@ -20,7 +20,7 @@
         left: 0;
         right: 0;
         height: 60px;
-        background: #f8f9fa;
+        background: #ffffff;
         clip-path: ellipse(55% 100% at 50% 100%);
     }
 

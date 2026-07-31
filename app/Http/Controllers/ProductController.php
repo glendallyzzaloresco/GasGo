@@ -30,7 +30,15 @@ class ProductController extends Controller
         $products = $query->orderBy('name')->get();
         $activeCategory = $category; // Pass active category to view for highlighting
 
-        return view('customer.product', compact('products', 'activeCategory'));
+        $categories = Product::where('is_active', true)
+            ->whereNotNull('category')
+            ->where('category', '!=', '')
+            ->pluck('category')
+            ->map(fn ($c) => trim($c))
+            ->unique(fn ($c) => strtolower($c))
+            ->values();
+
+        return view('customer.product', compact('products', 'activeCategory', 'categories'));
     }
 
     // Show single product details

@@ -544,6 +544,53 @@
         align-items: center;
         gap: 6px;
     }
+
+    /* Mobile Responsive Customizations */
+    @media (max-width: 576px) {
+        .route-map-container {
+            gap: 15px;
+            padding: 10px;
+        }
+        .map-section {
+            min-height: auto;
+            border-radius: 12px;
+        }
+        .map-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+            padding: 12px 15px;
+            text-align: center;
+        }
+        .map-title {
+            justify-content: center;
+            font-size: 1rem;
+        }
+        .map-subtitle {
+            font-size: 0.72rem;
+        }
+        .map-actions {
+            width: 100%;
+            justify-content: center;
+            gap: 8px;
+        }
+        .map-actions button {
+            flex: 1;
+            justify-content: center;
+            font-size: 0.75rem;
+            padding: 8px 12px;
+        }
+        #liveRouteMap {
+            height: 320px !important;
+            min-height: 320px;
+        }
+        .tasks-panel {
+            border-radius: 12px;
+        }
+        .task-card {
+            padding: 12px;
+        }
+    }
 </style>
 @endsection
 
@@ -940,6 +987,7 @@
         }
 
         isTracking = true;
+        hasAutoZoomedRider = false; // Reset so tracking auto-zooms smoothly to rider close-up (level 17)
 
         // Immediately request permission & get precise real device location
         navigator.geolocation.getCurrentPosition(
@@ -1001,17 +1049,38 @@
         }
     }
 
+    let lastRiderPosition = null;
+    let currentRiderHeading = 0;
+    let hasAutoZoomedRider = false;
+
     function updateRiderMarker(lat, lng) {
         if (!routeMap) return;
 
+        // Calculate bearing/heading if rider moved
+        if (lastRiderPosition) {
+            const dist = calculateDistance(lastRiderPosition.lat, lastRiderPosition.lng, lat, lng);
+            if (dist > 0.002) { // only recalculate heading if moved > 2 meters
+                currentRiderHeading = calculateBearing(lastRiderPosition.lat, lastRiderPosition.lng, lat, lng);
+            }
+        }
+        lastRiderPosition = { lat, lng };
+
         if (riderMarker) {
-            // Smoothly move existing marker
-            smoothMoveMarker(riderMarker, lat, lng, 1000);
+            // Smoothly move existing motorbike marker & rotate icon towards heading
+            smoothMoveMarker(riderMarker, lat, lng, 1200, currentRiderHeading);
         } else {
-            // Create new rider marker
-            riderMarker = createPulsingMarker(lat, lng, '#27ae60');
+            // Create Foodpanda-style 3D motorbike rider marker
+            riderMarker = createRiderMotorbikeMarker(lat, lng, currentRiderHeading);
             riderMarker.addTo(routeMap);
-            riderMarker.bindPopup('<div style="padding:8px;"><b>Your Location</b></div>');
+            riderMarker.bindPopup('<div style="padding:8px;text-align:center;"><b>🛵 Delivery Rider</b><br><small style="color:#27ae60;font-weight:600;">Active GPS Tracking</small></div>');
+        }
+
+        // Smooth close-up auto-zoom (Level 17) on initial position fix or tracking trigger
+        if (!hasAutoZoomedRider) {
+            routeMap.flyTo([lat, lng], 17, { animate: true, duration: 1.5 });
+            hasAutoZoomedRider = true;
+        } else {
+            routeMap.panTo([lat, lng], { animate: true, duration: 1.2 });
         }
 
         // Update polyline to include rider position using road routing
@@ -1123,9 +1192,9 @@
         });
         document.getElementById(`task-${deliveryId}`).classList.add('active');
 
-        // Zoom to the selected delivery on the map (without removing other pins)
+        // Zoom closely to the selected delivery on the map (Level 17 like Foodpanda)
         if (routeMap && lat && lng) {
-            routeMap.setView([lat, lng], 15, { animate: true });
+            routeMap.flyTo([lat, lng], 17, { animate: true, duration: 1.5 });
         }
         
         // Draw route line from rider's current position to delivery
@@ -1162,9 +1231,9 @@
                         
                         showAlert('error', errorMsg);
                         
-                        // Fallback: just show destination
+                        // Fallback: zoom closely to destination (Level 17)
                         if (routeMap && lat && lng) {
-                            routeMap.setView([lat, lng], 16, { animate: true });
+                            routeMap.flyTo([lat, lng], 17, { animate: true, duration: 1.5 });
                         }
                     },
                     {

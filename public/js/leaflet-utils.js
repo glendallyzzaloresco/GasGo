@@ -194,18 +194,102 @@ function toRadians(degrees) {
 }
 
 /**
- * Smoothly animates marker movement from current position to new position
+ * Calculate compass bearing angle in degrees (0-360) between two coordinates
+ * @param {number} lat1 
+ * @param {number} lng1 
+ * @param {number} lat2 
+ * @param {number} lng2 
+ * @returns {number} Bearing angle in degrees
+ */
+function calculateBearing(lat1, lng1, lat2, lng2) {
+    const dLng = toRadians(lng2 - lng1);
+    const rLat1 = toRadians(lat1);
+    const rLat2 = toRadians(lat2);
+    const y = Math.sin(dLng) * Math.cos(rLat2);
+    const x = Math.cos(rLat1) * Math.sin(rLat2) - Math.sin(rLat1) * Math.cos(rLat2) * Math.cos(dLng);
+    let brng = Math.atan2(y, x);
+    brng = (brng * 180 / Math.PI + 360) % 360;
+    return brng;
+}
+
+/**
+ * Creates a Foodpanda-style 3D motorbike rider marker with direction rotation
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @param {number} heading - Heading angle in degrees (default: 0)
+ * @returns {L.Marker} Leaflet marker with rotated motorbike icon
+ */
+function createRiderMotorbikeMarker(lat, lng, heading = 0) {
+    const icon = L.divIcon({
+        className: 'leaflet-rider-motorbike-container',
+        html: `
+            <div class="rider-marker-wrapper" style="position: relative; width: 46px; height: 46px;">
+                <div class="pulse-ring" style="
+                    position: absolute;
+                    width: 100%;
+                    height: 100%;
+                    border-radius: 50%;
+                    background: rgba(39, 174, 96, 0.35);
+                    animation: rider-pulse 2s infinite;
+                "></div>
+                <div class="rider-bike-icon" style="
+                    position: absolute;
+                    top: 3px;
+                    left: 3px;
+                    width: 40px;
+                    height: 40px;
+                    background: linear-gradient(135deg, #27ae60, #1e8449);
+                    border-radius: 50%;
+                    border: 3px solid #ffffff;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.35);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-size: 18px;
+                    transform: rotate(${heading}deg);
+                    transition: transform 0.4s ease-out;
+                ">
+                    <i class="fas fa-motorcycle"></i>
+                </div>
+            </div>
+            <style>
+                @keyframes rider-pulse {
+                    0% { transform: scale(1); opacity: 0.8; }
+                    100% { transform: scale(2.2); opacity: 0; }
+                }
+            </style>
+        `,
+        iconSize: [46, 46],
+        iconAnchor: [23, 23]
+    });
+
+    return L.marker([lat, lng], { icon: icon });
+}
+
+/**
+ * Smoothly animates marker movement from current position to new position with rotation
  * @param {L.Marker} marker - Leaflet marker to animate
  * @param {number} newLat - Target latitude
  * @param {number} newLng - Target longitude
- * @param {number} duration - Animation duration in milliseconds (default: 2000)
+ * @param {number} duration - Animation duration in milliseconds (default: 1200)
+ * @param {number|null} newHeading - Optional target heading rotation angle in degrees
  */
-function smoothMoveMarker(marker, newLat, newLng, duration = 2000) {
+function smoothMoveMarker(marker, newLat, newLng, duration = 1200, newHeading = null) {
     const startLatLng = marker.getLatLng();
     const startLat = startLatLng.lat;
     const startLng = startLatLng.lng;
 
     const startTime = Date.now();
+
+    // Rotate motorbike icon if heading is provided
+    const markerElem = marker.getElement();
+    if (markerElem && newHeading !== null && newHeading !== undefined) {
+        const bikeIcon = markerElem.querySelector('.rider-bike-icon');
+        if (bikeIcon) {
+            bikeIcon.style.transform = `rotate(${newHeading}deg)`;
+        }
+    }
 
     function animate() {
         const elapsed = Date.now() - startTime;

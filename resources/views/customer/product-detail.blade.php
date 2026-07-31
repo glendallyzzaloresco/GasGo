@@ -11,7 +11,7 @@
     }
     .page-header::after {
         content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 60px;
-        background: #f8f9fa; clip-path: ellipse(55% 100% at 50% 100%);
+        background: #ffffff; clip-path: ellipse(55% 100% at 50% 100%);
     }
 
     .back-link {

@@ -19,7 +19,7 @@
         position: absolute;
         bottom: -2px; left: 0; right: 0;
         height: 80px;
-        background: #f8f9fa;
+        background: #ffffff;
         clip-path: ellipse(55% 100% at 50% 100%);
     }
     .hero-title { font-size: 2.8rem; font-weight: 800; line-height: 1.2; }
@@ -213,7 +213,7 @@
     }
 
     /* ===== HOW IT WORKS ===== */
-    .how-it-works { background: white; }
+    .how-it-works { background: #ffffff; }
     .step-card {
         text-align: center;
         padding: 30px 20px;
@@ -237,7 +237,7 @@
 
     /* ===== WHY GASGO ===== */
     .why-card {
-        background: white;
+        background: #ffffff;
         border-radius: 16px;
         padding: 30px;
         box-shadow: 0 4px 20px rgba(0,0,0,.06);
@@ -359,7 +359,7 @@
 @endguest
 
 <!-- Featured Products -->
-<section class="section-padding">
+<section class="section-padding" style="background:#ffffff;">
     <div class="container">
         <div class="text-center mb-5" data-aos="fade-up">
             <h2 class="section-title">{{ $homepageSettings->products_section_title ?? 'Our Products' }}</h2>
@@ -419,18 +419,18 @@
 </section>
 
 <!-- How It Works -->
-<section class="section-padding how-it-works">
+<section class="section-padding how-it-works" style="background:#ffffff;">
     <div class="container">
         <div class="text-center mb-5" data-aos="fade-up">
-            <h2 class="section-title">How It Works</h2>
-            <p class="section-subtitle">Order your LPG in 4 easy steps</p>
+            <h2 class="section-title">{{ $homepageSettings->how_it_works_title ?? 'How It Works' }}</h2>
+            <p class="section-subtitle">{{ $homepageSettings->how_it_works_subtitle ?? 'Order in 4 easy steps' }}</p>
         </div>
         <div class="row g-4">
             <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="100">
                 <div class="step-card">
                     <div class="step-icon blue"><i class="fas fa-search"></i></div>
                     <h5 class="fw-bold">1. Browse</h5>
-                    <p class="text-muted">Explore our LPG products and accessories</p>
+                    <p class="text-muted">Explore our {{ strtolower($homepageSettings->industry_noun ?? 'products') }} and catalog</p>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="200">
@@ -451,26 +451,26 @@
                 <div class="step-card">
                     <div class="step-icon purple"><i class="fas fa-hand-holding-heart"></i></div>
                     <h5 class="fw-bold">4. Receive</h5>
-                    <p class="text-muted">Get your LPG delivered and earn rewards</p>
+                    <p class="text-muted">Get your delivery right to your door & earn rewards</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Why GasGo -->
-<section class="section-padding">
+<!-- Why Choose Us -->
+<section class="section-padding" style="background:#f8f9fa;">
     <div class="container">
         <div class="text-center mb-5" data-aos="fade-up">
-            <h2 class="section-title">Why Choose GasGo?</h2>
-            <p class="section-subtitle">We make LPG delivery convenient, safe, and rewarding</p>
+            <h2 class="section-title">{{ $homepageSettings->why_choose_title ?? ('Why Choose ' . trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) . '?') }}</h2>
+            <p class="section-subtitle">{{ $homepageSettings->why_choose_subtitle ?? 'We make delivery convenient, safe, and rewarding' }}</p>
         </div>
         <div class="row g-4">
             <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="100">
                 <div class="why-card text-center">
                     <i class="fas fa-shipping-fast" style="color:var(--gasgo-blue);"></i>
                     <h5 class="fw-bold mt-2">Fast Delivery</h5>
-                    <p class="text-muted small">Get your LPG delivered within the hour</p>
+                    <p class="text-muted small">Get your {{ strtolower($homepageSettings->industry_noun ?? 'order') }} delivered fast</p>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="200">
@@ -491,7 +491,7 @@
                 <div class="why-card text-center">
                     <i class="fas fa-shield-alt" style="color:#8e44ad;"></i>
                     <h5 class="fw-bold mt-2">Safe & Secure</h5>
-                    <p class="text-muted small">Certified LPG products with guaranteed quality</p>
+                    <p class="text-muted small">Certified {{ $homepageSettings->industry_noun ?? 'quality' }} products with guaranteed safety</p>
                 </div>
             </div>
         </div>

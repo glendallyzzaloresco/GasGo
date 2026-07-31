@@ -279,6 +279,12 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::get('/customers', [DashboardController::class, 'customers'])->name('admin.customers');
     Route::get('/users', [DashboardController::class, 'users'])->name('admin.users');
 
+    // Category Management
+    Route::get('/categories', [\App\Http\Controllers\Admin\CategoryController::class, 'index'])->name('admin.categories');
+    Route::post('/categories', [\App\Http\Controllers\Admin\CategoryController::class, 'store'])->name('admin.categories.store');
+    Route::put('/categories/{category}', [\App\Http\Controllers\Admin\CategoryController::class, 'update'])->name('admin.categories.update');
+    Route::delete('/categories/{category}', [\App\Http\Controllers\Admin\CategoryController::class, 'destroy'])->name('admin.categories.destroy');
+
     // Settings / Maintenance
     Route::get('/settings', [DashboardController::class, 'settings'])->name('admin.settings');
     Route::get('/settings/homepage', [HomepageSettingController::class, 'edit'])->name('admin.settings.homepage');

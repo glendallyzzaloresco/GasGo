@@ -44,6 +44,11 @@ class HomepageSettingController extends Controller
             'accent_color' => 'nullable|string|size:7',
             'background_color' => 'nullable|string|size:7',
             'sidebar_bg_color' => 'nullable|string|size:7',
+            'industry_noun' => 'nullable|string|max:100',
+            'how_it_works_title' => 'nullable|string|max:120',
+            'how_it_works_subtitle' => 'nullable|string|max:300',
+            'why_choose_title' => 'nullable|string|max:120',
+            'why_choose_subtitle' => 'nullable|string|max:300',
             'navbar_logo' => 'nullable|image|max:2048',
             'footer_logo' => 'nullable|image|max:2048',
             'home_hero_image' => 'nullable|image|max:4096',
@@ -77,6 +82,11 @@ class HomepageSettingController extends Controller
             'accent_color' => $validated['accent_color'] ?? '#f7941d',
             'background_color' => $validated['background_color'] ?? '#f4f7fb',
             'sidebar_bg_color' => $validated['sidebar_bg_color'] ?? '#111b35',
+            'industry_noun' => $validated['industry_noun'] ?? 'Products',
+            'how_it_works_title' => $validated['how_it_works_title'] ?? 'How It Works',
+            'how_it_works_subtitle' => $validated['how_it_works_subtitle'] ?? 'Order in 4 easy steps',
+            'why_choose_title' => $validated['why_choose_title'] ?? 'Why Choose Us',
+            'why_choose_subtitle' => $validated['why_choose_subtitle'] ?? 'We make delivery convenient, safe, and rewarding',
         ];
 
         if ($request->boolean('remove_navbar_logo')) {
@@ -135,7 +145,9 @@ class HomepageSettingController extends Controller
             $themePayload['logoUrl'] = Storage::disk('public')->url($payload['navbar_logo_path']);
         }
 
-        SiteTheme::query()->updateOrCreate(['id' => 1], $themePayload);
+        if (\Illuminate\Support\Facades\Schema::hasTable('site_theme')) {
+            SiteTheme::query()->updateOrCreate(['id' => 1], $themePayload);
+        }
 
         return redirect()->route('admin.settings.homepage')->with('success', 'Homepage settings updated successfully.');
     }
