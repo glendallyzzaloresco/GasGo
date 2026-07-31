@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('inventory', function (Blueprint $table) {
-            $table->string('status')->default('active')->after('supplier');
-        });
+        if (!Schema::hasColumn('inventory', 'status')) {
+            Schema::table('inventory', function (Blueprint $table) {
+                $table->string('status')->default('active')->after('supplier');
+            });
+        }
     }
 
     /**
