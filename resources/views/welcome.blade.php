@@ -642,7 +642,7 @@
                 <div class="row align-items-center">
                     <div class="col-md-8">
                         <h3><i
-                                class="fas fa-gift me-2"></i>{{ $homepageSettings->promo_title ?? 'New User? Get FREE Delivery on Your First Order kana boy!' }}
+                                class="fas fa-gift me-2"></i>{{ $homepageSettings->promo_title ?? 'New User? Get FREE Delivery on Your First Order!' }}
                         </h3>
                         <p class="mb-0" style="opacity:.9;">
                             {{ $homepageSettings->promo_subtitle ?? 'Register now and start earning loyalty points with every purchase.' }}
@@ -749,7 +749,7 @@
                 <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="100">
                     <div class="step-card">
                         <div class="step-icon blue"><i class="fas fa-search"></i></div>
-                        <h5 class="fw-bold">1. Browse</h5>
+                        <h5 class="fw-bold">1. Browse ka muna</h5>
                         <p class="text-muted">Explore our {{ strtolower($homepageSettings->industry_noun ?? 'products') }}
                             and catalog</p>
                     </div>
