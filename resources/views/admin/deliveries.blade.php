@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'GasGo Admin - Deliveries')
+@section('title', 'Deliveries')
 @section('nav-deliveries', 'active')
 @section('page-title', 'Delivery Tracking')
 

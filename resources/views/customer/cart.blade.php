@@ -1,6 +1,6 @@
 @extends('layouts.customer')
 
-@section('title', 'GasGo - Cart')
+@section('title', 'Cart')
 @section('nav-products', 'active')
 
 @section('styles')

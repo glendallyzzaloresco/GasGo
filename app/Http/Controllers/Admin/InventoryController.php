@@ -139,8 +139,8 @@ class InventoryController extends Controller
 
         $tankMovementQuery = StockMovement::query()
             ->whereHas('inventory.product', function ($query) {
-                if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'is_cylinder')) {
-                    $query->where('is_cylinder', true);
+                if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
+                    $query->where('requires_exchange', true);
                 } else {
                     $query->whereRaw('LOWER(category) = ?', ['tank']);
                 }
@@ -188,8 +188,8 @@ class InventoryController extends Controller
             ->join('products', 'order_items.product_id', '=', 'products.id')
             ->where('deliveries.status', 'delivered');
 
-        if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'is_cylinder')) {
-            $deliveryDates->where('products.is_cylinder', true);
+        if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
+            $deliveryDates->where('products.requires_exchange', true);
         } else {
             $deliveryDates->whereRaw('LOWER(products.category) = ?', ['tank']);
         }
@@ -200,8 +200,8 @@ class InventoryController extends Controller
             ->pluck('latest_delivery_date', 'product_id');
         
         $emptyTanksReturned = Inventory::whereHas('product', function($q) {
-            if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'is_cylinder')) {
-                $q->where('is_cylinder', true);
+            if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
+                $q->where('requires_exchange', true);
             } else {
                 $q->whereRaw('LOWER(category) = ?', ['tank']);
             }
@@ -225,8 +225,8 @@ class InventoryController extends Controller
         
         $emptyTankReturnsQuery = Inventory::with('product')
             ->whereHas('product', function($q) {
-                if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'is_cylinder')) {
-                    $q->where('is_cylinder', true);
+                if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
+                    $q->where('requires_exchange', true);
                 } else {
                     $q->whereRaw('LOWER(category) = ?', ['tank']);
                 }

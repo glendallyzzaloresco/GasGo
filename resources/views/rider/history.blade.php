@@ -1,6 +1,6 @@
 @extends('layouts.rider')
 
-@section('title', 'GasGo Rider - History')
+@section('title', 'History')
 @section('page-title', 'Delivery History')
 @section('nav-history', 'active')
 

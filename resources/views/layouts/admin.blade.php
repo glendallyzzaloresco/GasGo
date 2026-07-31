@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'GasGo Admin')</title>
+    <title>{{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }} Admin | @yield('title', 'Dashboard')</title>
     <link href="{{ asset('bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('fontawesome/css/all.min.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -76,7 +76,7 @@
         }
         .sidebar-brand img { height: 42px; }
         .sidebar-brand h4 { margin: 0; font-weight: 700; font-size: 1.15rem; }
-        .sidebar-brand h4 span { color: var(--gasgo-orange); }
+        .sidebar-brand h4 span { color: var(--color-accent); }
         .sidebar-menu { list-style: none; padding: 16px 0; margin: 0; position: relative; z-index: 1; }
         .sidebar-menu li a {
             display: flex; align-items: center; gap: 12px;
@@ -469,10 +469,10 @@
 
     <!-- Sidebar -->
     <aside class="admin-sidebar" id="adminSidebar">
-        <div class="sidebar-brand">
-            <img data-theme-logo src="{{ $homepageSettings->navbar_logo_url ?? asset('images/gasgo_logo-removebg-preview.png') }}" alt="{{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }}">
-            <h4>{{ $homepageSettings->brand_name_primary ?? 'Gas' }}<span>{{ $homepageSettings->brand_name_accent ?? 'Go' }}</span> Admin</h4>
-        </div>
+        <a href="{{ url('/admin/dashboard') }}" class="sidebar-brand">
+            <img data-theme-logo src="{{ $settings->navbar_logo_url ?? asset('images/logo-gasgo.png') }}" alt="{{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }}">
+            <h4 class="m-0">{{ $settings->brand_name_primary ?? 'Gas' }}<span>{{ $settings->brand_name_accent ?? 'Go' }}</span></h4>
+        </a>
         <div class="sidebar-section">Main</div>
         <ul class="sidebar-menu">
             <li><a href="{{ url('/admin/dashboard') }}" class="@yield('nav-dashboard')"><i class="fas fa-tachometer-alt"></i>Dashboard</a></li>

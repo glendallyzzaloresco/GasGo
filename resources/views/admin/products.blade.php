@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'GasGo Admin - Products')
+@section('title', 'Products')
 @section('nav-products', 'active')
 @section('page-title', 'Product Management')
 
@@ -232,7 +232,7 @@
                         data-selling-price="{{ $product->selling_price ?? $product->price ?? 0 }}"
                         data-stock="{{ $qty }}"
                         data-weight="{{ $product->weight }}"
-                        data-is-cylinder="{{ $product->is_cylinder ? '1' : '0' }}"
+                        data-requires-exchange="{{ $product->requires_exchange ? '1' : '0' }}"
                         data-is-active="{{ $product->is_active ? '1' : '0' }}"
                         data-update-url="{{ route('admin.products.update', $product) }}"
                     ><i class="fas fa-edit me-1"></i>Edit</button>
@@ -300,7 +300,7 @@
                         data-selling-price="{{ $product->selling_price ?? $product->price ?? 0 }}"
                         data-stock="{{ $qty }}"
                         data-weight="{{ $product->weight }}"
-                        data-is-cylinder="{{ $product->is_cylinder ? '1' : '0' }}"
+                        data-requires-exchange="{{ $product->requires_exchange ? '1' : '0' }}"
                         data-is-active="{{ $product->is_active ? '1' : '0' }}"
                         data-update-url="{{ route('admin.products.update', $product) }}"
                     ><i class="fas fa-edit me-1"></i>Edit</button>
@@ -368,7 +368,7 @@
                         data-selling-price="{{ $product->selling_price ?? $product->price ?? 0 }}"
                         data-stock="{{ $qty }}"
                         data-weight="{{ $product->weight }}"
-                        data-is-cylinder="{{ $product->is_cylinder ? '1' : '0' }}"
+                        data-requires-exchange="{{ $product->requires_exchange ? '1' : '0' }}"
                         data-is-active="{{ $product->is_active ? '1' : '0' }}"
                         data-update-url="{{ route('admin.products.update', $product) }}"
                     ><i class="fas fa-edit me-1"></i>Edit</button>
@@ -540,9 +540,11 @@
                             </select>
                         </div>
                         <div class="col-md-6 d-flex align-items-center">
-                            <div class="form-check form-switch ms-3 mt-2">
-                                <input class="form-check-input" type="checkbox" id="productIsCylinder" name="is_cylinder" value="1">
-                                <label class="form-check-label" for="productIsCylinder">Cylinder product</label>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="productRequiresExchange" name="requires_exchange" value="1">
+                                <label class="form-check-label" for="productRequiresExchange">
+                                    Requires Empty Container Exchange (e.g. Tank, Gallon)
+                                </label>
                             </div>
                         </div>
                         <div class="col-12">
@@ -725,7 +727,7 @@
         document.getElementById('productName').value = '';
         const defaultCategoryOption = document.querySelector('#productCategory option');
         document.getElementById('productCategory').value = defaultCategoryOption ? defaultCategoryOption.value : '';
-        document.getElementById('productIsCylinder').checked = false;
+        document.getElementById('productRequiresExchange').checked = false;
         document.getElementById('productDescription').value = '';
         document.getElementById('productCostPrice').value = '';
         document.getElementById('productSellingPrice').value = '';
@@ -739,7 +741,7 @@
         document.getElementById('productFormMethod').value = 'PUT';
         document.getElementById('productName').value = button.dataset.name || '';
         document.getElementById('productCategory').value = button.dataset.category || 'tank';
-        document.getElementById('productIsCylinder').checked = button.dataset.isCylinder === '1';
+        document.getElementById('productRequiresExchange').checked = button.dataset.requiresExchange === '1';
         document.getElementById('productDescription').value = button.dataset.description || '';
         document.getElementById('productCostPrice').value = button.dataset.costPrice || '';
         document.getElementById('productSellingPrice').value = button.dataset.sellingPrice || '';

@@ -1,6 +1,6 @@
 @extends('layouts.customer')
 
-@section('title', 'GasGo - Track Order #{{ $order->order_number }}')
+@section('title', 'Track Order #{{ $order->order_number }}')
 
 @section('styles')
 <style>

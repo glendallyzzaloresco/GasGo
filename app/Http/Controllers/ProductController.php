@@ -102,7 +102,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name'           => 'required|string|max:255',
             'category'       => 'required|in:tank,accessories,appliances,freebie',
-            'is_cylinder'    => 'nullable|boolean',
+            'requires_exchange'    => 'nullable|boolean',
             'description'    => 'nullable|string',
             'price'          => 'nullable|numeric|min:0',
             'cost_price'     => 'required|numeric|min:0',
@@ -114,10 +114,10 @@ class ProductController extends Controller
         ]);
 
         $validated['category'] = strtolower((string) $validated['category']);
-        if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'is_cylinder')) {
-            $validated['is_cylinder'] = $request->boolean('is_cylinder');
+        if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
+            $validated['requires_exchange'] = $request->boolean('requires_exchange');
         } else {
-            unset($validated['is_cylinder']);
+            unset($validated['requires_exchange']);
         }
         $validated['is_active'] = $request->boolean('is_active');
         $validated['stock'] = (int) ($validated['stock'] ?? 0);
@@ -178,7 +178,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name'           => 'required|string|max:255',
             'category'       => 'required|in:tank,accessories,appliances,freebie',
-            'is_cylinder'    => 'nullable|boolean',
+            'requires_exchange'    => 'nullable|boolean',
             'description'    => 'nullable|string',
             'price'          => 'nullable|numeric|min:0',
             'cost_price'     => 'required|numeric|min:0',
@@ -190,10 +190,10 @@ class ProductController extends Controller
         ]);
 
         $validated['category'] = strtolower((string) $validated['category']);
-        if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'is_cylinder')) {
-            $validated['is_cylinder'] = $request->boolean('is_cylinder');
+        if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
+            $validated['requires_exchange'] = $request->boolean('requires_exchange');
         } else {
-            unset($validated['is_cylinder']);
+            unset($validated['requires_exchange']);
         }
         $validated['is_active'] = $request->boolean('is_active');
         // If price is not provided, use selling_price as the price

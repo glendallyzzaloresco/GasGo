@@ -1,7 +1,7 @@
 <!-- stylelint-disable -->
 @extends('layouts.admin')
 
-@section('title', 'GasGo Admin - Dashboard')
+@section('title', 'Dashboard')
 @section('nav-dashboard', 'active')
 @section('page-title', 'Dashboard')
 
@@ -776,7 +776,7 @@
             <div class="detail-item">
                 <div class="detail-label">Registered Customers</div>
                 <div class="detail-value">{{ $totalCustomers }}</div>
-                <div class="detail-subtitle">Total members of GasGo platform</div>
+                <div class="detail-subtitle">Total members of the platform</div>
             </div>
             @php
                 $customers = \App\Models\User::where('role', 'customer')->orderBy('created_at', 'desc')->get();
