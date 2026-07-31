@@ -749,7 +749,7 @@
                 <div class="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="100">
                     <div class="step-card">
                         <div class="step-icon blue"><i class="fas fa-search"></i></div>
-                        <h5 class="fw-bold">1. Browse ka muna</h5>
+                        <h5 class="fw-bold">1. Browse</h5>
                         <p class="text-muted">Explore our {{ strtolower($homepageSettings->industry_noun ?? 'products') }}
                             and catalog</p>
                     </div>
