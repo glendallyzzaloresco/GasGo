@@ -7,7 +7,7 @@ $kernel->bootstrap();
 use App\Models\Product;
 
 $products = Product::all();
-echo "=== PRODUCTS LIS ===\n";
+echo "=== PRODUCTS LIST ===\n";
 foreach ($products as $p) {
     echo "ID: {$p->id} | Name: {$p->name} | Category: '{$p->category}'\n";
 }
