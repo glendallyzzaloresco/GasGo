@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'GasGo Admin - Rewards')
+@section('title', 'Rewards')
 @section('nav-rewards', 'active')
 @section('page-title', 'Loyalty & Rewards')
 

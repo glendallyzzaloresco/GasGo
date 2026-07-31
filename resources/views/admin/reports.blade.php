@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'GasGo Admin - Sales Reports & Forecast Analytics')
+@section('title', 'Sales Reports & Forecast Analytics')
 @section('nav-reports', 'active')
 @section('page-title', 'Sales Reports & Forecast Analytics')
 

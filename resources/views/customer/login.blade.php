@@ -1,6 +1,6 @@
 @extends('layouts.customer')
 
-@section('title', 'GasGo - Login / Register')
+@section('title', 'Login / Register')
 
 @section('styles')
 <style>
@@ -219,9 +219,9 @@
             <!-- Left Side -->
             <div class="col-lg-5 d-none d-lg-flex">
                 <div class="auth-sidebar w-100">
-                    <img src="{{ asset('images/logo-gasgo.png') }}" alt="GasGo">
-                    <h2>Gas<span style="color:var(--gasgo-orange);">Go</span></h2>
-                    <p>Your trusted LPG delivery partner with real-time tracking</p>
+                    <img src="{{ $settings->navbar_logo_url ?? asset('images/logo-gasgo.png') }}" alt="{{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }}">
+                    <h3 class="mt-3 text-white fw-bold">{{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }}</h3>
+                    <p>{{ $settings->hero_subtitle ?? 'Your trusted delivery partner with real-time tracking' }}</p>
                     <ul class="auth-features">
                         <li><i class="fas fa-bolt"></i> Fast & Reliable Delivery</li>
                         <li><i class="fas fa-map-marker-alt"></i> Real-Time GPS Tracking</li>
@@ -253,7 +253,7 @@
                     <!-- Login Form -->
                     <div id="loginForm" class="auth-pane" @if ($activeTab !== 'login') style="display:none;" @endif>
                         <h3>Welcome Back!</h3>
-                        <p class="sub">Login to your GasGo account</p>
+                        <p class="sub">Login to your {{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }} account</p>
                         <form action="{{ route('customer.authenticate') }}" method="POST" autocomplete="off">
                             @csrf
                             <input type="hidden" name="auth_tab" value="login">

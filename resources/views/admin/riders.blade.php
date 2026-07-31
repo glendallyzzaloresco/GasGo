@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'GasGo Admin - Riders')
+@section('title', 'Riders')
 @section('nav-riders', 'active')
 @section('page-title', 'Rider Management')
 

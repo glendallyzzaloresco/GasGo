@@ -1,6 +1,6 @@
 @extends('layouts.customer')
 
-@section('title', 'GasGo - My Account')
+@section('title', 'My Account')
 
 @section('styles')
 <style>

@@ -19,8 +19,10 @@ class Product extends Model
         'stock',
         'weight',
         'image',
+        'requires_exchange',
         'is_active',
-        'is_cylinder',
+        'status',
+        'category_id',
     ];
 
     protected function casts(): array
@@ -29,8 +31,8 @@ class Product extends Model
             'price' => 'decimal:2',
             'cost_price' => 'decimal:2',
             'selling_price' => 'decimal:2',
+            'requires_exchange' => 'boolean',
             'is_active' => 'boolean',
-            'is_cylinder' => 'boolean',
         ];
     }
 
@@ -79,11 +81,26 @@ class Product extends Model
      */
     public function getIsCylinderAttribute($value): bool
     {
-        if (array_key_exists('is_cylinder', $this->attributes)) {
-            return (bool) $value;
+        if (array_key_exists('requires_exchange', $this->attributes)) {
+            return $this->attributes['requires_exchange'];
         }
 
-        return strcasecmp((string) ($this->category ?? ''), 'tank') === 0;
+        // If not set, check the category as fallback
+        if ($this->relationLoaded('category') && $this->category) {
+            return $this->category->slug === 'lpg-tanks';
+        }
+
+        // Default to false if we can't determine
+        return false;
+    }
+
+    /**
+     * Set the requires_exchange flag.
+     * Overrides the isCylinder() fallback if set.
+     */
+    public function setRequiresExchangeAttribute($value)
+    {
+        $this->attributes['requires_exchange'] = $value;
     }
 
     /**
@@ -91,18 +108,19 @@ class Product extends Model
      */
     public function isCylinder(): bool
     {
-        return $this->is_cylinder;
+        return $this->requires_exchange;
     }
 
     /**
-     * Apply the cylinder-product filter using is_cylinder when available.
+     * Apply the exchange-product filter using requires_exchange when available.
+     * Falls back to category filter otherwise.
      */
-    public function scopeCylinder($query)
+    public function scopeCylinders($query)
     {
         $table = $query->getModel()->getTable();
 
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'is_cylinder')) {
-            return $query->where('is_cylinder', true);
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'requires_exchange')) {
+            return $query->where('requires_exchange', true);
         }
 
         return $query->whereRaw('LOWER(category) = ?', ['tank']);

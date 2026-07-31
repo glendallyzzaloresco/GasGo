@@ -616,11 +616,11 @@
                                     <div class="row g-3">
                                         <div class="col-12">
                                             <label class="form-label fw-semibold">Footer About / Description</label>
-                                            <textarea name="footer_description" rows="3" class="form-control" placeholder="GasGo is your trusted LPG delivery service provider...">{{ old('footer_description', $settings->footer_description) }}</textarea>
+                                            <textarea name="footer_description" rows="3" class="form-control" placeholder="We are your trusted delivery service provider...">{{ old('footer_description', $settings->footer_description) }}</textarea>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label fw-semibold">Office Address</label>
-                                            <input type="text" name="contact_address" class="form-control" value="{{ old('contact_address', $settings->contact_address) }}" placeholder="123 GasGo Street, City">
+                                            <input type="text" name="contact_address" class="form-control" value="{{ old('contact_address', $settings->contact_address) }}" placeholder="123 Store Street, City">
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label fw-semibold">Contact Phone Number</label>
@@ -722,7 +722,7 @@
                 promo_subtitle: 'Register now and start earning points with every tank purchase.',
                 footer_desc: 'Your trusted partner for fast, reliable LPG delivery. Real-time order tracking.',
                 how_title: 'How It Works', how_sub: 'Order your LPG cylinder in 4 easy steps',
-                why_title: 'Why Choose GasGo?', why_sub: 'Certified LPG products with guaranteed safety',
+                why_title: 'Why Choose Us?', why_sub: 'Certified products with guaranteed safety',
                 primary_color: '#1a6db0', accent_color: '#f7941d', bg_color: '#f4f7fb', sidebar_color: '#111b35'
             },
             grocery: {

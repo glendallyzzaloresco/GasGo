@@ -1,6 +1,6 @@
 @extends('layouts.customer')
 
-@section('title', 'GasGo - Loyalty & Promos')
+@section('title', 'Loyalty & Promos')
 @section('nav-loyalty', 'active')
 
 @section('styles')
@@ -988,7 +988,7 @@ Generate the corrected controller/service logic and the template updates.S =====
     @if ($isGuest)
     <div class="text-center mt-5 mb-3" data-aos="fade-up">
         <h3 style="color: var(--gasgo-blue); font-weight: 700;">Ready to Start Earning?</h3>
-        <p style="color: #666; margin: 15px 0 25px;">Join thousands of happy GasGo customers today.</p>
+        <p style="color: #666; margin: 15px 0 25px;">Join thousands of happy {{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }} customers today.</p>
         <a href="{{ route('customer.login') }}" class="btn" style="background: var(--gasgo-orange); color: white; padding: 12px 40px; border-radius: 25px; font-weight: 600; display: inline-block;">
             <i class="fas fa-user-plus me-2"></i>Register or Login
         </a>

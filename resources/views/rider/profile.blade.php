@@ -1,6 +1,6 @@
 @extends('layouts.rider')
 
-@section('title', 'GasGo Rider - Profile')
+@section('title', 'Profile')
 @section('page-title', 'My Profile')
 @section('nav-profile', 'active')
 

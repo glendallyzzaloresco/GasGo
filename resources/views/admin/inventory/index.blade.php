@@ -414,15 +414,15 @@
 <div class="container-fluid p-4">
     @php
         $totalFullCylinders = (int) \App\Models\Inventory::whereHas('product', function ($query) {
-            if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'is_cylinder')) {
-                $query->where('is_cylinder', true);
+            if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
+                $query->where('requires_exchange', true);
             } else {
                 $query->whereRaw('LOWER(category) = ?', ['tank']);
             }
         })->sum('quantity_on_hand');
         $tankInventoryIds = \App\Models\Inventory::whereHas('product', function ($query) {
-            if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'is_cylinder')) {
-                $query->where('is_cylinder', true);
+            if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
+                $query->where('requires_exchange', true);
             } else {
                 $query->whereRaw('LOWER(category) = ?', ['tank']);
             }

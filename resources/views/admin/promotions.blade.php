@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'GasGo Admin - Promotions')
+@section('title', 'Promotions')
 @section('nav-promotions', 'active')
 @section('page-title', 'Promotions')
 

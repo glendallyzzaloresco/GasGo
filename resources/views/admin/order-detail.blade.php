@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Order Details - GasGo Admin')
+@section('title', 'Order Details')
 @section('page-title', 'Order Details')
 
 @section('admin-styles')

@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Admin - Category Management')
+@section('title', 'Category Management')
 @section('nav-categories', 'active')
 @section('page-title', 'Category Management')
 
