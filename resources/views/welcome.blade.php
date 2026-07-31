@@ -589,6 +589,10 @@
                 return asset($normalized);
             }
 
+            if (str_starts_with($normalized, 'images/')) {
+                return asset($normalized);
+            }
+
             return asset('storage/' . $normalized);
         };
 
