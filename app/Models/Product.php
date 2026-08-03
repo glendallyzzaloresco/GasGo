@@ -108,7 +108,7 @@ class Product extends Model
      */
     public function isCylinder(): bool
     {
-        return $this->requires_exchange;
+        return (bool) ($this->requires_exchange ?? $this->is_cylinder ?? false);
     }
 
     /**
