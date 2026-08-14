@@ -53,6 +53,20 @@
     .product-stock { font-size: .8rem; font-weight: 500; }
     .product-stock.in { color: #27ae60; }
     .product-stock.out { color: #e74c3c; }
+
+    @media (max-width: 767.98px) {
+        .filter-bar {
+            padding: 14px 16px;
+        }
+        .filter-bar .ms-auto {
+            width: 100%;
+            margin-top: 10px;
+            margin-left: 0 !important;
+        }
+        .filter-bar input#searchProduct {
+            width: 100%;
+        }
+    }
     
     /* ===== NOTIFICATION TOAST ===== */
     .gasgo-notification {

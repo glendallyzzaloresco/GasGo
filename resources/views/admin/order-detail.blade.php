@@ -104,8 +104,8 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h2 class="mb-1">Order #{{ $order->order_number }}</h2>
-        <p class="text-muted mb-0">{{ $order->created_at->format('F j, Y - g:i A') }}</p>
+        <h2 class="mb-1">Order #{{ $order->order_number ?? $order->id }}</h2>
+        <p class="text-muted mb-0">{{ $order->created_at ? $order->created_at->format('F j, Y - g:i A') : 'N/A' }}</p>
     </div>
     <a href="{{ route('admin.orders') }}" class="btn btn-outline-secondary">
         <i class="fas fa-arrow-left me-2"></i>Back to Orders
@@ -121,7 +121,7 @@
                 <div class="detail-col">
                     <span class="detail-label">Current Status</span>
                     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                        <span class="badge-status badge-{{ $order->status }}">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</span>
+                        <span class="badge-status badge-{{ $order->status ?? 'pending' }}">{{ ucfirst(str_replace('_', ' ', $order->status ?? 'pending')) }}</span>
                         @if($order->is_urgent)
                             <span class="badge" style="background:#dc3545; color:white; font-size:.85rem; font-weight:600; padding:6px 12px;"><i class="fas fa-bolt me-1"></i>URGENT</span>
                         @endif
@@ -134,7 +134,7 @@
                 @if($order->delivery)
                     <div class="detail-col">
                         <span class="detail-label">Assigned Rider</span>
-                        <div class="detail-value">{{ $order->delivery->rider->name ?? 'N/A' }}</div>
+                        <div class="detail-value">{{ $order->delivery->rider?->name ?? 'N/A' }}</div>
                     </div>
                 @endif
             </div>
@@ -172,8 +172,8 @@
                                     @endif
                                 </td>
                                 <td class="text-center fw-bold">{{ $item->quantity }}</td>
-                                <td class="text-end">₱{{ number_format($item->price, 2) }}</td>
-                                <td class="text-end fw-bold">₱{{ number_format($item->subtotal, 2) }}</td>
+                                <td class="text-end">₱{{ number_format((float) ($item->price ?? 0), 2) }}</td>
+                                <td class="text-end fw-bold">₱{{ number_format((float) ($item->subtotal ?? 0), 2) }}</td>
                             </tr>
                         @empty
                             <tr>
@@ -191,14 +191,18 @@
             <div class="detail-row">
                 <div class="detail-col">
                     <span class="detail-label">Recipient Name</span>
-                    <div class="detail-value fw-bold">{{ $order->customer_name ?: ($order->user->name ?? 'N/A') }}</div>
+                    <div class="detail-value fw-bold">{{ $order->customer_name ?: ($order->user?->name ?? 'N/A') }}</div>
                 </div>
                 <div class="detail-col">
                     <span class="detail-label">Contact Number</span>
                     <div class="detail-value">
-                        <a href="tel:{{ $order->contact_number }}" class="text-decoration-none fw-semibold">
-                            <i class="fas fa-phone-alt me-1 text-success"></i>{{ $order->contact_number }}
-                        </a>
+                        @if($order->contact_number)
+                            <a href="tel:{{ $order->contact_number }}" class="text-decoration-none fw-semibold">
+                                <i class="fas fa-phone-alt me-1 text-success"></i>{{ $order->contact_number }}
+                            </a>
+                        @else
+                            <span class="text-muted">N/A</span>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -206,7 +210,7 @@
                 <div class="detail-col" style="width:100%;">
                     <span class="detail-label">Complete Address</span>
                     <div class="detail-value p-3 rounded" style="background:#f8f9fa; border:1px solid #e9ecef;">
-                        {{ $order->delivery_address }}
+                        {{ $order->delivery_address ?: 'No address provided' }}
                     </div>
                 </div>
             </div>
@@ -238,19 +242,31 @@
             <div class="detail-row">
                 <div class="detail-col">
                     <span class="detail-label">Account Name</span>
-                    <div class="detail-value fw-bold">{{ $order->user->name ?? ($order->customer_name ?? 'Guest') }}</div>
+                    <div class="detail-value fw-bold">{{ $order->user?->name ?? ($order->customer_name ?? 'Guest') }}</div>
                 </div>
             </div>
             <div class="detail-row">
                 <div class="detail-col">
                     <span class="detail-label">Account Email</span>
-                    <div class="detail-value"><a href="mailto:{{ $order->user->email ?? '' }}" class="text-decoration-none">{{ $order->user->email ?? 'N/A' }}</a></div>
+                    <div class="detail-value">
+                        @if($order->user?->email)
+                            <a href="mailto:{{ $order->user->email }}" class="text-decoration-none">{{ $order->user->email }}</a>
+                        @else
+                            <span class="text-muted">N/A</span>
+                        @endif
+                    </div>
                 </div>
             </div>
             <div class="detail-row">
                 <div class="detail-col">
                     <span class="detail-label">Primary Phone</span>
-                    <div class="detail-value"><a href="tel:{{ $order->contact_number }}" class="text-decoration-none">{{ $order->contact_number }}</a></div>
+                    <div class="detail-value">
+                        @if($order->contact_number)
+                            <a href="tel:{{ $order->contact_number }}" class="text-decoration-none">{{ $order->contact_number }}</a>
+                        @else
+                            <span class="text-muted">N/A</span>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
@@ -289,66 +305,70 @@
                 <div class="detail-col">
                     <span class="detail-label">Payment Method</span>
                     <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <span class="badge {{ in_array($order->payment_method, ['gcash', 'online']) ? 'bg-info' : 'bg-success' }}" style="font-size:.85rem; padding:6px 12px;">
-                            <i class="{{ in_array($order->payment_method, ['gcash', 'online']) ? 'fas fa-mobile-alt' : 'fas fa-money-bill-wave' }} me-1"></i>
-                            {{ strtoupper($order->payment_method) }}
+                        <span class="badge {{ in_array($order->payment_method ?? '', ['gcash', 'online']) ? 'bg-info' : 'bg-success' }}" style="font-size:.85rem; padding:6px 12px;">
+                            <i class="{{ in_array($order->payment_method ?? '', ['gcash', 'online']) ? 'fas fa-mobile-alt' : 'fas fa-money-bill-wave' }} me-1"></i>
+                            {{ strtoupper($order->payment_method ?? 'CASH') }}
                         </span>
                         <span class="badge {{ $paymentStatus === 'paid' ? 'bg-success' : ($paymentStatus === 'failed' ? 'bg-danger' : 'bg-warning text-dark') }}" style="font-size:.85rem; padding:6px 12px;">
                             Status: {{ ucfirst($paymentStatus) }}
                         </span>
                     </div>
                 </div>
-            </div>
-                        @if(!empty($selectedPaymentMethod['image_url']))
-                            <div style="width:64px;height:64px;border:1px solid #dee2e6;border-radius:12px;padding:6px;background:#fff;overflow:hidden;display:flex;align-items:center;justify-content:center;">
-                                <img src="{{ $selectedPaymentMethod['image_url'] }}" alt="{{ $selectedPaymentMethod['label'] }}" style="width:100%;height:100%;object-fit:contain;">
-                            </div>
-                        @endif
+                @if(!empty($selectedPaymentMethod['image_url']))
+                    <div class="detail-col" style="flex:0 0 auto; min-width:auto;">
+                        <div style="width:64px;height:64px;border:1px solid #dee2e6;border-radius:12px;padding:6px;background:#fff;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+                            <img src="{{ $selectedPaymentMethod['image_url'] }}" alt="{{ $selectedPaymentMethod['label'] ?? '' }}" style="width:100%;height:100%;object-fit:contain;">
+                        </div>
                     </div>
-                </div>
+                @endif
             </div>
-            @if($selectedPaymentMethod)
+
+            @if($selectedPaymentMethod && (!empty($selectedPaymentMethod['account_name']) || !empty($selectedPaymentMethod['account_number'])))
                 <div class="detail-row">
-                    <div class="detail-col">
-                        <span class="detail-label">Account Name</span>
-                        <div class="detail-value">{{ $selectedPaymentMethod['account_name'] ?: 'N/A' }}</div>
-                    </div>
-                    <div class="detail-col">
-                        <span class="detail-label">Account Number</span>
-                        <div class="detail-value">{{ $selectedPaymentMethod['account_number'] ?: 'N/A' }}</div>
-                    </div>
+                    @if(!empty($selectedPaymentMethod['account_name']))
+                        <div class="detail-col">
+                            <span class="detail-label">Account Name</span>
+                            <div class="detail-value">{{ $selectedPaymentMethod['account_name'] }}</div>
+                        </div>
+                    @endif
+                    @if(!empty($selectedPaymentMethod['account_number']))
+                        <div class="detail-col">
+                            <span class="detail-label">Account Number</span>
+                            <div class="detail-value">{{ $selectedPaymentMethod['account_number'] }}</div>
+                        </div>
+                    @endif
                 </div>
             @endif
             <div class="detail-row">
                 <div class="detail-col">
                     <span class="detail-label">Subtotal</span>
-                    <div class="detail-value">₱{{ number_format($order->subtotal, 2) }}</div>
+                    <div class="detail-value">₱{{ number_format((float) ($order->subtotal ?? 0), 2) }}</div>
                 </div>
             </div>
             <div class="detail-row">
                 <div class="detail-col">
                     <span class="detail-label">Delivery Fee</span>
-                    <div class="detail-value">₱{{ number_format($order->delivery_fee, 2) }}</div>
+                    <div class="detail-value">₱{{ number_format((float) ($order->delivery_fee ?? 0), 2) }}</div>
                 </div>
             </div>
-            @if($order->discount > 0)
+            @if(($order->discount ?? 0) > 0)
                 <div class="detail-row">
                     <div class="detail-col">
                         <span class="detail-label">Discount Applied</span>
-                        <div class="detail-value text-danger">-₱{{ number_format($order->discount, 2) }}</div>
+                        <div class="detail-value text-danger">-₱{{ number_format((float) $order->discount, 2) }}</div>
                     </div>
                 </div>
             @endif
             <div class="detail-row">
                 <div class="detail-col">
                     <span class="detail-label">Total Amount</span>
-                    <div class="detail-value" style="font-size: 1.3rem; font-weight: 700; color: var(--gasgo-orange);">₱{{ number_format($order->total_amount, 2) }}</div>
+                    <div class="detail-value" style="font-size: 1.3rem; font-weight: 700; color: var(--gasgo-orange);">₱{{ number_format((float) ($order->total_amount ?? 0), 2) }}</div>
                 </div>
             </div>
         </div>
 
         <!-- Actions -->
-        @if($order->status === 'pending')
+        @if(($order->status ?? 'pending') === 'pending')
             <div class="detail-card" style="background: #f8f9fa; border: 2px dashed #28a745;">
                 <h5 style="color: #28a745;"><i class="fas fa-check-circle"></i>Approve Order</h5>
                 <p class="text-muted mb-3" style="font-size: .9rem;">Approve this order so it can be assigned to a rider.</p>
@@ -370,13 +390,13 @@
                     </button>
                 </form>
             </div>
-        @elseif($order->status === 'approved')
+        @elseif(($order->status ?? '') === 'approved')
             <div class="detail-card" style="background: #f8f9fa; border: 2px dashed var(--gasgo-orange);">
                 <h5 style="color: var(--gasgo-orange);"><i class="fas fa-motorcycle"></i>Assign Rider</h5>
                 <p class="text-muted mb-3" style="font-size: .9rem;">Ready to assign this order to a rider?</p>
                 <button class="btn btn-gasgo w-100 assign-btn" 
                     data-order-id="{{ $order->id }}" 
-                    data-order-number="{{ $order->order_number }}">
+                    data-order-number="{{ $order->order_number ?? $order->id }}">
                     <i class="fas fa-motorcycle me-2"></i>Assign Rider
                 </button>
             </div>
@@ -399,7 +419,7 @@
                 </div>
                 <div class="modal-body">
                     <p class="text-muted" style="font-size:.88rem;">
-                        Assign a rider to order <strong id="assignOrderNumber">#{{ $order->order_number }}</strong>:
+                        Assign a rider to order <strong id="assignOrderNumber">#{{ $order->order_number ?? $order->id }}</strong>:
                     </p>
                     @if($riders->count() > 0)
                         <div class="list-group">
@@ -407,7 +427,7 @@
                                 <label class="list-group-item d-flex align-items-center gap-3 mb-2" style="border-radius:12px;cursor:pointer;">
                                     <input type="radio" name="rider_id" value="{{ $rider->user_id }}" class="form-check-input" required>
                                     <div>
-                                        <div class="fw-bold">{{ $rider->user->name ?? 'Unknown' }}</div>
+                                        <div class="fw-bold">{{ $rider->user?->name ?? 'Unknown' }}</div>
                                         <small class="text-muted">
                                             {{ $rider->vehicle_type ?? 'No vehicle info' }}
                                             @if($rider->plate_number) &bull; {{ $rider->plate_number }} @endif

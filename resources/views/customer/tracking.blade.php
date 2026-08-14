@@ -136,6 +136,26 @@
     .status-out_for_delivery { background: #fff5e6; color: #e07d0a; }
     .status-delivered { background: #d4edda; color: #155724; }
     .status-cancelled { background: #f8d7da; color: #721c24; }
+
+    @media (max-width: 767.98px) {
+        .map-container {
+            height: 300px;
+            border-radius: 14px;
+        }
+        .rider-card {
+            flex-wrap: wrap;
+            padding: 16px;
+            gap: 12px;
+        }
+        .rider-card .text-end {
+            width: 100%;
+            text-align: left !important;
+            margin-top: 6px;
+        }
+        .timeline-track {
+            padding: 16px 12px;
+        }
+    }
 </style>
 @endsection
 

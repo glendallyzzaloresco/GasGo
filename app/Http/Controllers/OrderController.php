@@ -859,7 +859,7 @@ class OrderController extends Controller
     // Admin: show single order details
     public function show(Order $order)
     {
-        $order->load(['user', 'orderItems.product', 'delivery', 'payment']);
+        $order->load(['user', 'orderItems.product', 'delivery.rider', 'payment']);
 
         $riders = \App\Models\Rider::with('user')
             ->where('availability', 'available')
