@@ -1,9 +1,9 @@
 DB_CONNECTION=mysql
 DB_HOST=gateway01.ap-southeast-1.prod.aws.tidbcloud.com
 DB_PORT=4000
-DB_DATABASE=sys
+DB_DATABASE=gasgo   
 DB_USERNAME=27UpCwwpzdfiuyk.root
-DB_PASSWORD=MfIyRT6XevJW0a3W
+DB_PASSWORD=nQJtGWt5A5tN6qJ0
 MYSQL_ATTR_SSL_CA=/etc/ssl/certs/ca-certificates.crt
 APP_NAME=GasGo
 APP_ENV=production
