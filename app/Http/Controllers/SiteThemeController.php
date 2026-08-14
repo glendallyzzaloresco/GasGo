@@ -57,8 +57,8 @@ class SiteThemeController extends Controller
         ];
 
         if ($request->hasFile('logo')) {
-            $logoPath = $request->file('logo')->store('theme', 'public');
-            $payload['logoUrl'] = asset('storage/' . ltrim($logoPath, '/'));
+            $logoPath = $request->file('logo')->store('theme');
+            $payload['logoUrl'] = Storage::url($logoPath);
         }
 
         $theme->fill($payload);
