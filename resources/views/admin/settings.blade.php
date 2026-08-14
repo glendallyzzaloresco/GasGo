@@ -233,7 +233,7 @@
                                                 <input type="file" name="gcash_image" class="form-control form-control-sm @error('gcash_image') is-invalid @enderror" accept="image/*">
                                                 @if(!empty($homepageSettings->gcash_image_path))
                                                     <div class="mt-2">
-                                                        <img src="{{ asset('storage/' . $homepageSettings->gcash_image_path) }}" alt="GCash Image" style="max-width:80px;max-height:80px;object-fit:contain;border:1px solid #ddd;border-radius:8px;padding:4px;background:#fff;">
+                                                        <img src="{{ \Illuminate\Support\Facades\Storage::url($homepageSettings->gcash_image_path) }}" alt="GCash Image" style="max-width:80px;max-height:80px;object-fit:contain;border:1px solid #ddd;border-radius:8px;padding:4px;background:#fff;">
                                                     </div>
                                                 @endif
                                                 @error('gcash_image')
@@ -305,7 +305,7 @@
                                                         <input type="hidden" name="payment_methods[{{ $index }}][existing_image]" value="{{ $method['image_path'] ?? '' }}">
                                                         @if(!empty($method['image_path']))
                                                             <div class="mt-2">
-                                                                <img src="{{ asset('storage/' . $method['image_path']) }}" alt="Payment Method Image" style="max-width:80px;max-height:80px;object-fit:contain;border:1px solid #ddd;border-radius:8px;padding:4px;background:#fff;">
+                                                                <img src="{{ \Illuminate\Support\Facades\Storage::url($method['image_path']) }}" alt="Payment Method Image" style="max-width:80px;max-height:80px;object-fit:contain;border:1px solid #ddd;border-radius:8px;padding:4px;background:#fff;">
                                                             </div>
                                                         @endif
                                                     </div>

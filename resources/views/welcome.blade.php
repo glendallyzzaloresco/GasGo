@@ -585,15 +585,15 @@
                 return $path;
             }
 
-            if (str_starts_with($normalized, 'storage/')) {
-                return asset($normalized);
-            }
-
             if (str_starts_with($normalized, 'images/')) {
                 return asset($normalized);
             }
 
-            return asset('storage/' . $normalized);
+            if (str_starts_with($normalized, 'storage/')) {
+                $normalized = substr($normalized, 8);
+            }
+
+            return \Illuminate\Support\Facades\Storage::url($normalized);
         };
 
         $featuredProducts = collect($products ?? [])->take(4);
