@@ -231,7 +231,7 @@
                 $availablePaymentMethods = collect($homepageSettings->availablePaymentMethods());
                 $selectedPaymentMethod = $availablePaymentMethods->firstWhere('key', $order->payment_method);
                 $proofImageUrl = $order->payment && filled($order->payment->proof_of_payment)
-                    ? asset('storage/' . ltrim($order->payment->proof_of_payment, '/'))
+                    ? \Illuminate\Support\Facades\Storage::url(ltrim($order->payment->proof_of_payment, '/'))
                     : null;
             @endphp
             

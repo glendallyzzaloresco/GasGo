@@ -249,10 +249,15 @@
             if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
                 return $path;
             }
-            if (str_starts_with($normalized, 'storage/') || str_starts_with($normalized, 'images/')) {
+            if (str_starts_with($normalized, 'images/')) {
                 return asset($normalized);
             }
-            return asset('storage/' . $normalized);
+
+            if (str_starts_with($normalized, 'storage/')) {
+                $normalized = substr($normalized, 8);
+            }
+
+            return \Illuminate\Support\Facades\Storage::url($normalized);
         };
         $productImageUrl = $resolveImageUrl($inventory->product->image);
     @endphp
