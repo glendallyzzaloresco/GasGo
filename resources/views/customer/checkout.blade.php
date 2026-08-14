@@ -125,6 +125,32 @@
         padding: 10px 14px; cursor: pointer; font-size: .85rem; border-bottom: 1px solid #f5f5f5;
     }
     .map-search-results .result-item:hover { background: var(--gasgo-orange-light); }
+
+    @media (max-width: 767.98px) {
+        .checkout-card {
+            padding: 20px 16px;
+            border-radius: 16px;
+        }
+        .order-summary {
+            position: static;
+            padding: 20px 16px;
+            margin-top: 16px;
+        }
+        #checkoutMap {
+            height: 240px;
+        }
+        .payment-option {
+            padding: 14px 16px;
+            gap: 12px;
+        }
+        .freebie-image-wrapper {
+            height: 160px;
+        }
+        .freebie-image-wrapper img {
+            max-width: 130px;
+            max-height: 130px;
+        }
+    }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 @endsection

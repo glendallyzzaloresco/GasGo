@@ -174,6 +174,8 @@
                                         data-rider-name="{{ $rider->name }}"
                                         data-rider-email="{{ $rider->email }}"
                                         data-rider-phone="{{ $rider->phone ?? '' }}"
+                                        data-rider-vehicle="{{ $item['rider']->rider->vehicle_type ?? 'Motorcycle' }}"
+                                        data-rider-plate="{{ $item['rider']->rider->plate_number ?? '' }}"
                                         style="border-radius:6px;">
                                         <i class="fas fa-edit"></i>
                                     </button>
@@ -228,23 +230,18 @@
                                 </td>
                                 <td>{{ $customer->email }}</td>
                                 <td>{{ $customer->phone ?? '—' }}</td>
+                                <td><span class="stat-badge">{{ $item['totalOrders'] }} Orders</span></td>
                                 <td>
-                                    <span class="status-badge" style="background:#e0e7ff;color:#3730a3;">
-                                        {{ $item['totalOrders'] }} orders
-                                    </span>
-                                </td>
-                                <td>
-                                    <div>₱{{ number_format($item['productTotal'], 2) }}</div>
-                                    <div class="text-muted" style="font-size:.8rem;">Delivery: ₱{{ number_format($item['deliveryTotal'], 2) }}</div>
-                                    <div class="fw-bold mt-1">Total: ₱{{ number_format($item['totalSpent'], 2) }}</div>
+                                    <div class="stat-badge">₱{{ number_format($item['productTotal'], 2) }}</div>
+                                    <div class="stat-badge" style="background:#e0f2fe;color:#0369a1;">₱{{ number_format($item['deliveryTotal'], 2) }} Del</div>
                                 </td>
                                 <td>
                                     @if($item['loyaltyTier'])
-                                        <span class="badge bg-{{ $item['loyaltyBadge'] }}">
-                                            {{ $item['loyaltyTier'] }} ({{ $item['loyaltyPoints'] }} pts)
+                                        <span class="badge bg-{{ $item['loyaltyBadge'] }}" style="padding:6px 12px;border-radius:20px;">
+                                            <i class="fas fa-crown me-1"></i>{{ $item['loyaltyTier'] }} ({{ $item['loyaltyPoints'] }} pts)
                                         </span>
                                     @else
-                                        <span class="text-muted">—</span>
+                                        <span class="text-muted" style="font-size:.85rem;">No Tier</span>
                                     @endif
                                 </td>
                             </tr>
@@ -267,9 +264,9 @@
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-bottom py-3">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold">Administrator Accounts</h6>
+                    <h6 class="mb-0 fw-bold">Admin Accounts</h6>
                     <button class="btn btn-sm" style="background:var(--gasgo-blue);color:#fff;" data-bs-toggle="modal" data-bs-target="#adminModal">
-                        <i class="fas fa-user-plus me-1"></i>Add Admin
+                        <i class="fas fa-plus me-1"></i>Add Admin
                     </button>
                 </div>
             </div>
@@ -279,8 +276,8 @@
                         <tr>
                             <th>Name</th>
                             <th>Email</th>
-                            <th>Created</th>
-                            <th>Status</th>
+                            <th>Role</th>
+                            <th>Joined</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -288,29 +285,24 @@
                             <tr>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
-                                        <div class="user-avatar" style="background:linear-gradient(135deg,#6b21a8,#d946ef);">
+                                        <div class="user-avatar" style="background:linear-gradient(135deg,#7c3aed,#a855f7);">
                                             {{ strtoupper(substr($admin->name, 0, 1)) }}
                                         </div>
                                         <div>
                                             <div class="fw-bold">{{ $admin->name }}</div>
-                                            <small class="text-muted">{{ $admin->id === auth()->id() ? 'You' : 'Admin' }}</small>
+                                            @if($admin->id === Auth::id())
+                                                <span class="badge bg-primary" style="font-size:.7rem;">You</span>
+                                            @endif
                                         </div>
                                     </div>
                                 </td>
                                 <td>{{ $admin->email }}</td>
-                                <td><small class="text-muted">{{ $admin->created_at->format('M d, Y') }}</small></td>
-                                <td>
-                                    <span class="status-badge" style="background:#e9d5ff;color:#7e22ce;">
-                                        <i class="fas fa-shield-alt me-1"></i>Administrator
-                                    </span>
-                                </td>
+                                <td><span class="status-badge" style="background:#f3e8ff;color:#7e22ce;"><i class="fas fa-shield-alt me-1"></i>Administrator</span></td>
+                                <td>{{ $admin->created_at->format('M d, Y') }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="text-center py-4 text-muted">
-                                    <i class="fas fa-user-shield" style="font-size:2rem;opacity:0.3;display:block;margin-bottom:8px;"></i>
-                                    No admins found
-                                </td>
+                                <td colspan="4" class="text-center py-4 text-muted">No admin accounts found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -343,6 +335,19 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold" style="font-size:.88rem;">Phone Number <span class="text-danger">*</span></label>
                             <input type="text" name="phone" class="form-control" style="border-radius:10px;" placeholder="09XX-XXX-XXXX" value="{{ old('phone') }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold" style="font-size:.88rem;">Vehicle Type</label>
+                            <select name="vehicle_type" class="form-select" style="border-radius:10px;">
+                                <option value="Motorcycle">Motorcycle</option>
+                                <option value="Tricycle">Tricycle</option>
+                                <option value="Bicycle">Bicycle</option>
+                                <option value="Van / Multicab">Van / Multicab</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold" style="font-size:.88rem;">Plate Number (optional)</label>
+                            <input type="text" name="plate_number" class="form-control" style="border-radius:10px;" placeholder="e.g. ABC 1234">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold" style="font-size:.88rem;">Password <span class="text-danger">*</span></label>
@@ -401,9 +406,22 @@
                             <label class="form-label fw-bold" style="font-size:.88rem;">Phone Number <span class="text-danger">*</span></label>
                             <input type="text" id="editPhone" name="phone" class="form-control" style="border-radius:10px;" required>
                         </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold" style="font-size:.88rem;">Vehicle Type</label>
+                            <select id="editVehicleType" name="vehicle_type" class="form-select" style="border-radius:10px;">
+                                <option value="Motorcycle">Motorcycle</option>
+                                <option value="Tricycle">Tricycle</option>
+                                <option value="Bicycle">Bicycle</option>
+                                <option value="Van / Multicab">Van / Multicab</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold" style="font-size:.88rem;">Plate Number (optional)</label>
+                            <input type="text" id="editPlateNumber" name="plate_number" class="form-control" style="border-radius:10px;" placeholder="e.g. ABC 1234">
+                        </div>
                         <div class="col-md-12">
                             <label class="form-label fw-bold" style="font-size:.88rem;">Password</label>
-                            <p class="text-muted" style="font-size:.8rem;">Leave empty to keep current password</p>
+                            <p class="text-muted" style="font-size:.8rem;margin-bottom:6px;">Leave empty to keep current password</p>
                             <div class="input-group" style="border-radius:10px;overflow:hidden;">
                                 <input type="password" id="editPassword" name="password" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Min 6 characters">
                                 <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this, 'editPassword')" style="border-radius:0 10px 10px 0;">
@@ -520,6 +538,8 @@
         document.getElementById('editName').value = button.dataset.riderName;
         document.getElementById('editEmail').value = button.dataset.riderEmail;
         document.getElementById('editPhone').value = button.dataset.riderPhone;
+        document.getElementById('editVehicleType').value = button.dataset.riderVehicle || 'Motorcycle';
+        document.getElementById('editPlateNumber').value = button.dataset.riderPlate || '';
         document.getElementById('editPassword').value = '';  // Clear password field for security
         
         // Update the form action
@@ -538,6 +558,8 @@
         const name = document.getElementById('editName').value;
         const email = document.getElementById('editEmail').value;
         const phone = document.getElementById('editPhone').value;
+        const vehicleType = document.getElementById('editVehicleType').value;
+        const plateNumber = document.getElementById('editPlateNumber').value;
         const password = document.getElementById('editPassword').value;
         
         // Build FormData manually
@@ -546,6 +568,8 @@
         formData.append('name', name);
         formData.append('email', email);
         formData.append('phone', phone);
+        formData.append('vehicle_type', vehicleType);
+        formData.append('plate_number', plateNumber);
         if (password) {
             formData.append('password', password);
         }

@@ -109,20 +109,21 @@ class HomepageSetting extends Model
             ],
         ];
 
-        if (filled($this->gcash_account_number) && filled($this->gcash_account_name)) {
-            $methods[] = [
-                'key' => 'gcash',
-                'label' => 'GCash',
-                'description' => 'Pay via GCash e-wallet',
-                'icon' => 'fas fa-mobile-alt',
-                'color' => 'gcash',
-                'requires_proof' => true,
-                'account_name' => $this->gcash_account_name,
-                'account_number' => $this->gcash_account_number,
-                'image_url' => $this->resolveAssetUrl($this->gcash_image_path),
-                'instructions' => 'After payment, upload a screenshot or photo of your proof of payment.',
-            ];
-        }
+        $gcashName = filled($this->gcash_account_name) ? $this->gcash_account_name : 'GasGo LPG Hub';
+        $gcashNumber = filled($this->gcash_account_number) ? $this->gcash_account_number : '0917 123 4567';
+
+        $methods[] = [
+            'key' => 'gcash',
+            'label' => 'GCash',
+            'description' => 'Pay via GCash e-wallet',
+            'icon' => 'fas fa-mobile-alt',
+            'color' => 'gcash',
+            'requires_proof' => true,
+            'account_name' => $gcashName,
+            'account_number' => $gcashNumber,
+            'image_url' => $this->resolveAssetUrl($this->gcash_image_path),
+            'instructions' => 'After payment, upload a screenshot or photo of your proof of payment.',
+        ];
 
         foreach ((array) ($this->payment_methods ?? []) as $method) {
             if (!is_array($method)) {

@@ -39,25 +39,72 @@
         display: flex; align-items: center; gap: 0; border: 2px solid #eee; border-radius: 10px; overflow: hidden;
     }
     .qty-control button {
-        width: 34px; height: 34px; border: none; background: #f8f8f8; font-size: 1rem; cursor: pointer;
+        width: 38px; height: 38px; border: none; background: #f8f8f8; font-size: 1rem; cursor: pointer;
         display: flex; align-items: center; justify-content: center; transition: background .2s;
     }
     .qty-control button:hover { background: var(--gasgo-blue-light); }
-    .qty-control span { width: 36px; text-align: center; font-weight: 600; font-size: .95rem; }
+    .qty-control span { width: 40px; text-align: center; font-weight: 600; font-size: 1rem; }
     .remove-btn {
         background: none; border: none; color: #ccc; font-size: 1.1rem; cursor: pointer; transition: color .2s;
+        padding: 6px 10px; border-radius: 8px;
     }
-    .remove-btn:hover { color: #e74c3c; }
+    .remove-btn:hover { color: #e74c3c; background: #ffeaea; }
 
     /* Summary */
     .cart-summary {
         background: white; border-radius: 20px; padding: 28px;
         box-shadow: 0 8px 30px rgba(0,0,0,.08); position: sticky; top: 100px;
     }
-    .cart-summary h5 { font-weight: 700; color: var(--gasgo-blue); border-bottom: 2px solid #f0f0f0; padding-bottom: 14px; }
     .summary-row { display: flex; justify-content: space-between; padding: 10px 0; font-size: .95rem; }
     .summary-row.total { font-size: 1.2rem; font-weight: 700; border-top: 2px solid var(--gasgo-orange); margin-top: 8px; padding-top: 14px; }
     .summary-row.total .value { color: var(--gasgo-orange); }
+
+    @media (max-width: 767.98px) {
+        .cart-item {
+            flex-wrap: wrap;
+            padding: 16px 14px;
+            gap: 10px;
+            position: relative;
+        }
+        .cart-item img {
+            width: 60px;
+            height: 60px;
+        }
+        .cart-item .item-details {
+            min-width: calc(100% - 120px);
+            padding-right: 28px;
+        }
+        .qty-control {
+            margin-left: 36px;
+        }
+        .qty-control button {
+            width: 42px;
+            height: 42px;
+            font-size: 1.1rem;
+        }
+        .qty-control span {
+            width: 42px;
+            font-size: 1.05rem;
+        }
+        .cart-item .item-subtotal {
+            margin-left: auto;
+            font-size: 1.1rem;
+            min-width: auto;
+        }
+        .remove-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 8px;
+            font-size: 1.2rem;
+            color: #999;
+        }
+        .cart-summary {
+            position: static;
+            margin-top: 20px;
+            padding: 20px;
+        }
+    }
 
     /* Empty */
     .empty-cart { text-align: center; padding: 60px 20px; }
