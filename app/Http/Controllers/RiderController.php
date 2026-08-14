@@ -270,6 +270,8 @@ class RiderController extends Controller
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => 'required|string|max:20',
+            'vehicle_type' => 'nullable|string|max:255',
+            'plate_number' => 'nullable|string|max:255',
             'password' => 'nullable|string|min:6',
         ]);
 
@@ -291,6 +293,18 @@ class RiderController extends Controller
 
         // Use DB::table to bypass Eloquent's hashed cast
         DB::table('users')->where('id', $user->id)->update($updateData);
+
+        // Update rider vehicle and plate info
+        $riderUpdates = [];
+        if (array_key_exists('vehicle_type', $validated)) {
+            $riderUpdates['vehicle_type'] = $validated['vehicle_type'];
+        }
+        if (array_key_exists('plate_number', $validated)) {
+            $riderUpdates['plate_number'] = $validated['plate_number'];
+        }
+        if (!empty($riderUpdates)) {
+            $rider->update($riderUpdates);
+        }
 
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Rider information updated successfully!']);

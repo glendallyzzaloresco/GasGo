@@ -143,30 +143,46 @@
         <!-- Order Items -->
         <div class="detail-card">
             <h5><i class="fas fa-box"></i>Order Items</h5>
-            <table class="item-table">
-                <thead>
-                    <tr>
-                        <th>Product Name</th>
-                        <th style="width:80px;">Qty</th>
-                        <th style="width:120px;">Price</th>
-                        <th style="width:120px;">Subtotal</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($order->orderItems as $item)
+            <div class="table-responsive">
+                <table class="item-table">
+                    <thead>
                         <tr>
-                            <td><span class="item-name">{{ $item->product_name }}</span>@if($item->is_reward)<span class="reward-badge">REWARD</span>@endif</td>
-                            <td>{{ $item->quantity }}</td>
-                            <td>₱{{ number_format($item->price, 2) }}</td>
-                            <td>₱{{ number_format($item->subtotal, 2) }}</td>
+                            <th style="width:60px;">Item</th>
+                            <th>Product Name</th>
+                            <th style="width:80px;" class="text-center">Qty</th>
+                            <th style="width:120px;" class="text-end">Price</th>
+                            <th style="width:120px;" class="text-end">Subtotal</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4" class="text-center text-muted py-3">No items in this order</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @forelse($order->orderItems as $item)
+                            @php
+                                $itemImg = $item->product?->resolved_image ?? $item->reward_image_url ?? asset('images/default-product.png');
+                            @endphp
+                            <tr>
+                                <td>
+                                    <div style="width:48px;height:48px;border-radius:10px;background:#f8f9fa;border:1px solid #eee;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+                                        <img src="{{ $itemImg }}" alt="{{ $item->product_name }}" style="width:100%;height:100%;object-fit:cover;">
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="item-name">{{ $item->product_name }}</span>
+                                    @if($item->is_reward)
+                                        <span class="reward-badge"><i class="fas fa-gift me-1"></i>REWARD</span>
+                                    @endif
+                                </td>
+                                <td class="text-center fw-bold">{{ $item->quantity }}</td>
+                                <td class="text-end">₱{{ number_format($item->price, 2) }}</td>
+                                <td class="text-end fw-bold">₱{{ number_format($item->subtotal, 2) }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">No items in this order</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- Delivery Address -->
@@ -174,25 +190,41 @@
             <h5><i class="fas fa-map-marker-alt"></i>Delivery Address</h5>
             <div class="detail-row">
                 <div class="detail-col">
-                    <span class="detail-label">Address</span>
-                    <div class="detail-value">{{ $order->delivery_address }}</div>
+                    <span class="detail-label">Recipient Name</span>
+                    <div class="detail-value fw-bold">{{ $order->customer_name ?: ($order->user->name ?? 'N/A') }}</div>
+                </div>
+                <div class="detail-col">
+                    <span class="detail-label">Contact Number</span>
+                    <div class="detail-value">
+                        <a href="tel:{{ $order->contact_number }}" class="text-decoration-none fw-semibold">
+                            <i class="fas fa-phone-alt me-1 text-success"></i>{{ $order->contact_number }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-col" style="width:100%;">
+                    <span class="detail-label">Complete Address</span>
+                    <div class="detail-value p-3 rounded" style="background:#f8f9fa; border:1px solid #e9ecef;">
+                        {{ $order->delivery_address }}
+                    </div>
                 </div>
             </div>
             <div class="detail-row">
                 <div class="detail-col">
-                    <span class="detail-label">Contact Number</span>
-                    <div class="detail-value">{{ $order->contact_number }}</div>
-                </div>
-                <div class="detail-col">
-                    <span class="detail-label">Delivery Notes</span>
-                    <div class="detail-value">{{ $order->notes ?: '—' }}</div>
+                    <span class="detail-label">Delivery Notes / Landmarks</span>
+                    <div class="detail-value">{{ $order->notes ?: 'No special instructions' }}</div>
                 </div>
             </div>
             @if($order->latitude && $order->longitude)
                 <div class="detail-row">
                     <div class="detail-col">
-                        <span class="detail-label">GPS Coordinates</span>
-                        <div class="detail-value">{{ $order->latitude }}, {{ $order->longitude }}</div>
+                        <span class="detail-label">GPS Location</span>
+                        <div class="detail-value">
+                            <a href="https://www.google.com/maps/search/?api=1&query={{ $order->latitude }},{{ $order->longitude }}" target="_blank" class="btn btn-sm btn-outline-primary" style="border-radius:8px;">
+                                <i class="fas fa-external-link-alt me-1"></i>View Pinned Location on Map ({{ $order->latitude }}, {{ $order->longitude }})
+                            </a>
+                        </div>
                     </div>
                 </div>
             @endif
@@ -202,23 +234,23 @@
     <div class="col-lg-4">
         <!-- Customer Information -->
         <div class="detail-card">
-            <h5><i class="fas fa-user"></i>Customer</h5>
+            <h5><i class="fas fa-user"></i>Customer Profile</h5>
             <div class="detail-row">
                 <div class="detail-col">
-                    <span class="detail-label">Name</span>
-                    <div class="detail-value">{{ $order->user->name }}</div>
+                    <span class="detail-label">Account Name</span>
+                    <div class="detail-value fw-bold">{{ $order->user->name ?? ($order->customer_name ?? 'Guest') }}</div>
                 </div>
             </div>
             <div class="detail-row">
                 <div class="detail-col">
-                    <span class="detail-label">Email</span>
-                    <div class="detail-value"><a href="mailto:{{ $order->user->email }}">{{ $order->user->email }}</a></div>
+                    <span class="detail-label">Account Email</span>
+                    <div class="detail-value"><a href="mailto:{{ $order->user->email ?? '' }}" class="text-decoration-none">{{ $order->user->email ?? 'N/A' }}</a></div>
                 </div>
             </div>
             <div class="detail-row">
                 <div class="detail-col">
-                    <span class="detail-label">Phone</span>
-                    <div class="detail-value"><a href="tel:{{ $order->contact_number }}">{{ $order->contact_number }}</a></div>
+                    <span class="detail-label">Primary Phone</span>
+                    <div class="detail-value"><a href="tel:{{ $order->contact_number }}" class="text-decoration-none">{{ $order->contact_number }}</a></div>
                 </div>
             </div>
         </div>
@@ -233,6 +265,7 @@
                 $proofImageUrl = $order->payment && filled($order->payment->proof_of_payment)
                     ? \Illuminate\Support\Facades\Storage::url(ltrim($order->payment->proof_of_payment, '/'))
                     : null;
+                $paymentStatus = $order->payment->status ?? ($order->status === 'delivered' ? 'paid' : 'pending');
             @endphp
             
             <!-- Payment Proof Image - Top Section -->
@@ -240,10 +273,13 @@
                 <div class="detail-row" style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #e9ecef;">
                     <div class="detail-col" style="width: 100%;">
                         <span class="detail-label">
-                            <i class="fas fa-receipt" style="color: var(--gasgo-orange); margin-right: 6px;"></i>Payment Proof
+                            <i class="fas fa-receipt" style="color: var(--gasgo-orange); margin-right: 6px;"></i>Proof of Payment
                         </span>
-                        <div style="margin-top: 12px;">
-                            <img src="{{ $proofImageUrl }}" alt="Proof of Payment" class="proof-image" style="max-width: 100%; height: auto; cursor: pointer;" onclick="this.style.transform='scale(1.05)'; setTimeout(() => this.style.transform='scale(1)', 200);">
+                        <div style="margin-top: 12px; text-align:center; background:#f8f9fa; padding:10px; border-radius:12px; border:1px solid #dee2e6;">
+                            <a href="{{ $proofImageUrl }}" target="_blank" title="Click to view full image">
+                                <img src="{{ $proofImageUrl }}" alt="Proof of Payment" class="proof-image" style="max-width: 100%; max-height:260px; object-fit:contain; border-radius:8px;">
+                            </a>
+                            <small class="d-block text-muted mt-2"><i class="fas fa-search-plus me-1"></i>Click image to open full size</small>
                         </div>
                     </div>
                 </div>
@@ -251,11 +287,18 @@
             
             <div class="detail-row">
                 <div class="detail-col">
-                    <span class="detail-label">Method</span>
-                    <div class="d-flex align-items-center gap-3 flex-wrap">
-                        <span class="badge {{ $order->payment_method === 'gcash' ? 'bg-success' : 'bg-secondary' }}">
-                            {{ ucfirst($order->payment_method) }}
+                    <span class="detail-label">Payment Method</span>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="badge {{ in_array($order->payment_method, ['gcash', 'online']) ? 'bg-info' : 'bg-success' }}" style="font-size:.85rem; padding:6px 12px;">
+                            <i class="{{ in_array($order->payment_method, ['gcash', 'online']) ? 'fas fa-mobile-alt' : 'fas fa-money-bill-wave' }} me-1"></i>
+                            {{ strtoupper($order->payment_method) }}
                         </span>
+                        <span class="badge {{ $paymentStatus === 'paid' ? 'bg-success' : ($paymentStatus === 'failed' ? 'bg-danger' : 'bg-warning text-dark') }}" style="font-size:.85rem; padding:6px 12px;">
+                            Status: {{ ucfirst($paymentStatus) }}
+                        </span>
+                    </div>
+                </div>
+            </div>
                         @if(!empty($selectedPaymentMethod['image_url']))
                             <div style="width:64px;height:64px;border:1px solid #dee2e6;border-radius:12px;padding:6px;background:#fff;overflow:hidden;display:flex;align-items:center;justify-content:center;">
                                 <img src="{{ $selectedPaymentMethod['image_url'] }}" alt="{{ $selectedPaymentMethod['label'] }}" style="width:100%;height:100%;object-fit:contain;">
