@@ -111,22 +111,22 @@ class HomepageSettingController extends Controller
 
         if ($request->hasFile('navbar_logo')) {
             $this->deletePublicFile($settings->navbar_logo_path);
-            $payload['navbar_logo_path'] = $request->file('navbar_logo')->store('branding', 'public');
+            $payload['navbar_logo_path'] = $request->file('navbar_logo')->store('branding');
         }
 
         if ($request->hasFile('footer_logo')) {
             $this->deletePublicFile($settings->footer_logo_path);
-            $payload['footer_logo_path'] = $request->file('footer_logo')->store('branding', 'public');
+            $payload['footer_logo_path'] = $request->file('footer_logo')->store('branding');
         }
 
         if ($request->hasFile('home_hero_image')) {
             $this->deletePublicFile($settings->home_hero_image_path);
-            $payload['home_hero_image_path'] = $request->file('home_hero_image')->store('branding', 'public');
+            $payload['home_hero_image_path'] = $request->file('home_hero_image')->store('branding');
         }
 
         if ($request->hasFile('promo_banner_image')) {
             $this->deletePublicFile($settings->promo_banner_image_path);
-            $payload['promo_banner_image_path'] = $request->file('promo_banner_image')->store('branding', 'public');
+            $payload['promo_banner_image_path'] = $request->file('promo_banner_image')->store('branding');
         }
 
         $settings->update($payload);
@@ -142,7 +142,7 @@ class HomepageSettingController extends Controller
         ];
 
         if (! empty($payload['navbar_logo_path'])) {
-            $themePayload['logoUrl'] = Storage::disk('public')->url($payload['navbar_logo_path']);
+            $themePayload['logoUrl'] = Storage::url($payload['navbar_logo_path']);
         }
 
         if (\Illuminate\Support\Facades\Schema::hasTable('site_theme')) {
@@ -159,7 +159,7 @@ class HomepageSettingController extends Controller
         }
 
         if (! str_starts_with($path, 'http://') && ! str_starts_with($path, 'https://')) {
-            Storage::disk('public')->delete($path);
+            Storage::delete($path);
         }
     }
 }

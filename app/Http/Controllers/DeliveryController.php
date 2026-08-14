@@ -289,7 +289,7 @@ class DeliveryController extends Controller
             'delivery_notes' => 'nullable|string|max:500',
         ]);
 
-        $path = $request->file('proof_photo')->store('delivery-proofs', 'public');
+        $path = $request->file('proof_photo')->store('delivery-proofs');
         $delivery->update([
             'proof_photo'    => $path,
             'delivery_notes' => $validated['delivery_notes'] ?? null,

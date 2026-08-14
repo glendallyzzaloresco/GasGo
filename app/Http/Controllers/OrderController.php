@@ -677,7 +677,7 @@ class OrderController extends Controller
                 // Store the proof of payment file
                 $file = $request->file('proof_of_payment');
                 $fileName = 'proof_' . $order->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-                $proofOfPaymentPath = $file->storeAs('payments/proofs', $fileName, 'public');
+                $proofOfPaymentPath = $file->storeAs('payments/proofs', $fileName);
             }
 
             Payment::create([
