@@ -561,10 +561,13 @@ class OrderController extends Controller
                         $normalized = ltrim($freebieImagePath, '/');
                         if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
                             $freebieImageUrl = $freebieImagePath;
-                        } elseif (str_starts_with($normalized, 'storage/') || str_starts_with($normalized, 'images/')) {
+                        } elseif (str_starts_with($normalized, 'images/')) {
                             $freebieImageUrl = asset($normalized);
                         } else {
-                            $freebieImageUrl = asset('storage/' . $normalized);
+                            if (str_starts_with($normalized, 'storage/')) {
+                                $normalized = substr($normalized, 8);
+                            }
+                            $freebieImageUrl = \Illuminate\Support\Facades\Storage::url($normalized);
                         }
                     }
                     

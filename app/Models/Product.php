@@ -150,15 +150,15 @@ class Product extends Model
 
         $normalized = ltrim($path, '/');
 
-        if (str_starts_with($normalized, 'storage/')) {
-            return asset($normalized);
-        }
-
         if (str_starts_with($normalized, 'images/')) {
             return asset($normalized);
         }
 
-        return asset('storage/' . $normalized);
+        if (str_starts_with($normalized, 'storage/')) {
+            $normalized = substr($normalized, 8);
+        }
+
+        return \Illuminate\Support\Facades\Storage::url($normalized);
     }
 
     /**
@@ -166,15 +166,6 @@ class Product extends Model
      */
     public function getImageUrlAttribute()
     {
-        if ($this->image) {
-            if (str_starts_with($this->image, 'http')) {
-                return $this->image;
-            }
-            if (str_starts_with($this->image, '/')) {
-                return asset($this->image);
-            }
-            return asset('storage/' . $this->image);
-        }
-        return asset('images/default-product.png');
+        return $this->resolved_image ?? asset('images/default-product.png');
     }
 }

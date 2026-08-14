@@ -33,10 +33,21 @@ class Freebie extends Model
     public function getImageUrlAttribute()
     {
         if ($this->image) {
-            if (str_starts_with($this->image, 'http')) {
+            if (str_starts_with($this->image, 'http://') || str_starts_with($this->image, 'https://')) {
                 return $this->image;
             }
-            return asset('storage/' . $this->image);
+
+            $normalized = ltrim($this->image, '/');
+
+            if (str_starts_with($normalized, 'images/')) {
+                return asset($normalized);
+            }
+
+            if (str_starts_with($normalized, 'storage/')) {
+                $normalized = substr($normalized, 8);
+            }
+
+            return \Illuminate\Support\Facades\Storage::url($normalized);
         }
         return asset('images/default-product.png');
     }
