@@ -52,6 +52,28 @@
     .filter-tab:hover, .filter-tab.active { background: var(--gasgo-blue); color: white; border-color: var(--gasgo-blue); }
     .empty-orders { text-align: center; padding: 60px 20px; }
     .empty-orders i { font-size: 4rem; color: #ddd; margin-bottom: 14px; }
+
+    @media (max-width: 767.98px) {
+        .order-header, .order-body, .order-footer {
+            padding: 14px 16px;
+        }
+        .filter-tabs {
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            padding-bottom: 8px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .filter-tab {
+            white-space: nowrap;
+            flex-shrink: 0;
+            padding: 8px 16px;
+        }
+        .order-header .order-date {
+            margin-left: 0 !important;
+            display: block;
+            margin-top: 4px;
+        }
+    }
 </style>
 @endsection
 
