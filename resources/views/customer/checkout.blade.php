@@ -307,8 +307,8 @@
                             >
                                 <input type="radio" name="payment_method" value="{{ $method['key'] }}" {{ $selectedPaymentMethodKey === $method['key'] ? 'checked' : '' }}>
                                 @if(!empty($method['image_url']))
-                                    <div class="pay-icon" style="background:white;overflow:hidden;padding:4px;">
-                                        <img src="{{ $method['image_url'] }}" alt="{{ $method['label'] }}" style="width:100%;height:100%;object-fit:contain;">
+                                    <div class="pay-icon" style="background:white;overflow:hidden;padding:4px;display:flex;align-items:center;justify-content:center;">
+                                        <img src="{{ $method['image_url'] }}" alt="{{ $method['label'] }}" style="width:100%;height:100%;object-fit:contain;" onerror="this.parentElement.innerHTML='<div class=\'pay-icon {{ $method['color'] ?? 'info' }}\' style=\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;\'><i class=\'{{ $method['icon'] ?? 'fas fa-credit-card' }}\'></i></div>';">
                                     </div>
                                 @else
                                     <div class="pay-icon {{ $method['color'] ?? 'info' }}"><i class="{{ $method['icon'] ?? 'fas fa-credit-card' }}"></i></div>
@@ -345,18 +345,24 @@
                     </div>
                 </div>
 
-                <!-- Urgent Order Option -->
+                <!-- Delivery & Transaction Type Options -->
                 <div class="checkout-card" style="background: linear-gradient(135deg, rgba(247, 148, 29, 0.05) 0%, rgba(33, 150, 243, 0.05) 100%); border: 2px solid #f0f0f0;">
-                    <h5><i class="fas fa-bolt" style="color: var(--gasgo-orange);"></i>Delivery Options</h5>
+                    <h5><i class="fas fa-bolt" style="color: var(--gasgo-orange);"></i>Delivery & Order Options</h5>
                     @if(!empty($hasCylinderProducts))
-                        <div class="mb-3">
-                            <label class="form-label">Cylinder Transaction Type</label>
-                            <select class="form-select form-control-gasgo" name="transaction_type" required>
-                                <option value="exchange" {{ old('transaction_type', 'exchange') === 'exchange' ? 'selected' : '' }}>Exchange</option>
-                                <option value="new_cylinder" {{ old('transaction_type') === 'new_cylinder' ? 'selected' : '' }}>New Cylinder</option>
+                        <div class="mb-3 p-3 bg-white rounded-3 border">
+                            <label class="form-label fw-bold d-flex align-items-center" style="color: #1a6db0; font-size: 0.95rem;">
+                                <i class="fas fa-gas-pump me-2"></i>Cylinder Transaction Type <span class="text-danger ms-1">*</span>
+                            </label>
+                            <select class="form-select form-control-gasgo" name="transaction_type" id="transactionTypeSelect" required style="font-weight:500;">
+                                <option value="exchange" {{ old('transaction_type', 'exchange') === 'exchange' ? 'selected' : '' }}>
+                                    🔄 Exchange (Swap empty cylinder for refill)
+                                </option>
+                                <option value="new_cylinder" {{ old('transaction_type') === 'new_cylinder' ? 'selected' : '' }}>
+                                    🆕 New Cylinder (Purchase complete new cylinder set)
+                                </option>
                             </select>
-                            <small class="text-muted d-block mt-1">
-                                Applies only to cylinder products. Non-cylinder items will be deducted normally.
+                            <small class="text-muted d-block mt-2">
+                                <i class="fas fa-info-circle me-1 text-primary"></i>Applies to LPG cylinder items in your order.
                             </small>
                         </div>
                     @else
@@ -480,7 +486,7 @@
                                             >
                                             @if($freebieImageUrl)
                                                 <div class="freebie-image-wrapper">
-                                                    <img src="{{ $freebieImageUrl }}" alt="{{ $freebie->name }}">
+                                                    <img src="{{ $freebieImageUrl }}" alt="{{ $freebie->name }}" onerror="this.onerror=null;this.src='{{ asset('images/default-product.png') }}';">
                                                 </div>
                                             @endif
                                             <div class="freebie-title">{{ $freebie->name }}</div>
@@ -514,11 +520,10 @@
                     <h5><i class="fas fa-receipt me-2"></i>Order Summary</h5>
                     @foreach ($cartItems as $item)
                     <div class="order-item-mini" data-cart-id="{{ $item->id }}" data-product-id="{{ $item->product_id }}" data-price="{{ $item->product->price * $item->quantity }}" data-is-buy-now="false">
-                        @if($item->product->resolved_image)
-                            <img src="{{ $item->product->resolved_image }}" alt="{{ $item->product->name }}">
-                        @else
-                            <span class="text-muted small">No image available</span>
-                        @endif
+                        @php
+                            $checkoutItemImage = $item->product->resolved_image ?? asset('images/default-product.png');
+                        @endphp
+                        <img src="{{ $checkoutItemImage }}" alt="{{ $item->product->name }}" onerror="this.onerror=null;this.src='{{ asset('images/default-product.png') }}';">
                         <div class="flex-grow-1">
                             <div class="name">{{ $item->product->name }}</div>
                             <div class="qty">Qty: {{ $item->quantity }} &times; ₱{{ number_format($item->product->price, 2) }}</div>

@@ -192,6 +192,18 @@ class HomepageSetting extends Model
             $normalized = substr($normalized, 8);
         }
 
+        if (file_exists(public_path('storage/' . $normalized))) {
+            return asset('storage/' . $normalized);
+        }
+
+        if (file_exists(storage_path('app/public/' . $normalized))) {
+            return asset('storage/' . $normalized);
+        }
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($normalized)) {
+            return \Illuminate\Support\Facades\Storage::disk('public')->url($normalized);
+        }
+
         return \Illuminate\Support\Facades\Storage::url($normalized);
     }
 }
