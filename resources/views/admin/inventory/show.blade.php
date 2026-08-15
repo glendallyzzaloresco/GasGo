@@ -415,7 +415,6 @@
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 @endif
-                
                 <form action="{{ route('admin.inventory.update', $inventory) }}" method="POST" id="settingsForm">
                     @csrf
                     @method('PUT')
@@ -452,8 +451,8 @@
                                 @enderror
                             </div>
                         </div>
+                    </div>
                         
-                    
                     <div class="d-flex gap-2 justify-content-end mt-3">
                         <button type="reset" class="btn btn-secondary">
                             <i class="fas fa-undo me-2"></i>Reset
@@ -634,3 +633,5 @@
             </div>
         </div>
     </div>
+</div>
+@endsection
