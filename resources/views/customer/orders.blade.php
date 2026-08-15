@@ -226,119 +226,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Customer Order Details Modal -->
-        <div class="modal fade" id="orderModal{{ $order->id }}" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content" style="border-radius:16px; overflow:hidden;">
-                    <div class="modal-header" style="background:linear-gradient(135deg, var(--gasgo-blue), #2196f3); color:#fff;">
-                        <h6 class="modal-title fw-bold"><i class="fas fa-receipt me-2"></i>Order #{{ $order->order_number }} Details</h6>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body p-4">
-                        <div class="row g-3 mb-3">
-                            <div class="col-sm-6">
-                                <label class="text-muted small">Status</label>
-                                <div>
-                                    <span class="badge-status badge-{{ $order->status }}">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</span>
-                                    @if($order->is_urgent)
-                                        <span class="badge bg-danger ms-1"><i class="fas fa-bolt me-1"></i>URGENT</span>
-                                    @endif
-                                </div>
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="text-muted small">Transaction Type</label>
-                                <div>
-                                    @if($txType === 'exchange')
-                                        <span class="badge" style="background:#e8f4fc;color:#1a6db0;font-size:.82rem;font-weight:600;padding:6px 12px;"><i class="fas fa-exchange-alt me-1"></i>Exchange</span>
-                                    @elseif($txType === 'new_cylinder')
-                                        <span class="badge" style="background:#fff5e6;color:#e07d0a;font-size:.82rem;font-weight:600;padding:6px 12px;"><i class="fas fa-plus-circle me-1"></i>New Cylinder</span>
-                                    @else
-                                        <span class="badge" style="background:#f1f5f9;color:#475569;font-size:.82rem;font-weight:600;padding:6px 12px;"><i class="fas fa-box me-1"></i>{{ ucfirst(str_replace('_', ' ', $txType)) }}</span>
-                                    @endif
-                                </div>
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="text-muted small">Placed On</label>
-                                <div class="fw-semibold">{{ $order->created_at->format('F j, Y - g:i A') }}</div>
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="text-muted small">Payment Method</label>
-                                <div class="fw-semibold">{{ strtoupper($order->payment_method ?? 'CASH') }}</div>
-                            </div>
-                        </div>
-
-                        <div class="p-3 mb-3 rounded" style="background:#f8f9fa; border:1px solid #e9ecef;">
-                            <h6 class="fw-bold mb-2" style="color:var(--gasgo-blue); font-size:.9rem;"><i class="fas fa-map-marker-alt me-2"></i>Delivery Address</h6>
-                            <div class="fw-bold" style="font-size:.92rem;">{{ $order->customer_name ?: ($order->user?->name ?? 'Customer') }}</div>
-                            <div class="text-muted small">{{ $order->delivery_address }}</div>
-                            @if($order->contact_number)
-                                <div class="small mt-1"><i class="fas fa-phone-alt me-1 text-success"></i>{{ $order->contact_number }}</div>
-                            @endif
-                            @if($order->notes)
-                                <div class="small text-muted mt-1"><strong>Notes:</strong> {{ $order->notes }}</div>
-                            @endif
-                        </div>
-
-                        <h6 class="fw-bold mb-2" style="color:var(--gasgo-blue); font-size:.9rem;"><i class="fas fa-box me-2"></i>Ordered Items</h6>
-                        <div class="table-responsive mb-3">
-                            <table class="table table-sm align-middle">
-                                <thead style="background:#f1f5f9;">
-                                    <tr>
-                                        <th>Item</th>
-                                        <th class="text-center">Qty</th>
-                                        <th class="text-end">Price</th>
-                                        <th class="text-end">Subtotal</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($order->orderItems as $item)
-                                        <tr>
-                                            <td>
-                                                <span class="fw-semibold">{{ $item->product_name }}</span>
-                                                @if($item->is_reward)
-                                                    <span class="badge bg-success ms-1" style="font-size:.68rem;">FREE</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-center">{{ $item->quantity }}</td>
-                                            <td class="text-end">₱{{ number_format((float) ($item->is_reward ? 0 : $item->price), 2) }}</td>
-                                            <td class="text-end fw-bold">₱{{ number_format((float) ($item->is_reward ? 0 : $item->subtotal), 2) }}</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="p-3 rounded" style="background:#f8f9fa; border:1px solid #e9ecef;">
-                            <div class="d-flex justify-content-between mb-1 small">
-                                <span class="text-muted">Subtotal:</span>
-                                <span>₱{{ number_format((float) ($order->subtotal ?? 0), 2) }}</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-1 small">
-                                <span class="text-muted">Delivery Fee:</span>
-                                <span>₱{{ number_format((float) ($order->delivery_fee ?? 0), 2) }}</span>
-                            </div>
-                            @if((float) ($order->discount ?? 0) > 0)
-                            <div class="d-flex justify-content-between mb-1 small text-success">
-                                <span>Discount:</span>
-                                <span>-₱{{ number_format((float) $order->discount, 2) }}</span>
-                            </div>
-                            @endif
-                            <div class="d-flex justify-content-between pt-2 border-top fw-bold" style="font-size:1.05rem; color:var(--gasgo-orange);">
-                                <span>Total Amount:</span>
-                                <span>₱{{ number_format((float) ($order->total_amount ?? 0), 2) }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer" style="border-top:none;">
-                        @if(in_array($order->status, ['pending', 'approved', 'assigned', 'out_for_delivery']))
-                            <a href="{{ route('customer.tracking', $order) }}" class="btn btn-gasgo btn-sm"><i class="fas fa-map-marker-alt me-1"></i>Track Order</a>
-                        @endif
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                    </div>
-                </div>
-            </div>
-        </div>
         @empty
         <div class="order-card" data-aos="fade-up">
             <div class="empty-orders">
@@ -351,6 +238,122 @@
         @endforelse
     </div>
 </section>
+
+<!-- Customer Order Details Modals (Outside section to prevent z-index backdrop conflict) -->
+@foreach ($orders as $order)
+@php $txType = $order->transaction_type ?? 'exchange'; @endphp
+<div class="modal fade" id="orderModal{{ $order->id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:16px; overflow:hidden;">
+            <div class="modal-header" style="background:linear-gradient(135deg, var(--gasgo-blue), #2196f3); color:#fff;">
+                <h6 class="modal-title fw-bold"><i class="fas fa-receipt me-2"></i>Order #{{ $order->order_number }} Details</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-6">
+                        <label class="text-muted small">Status</label>
+                        <div>
+                            <span class="badge-status badge-{{ $order->status }}">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</span>
+                            @if($order->is_urgent)
+                                <span class="badge bg-danger ms-1"><i class="fas fa-bolt me-1"></i>URGENT</span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="text-muted small">Transaction Type</label>
+                        <div>
+                            @if($txType === 'exchange')
+                                <span class="badge" style="background:#e8f4fc;color:#1a6db0;font-size:.82rem;font-weight:600;padding:6px 12px;"><i class="fas fa-exchange-alt me-1"></i>Exchange</span>
+                            @elseif($txType === 'new_cylinder')
+                                <span class="badge" style="background:#fff5e6;color:#e07d0a;font-size:.82rem;font-weight:600;padding:6px 12px;"><i class="fas fa-plus-circle me-1"></i>New Cylinder</span>
+                            @else
+                                <span class="badge" style="background:#f1f5f9;color:#475569;font-size:.82rem;font-weight:600;padding:6px 12px;"><i class="fas fa-box me-1"></i>{{ ucfirst(str_replace('_', ' ', $txType)) }}</span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="text-muted small">Placed On</label>
+                        <div class="fw-semibold">{{ $order->created_at->format('F j, Y - g:i A') }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="text-muted small">Payment Method</label>
+                        <div class="fw-semibold">{{ strtoupper($order->payment_method ?? 'CASH') }}</div>
+                    </div>
+                </div>
+
+                <div class="p-3 mb-3 rounded" style="background:#f8f9fa; border:1px solid #e9ecef;">
+                    <h6 class="fw-bold mb-2" style="color:var(--gasgo-blue); font-size:.9rem;"><i class="fas fa-map-marker-alt me-2"></i>Delivery Address</h6>
+                    <div class="fw-bold" style="font-size:.92rem;">{{ $order->customer_name ?: ($order->user?->name ?? 'Customer') }}</div>
+                    <div class="text-muted small">{{ $order->delivery_address }}</div>
+                    @if($order->contact_number)
+                        <div class="small mt-1"><i class="fas fa-phone-alt me-1 text-success"></i>{{ $order->contact_number }}</div>
+                    @endif
+                    @if($order->notes)
+                        <div class="small text-muted mt-1"><strong>Notes:</strong> {{ $order->notes }}</div>
+                    @endif
+                </div>
+
+                <h6 class="fw-bold mb-2" style="color:var(--gasgo-blue); font-size:.9rem;"><i class="fas fa-box me-2"></i>Ordered Items</h6>
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm align-middle">
+                        <thead style="background:#f1f5f9;">
+                            <tr>
+                                <th>Item</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Price</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($order->orderItems as $item)
+                                <tr>
+                                    <td>
+                                        <span class="fw-semibold">{{ $item->product_name }}</span>
+                                        @if($item->is_reward)
+                                            <span class="badge bg-success ms-1" style="font-size:.68rem;">FREE</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-center">{{ $item->quantity }}</td>
+                                    <td class="text-end">₱{{ number_format((float) ($item->is_reward ? 0 : $item->price), 2) }}</td>
+                                    <td class="text-end fw-bold">₱{{ number_format((float) ($item->is_reward ? 0 : $item->subtotal), 2) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="p-3 rounded" style="background:#f8f9fa; border:1px solid #e9ecef;">
+                    <div class="d-flex justify-content-between mb-1 small">
+                        <span class="text-muted">Subtotal:</span>
+                        <span>₱{{ number_format((float) ($order->subtotal ?? 0), 2) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1 small">
+                        <span class="text-muted">Delivery Fee:</span>
+                        <span>₱{{ number_format((float) ($order->delivery_fee ?? 0), 2) }}</span>
+                    </div>
+                    @if((float) ($order->discount ?? 0) > 0)
+                    <div class="d-flex justify-content-between mb-1 small text-success">
+                        <span>Discount:</span>
+                        <span>-₱{{ number_format((float) $order->discount, 2) }}</span>
+                    </div>
+                    @endif
+                    <div class="d-flex justify-content-between pt-2 border-top fw-bold" style="font-size:1.05rem; color:var(--gasgo-orange);">
+                        <span>Total Amount:</span>
+                        <span>₱{{ number_format((float) ($order->total_amount ?? 0), 2) }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:none;">
+                @if(in_array($order->status, ['pending', 'approved', 'assigned', 'out_for_delivery']))
+                    <a href="{{ route('customer.tracking', $order) }}" class="btn btn-gasgo btn-sm"><i class="fas fa-map-marker-alt me-1"></i>Track Order</a>
+                @endif
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endforeach
 @endsection
 
 @section('scripts')
