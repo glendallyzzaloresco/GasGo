@@ -158,6 +158,28 @@ class ProductController extends Controller
             $validated['image'] = $request->file('image')->store('products', 'public');
         }
 
+        // If category is freebie, save into freebies table
+        if ($validated['category'] === 'freebie') {
+            $freebie = Freebie::create([
+                'name' => $validated['name'],
+                'description' => $validated['description'] ?? null,
+                'stock' => (int) ($validated['stock'] ?? 0),
+                'category' => 'Promotional Gifts',
+                'reward_points_required' => 0,
+                'redemption_type' => 'promotional',
+                'image' => $validated['image'] ?? null,
+                'is_active' => $validated['is_active'] ?? true,
+            ]);
+
+            $message = 'Freebie added to Freebies successfully.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => true, 'message' => $message, 'freebie_id' => $freebie->id], 200);
+            }
+
+            return redirect()->route('admin.products', ['tab' => 'freebies'])->with('success', $message);
+        }
+
         DB::transaction(function () use ($validated) {
             $product = Product::create($validated);
 
