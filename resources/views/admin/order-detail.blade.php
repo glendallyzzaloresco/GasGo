@@ -129,7 +129,24 @@
                 </div>
                 <div class="detail-col">
                     <span class="detail-label">Transaction Type</span>
-                    <div class="detail-value">{{ ucfirst(str_replace('_', ' ', $order->transaction_type ?? 'exchange')) }}</div>
+                    <div class="detail-value mt-1">
+                        @php
+                            $txType = $order->transaction_type ?? 'exchange';
+                        @endphp
+                        @if($txType === 'exchange')
+                            <span class="badge" style="background:#e8f4fc;color:#1a6db0;font-size:.85rem;font-weight:600;padding:6px 12px;">
+                                <i class="fas fa-exchange-alt me-1"></i>Exchange
+                            </span>
+                        @elseif($txType === 'new_cylinder')
+                            <span class="badge" style="background:#fff5e6;color:#e07d0a;font-size:.85rem;font-weight:600;padding:6px 12px;">
+                                <i class="fas fa-plus-circle me-1"></i>New Cylinder
+                            </span>
+                        @else
+                            <span class="badge" style="background:#f1f5f9;color:#475569;font-size:.85rem;font-weight:600;padding:6px 12px;">
+                                <i class="fas fa-box me-1"></i>{{ ucfirst(str_replace('_', ' ', $txType)) }}
+                            </span>
+                        @endif
+                    </div>
                 </div>
                 @if($order->delivery)
                     <div class="detail-col">
@@ -278,9 +295,9 @@
                 $homepageSettings = \App\Models\HomepageSetting::singleton();
                 $availablePaymentMethods = collect($homepageSettings->availablePaymentMethods());
                 $selectedPaymentMethod = $availablePaymentMethods->firstWhere('key', $order->payment_method);
-                $proofImageUrl = $order->payment && filled($order->payment->proof_of_payment)
+                $proofImageUrl = $order->payment?->proof_image_url ?? ($order->payment && filled($order->payment->proof_of_payment)
                     ? \Illuminate\Support\Facades\Storage::url(ltrim($order->payment->proof_of_payment, '/'))
-                    : null;
+                    : null);
                 $paymentStatus = $order->payment->status ?? ($order->status === 'delivered' ? 'paid' : 'pending');
             @endphp
             

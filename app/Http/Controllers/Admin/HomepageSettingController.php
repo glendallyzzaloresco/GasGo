@@ -111,22 +111,22 @@ class HomepageSettingController extends Controller
 
         if ($request->hasFile('navbar_logo')) {
             $this->deletePublicFile($settings->navbar_logo_path);
-            $payload['navbar_logo_path'] = $request->file('navbar_logo')->store('branding');
+            $payload['navbar_logo_path'] = $request->file('navbar_logo')->store('branding', 'public');
         }
 
         if ($request->hasFile('footer_logo')) {
             $this->deletePublicFile($settings->footer_logo_path);
-            $payload['footer_logo_path'] = $request->file('footer_logo')->store('branding');
+            $payload['footer_logo_path'] = $request->file('footer_logo')->store('branding', 'public');
         }
 
         if ($request->hasFile('home_hero_image')) {
             $this->deletePublicFile($settings->home_hero_image_path);
-            $payload['home_hero_image_path'] = $request->file('home_hero_image')->store('branding');
+            $payload['home_hero_image_path'] = $request->file('home_hero_image')->store('branding', 'public');
         }
 
         if ($request->hasFile('promo_banner_image')) {
             $this->deletePublicFile($settings->promo_banner_image_path);
-            $payload['promo_banner_image_path'] = $request->file('promo_banner_image')->store('branding');
+            $payload['promo_banner_image_path'] = $request->file('promo_banner_image')->store('branding', 'public');
         }
 
         $settings->update($payload);

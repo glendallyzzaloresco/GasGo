@@ -513,7 +513,7 @@ class DashboardController extends Controller
             if (!empty($homepageSettings->gcash_image_path)) {
                 Storage::delete($homepageSettings->gcash_image_path);
             }
-            $validated['gcash_image_path'] = $request->file('gcash_image')->store('payment-methods');
+            $validated['gcash_image_path'] = $request->file('gcash_image')->store('payment-methods', 'public');
         }
 
         unset($validated['gcash_image']);
@@ -553,7 +553,7 @@ class DashboardController extends Controller
                     if ($imagePath !== '') {
                         Storage::delete($imagePath);
                     }
-                    $imagePath = $uploadedImage->store('payment-methods');
+                    $imagePath = $uploadedImage->store('payment-methods', 'public');
                 }
 
                 return [

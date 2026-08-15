@@ -19,23 +19,44 @@ class ProductController extends Controller
     {
         $query = Product::with('inventory')
             ->where('is_active', true)
-            ->where('price', '>', 0);
+            ->where('price', '>', 0)
+            ->where(function ($q) {
+                $q->whereNull('category')
+                  ->orWhereRaw('LOWER(category) != ?', ['freebie']);
+            });
 
-        // Apply category filter if provided (case-insensitive)
+        // Apply category filter if provided (case-insensitive & handles aliases)
         $category = $request->query('category');
         if ($category) {
-            $query->whereRaw('LOWER(category) = ?', [strtolower($category)]);
+            $catLower = strtolower(trim($category));
+            if (in_array($catLower, ['tank', 'tanks', 'cylinder', 'cylinders'])) {
+                $query->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(category)'), ['tank', 'tanks', 'cylinder', 'cylinders']);
+                $category = 'tank';
+            } else {
+                $query->whereRaw('LOWER(category) = ?', [$catLower]);
+            }
         }
 
         $products = $query->orderBy('name')->get();
-        $activeCategory = $category; // Pass active category to view for highlighting
+        $activeCategory = $category;
 
-        $categories = Product::where('is_active', true)
+        // Fetch distinct categories, normalize tank/tanks aliases, and exclude freebie
+        $rawCategories = Product::where('is_active', true)
             ->whereNotNull('category')
             ->where('category', '!=', '')
-            ->pluck('category')
-            ->map(fn ($c) => trim($c))
-            ->unique(fn ($c) => strtolower($c))
+            ->where('price', '>', 0)
+            ->whereRaw('LOWER(category) != ?', ['freebie'])
+            ->pluck('category');
+
+        $categories = $rawCategories
+            ->map(function ($c) {
+                $trimmed = strtolower(trim($c));
+                if (in_array($trimmed, ['tank', 'tanks', 'cylinder', 'cylinders'])) {
+                    return 'Tank';
+                }
+                return ucfirst($trimmed);
+            })
+            ->unique()
             ->values();
 
         return view('customer.product', compact('products', 'activeCategory', 'categories'));
@@ -105,8 +126,8 @@ class ProductController extends Controller
             'requires_exchange'    => 'nullable|boolean',
             'description'    => 'nullable|string',
             'price'          => 'nullable|numeric|min:0',
-            'cost_price'     => 'required|numeric|min:0',
-            'selling_price'  => 'required|numeric|min:0',
+            'cost_price'     => 'required_unless:category,freebie|nullable|numeric|min:0',
+            'selling_price'  => 'required_unless:category,freebie|nullable|numeric|min:0',
             'stock'          => 'nullable|integer|min:0',
             'weight'         => 'nullable|string|max:255',
             'image'          => 'nullable|image|max:2048',
@@ -121,13 +142,20 @@ class ProductController extends Controller
         }
         $validated['is_active'] = $request->boolean('is_active');
         $validated['stock'] = (int) ($validated['stock'] ?? 0);
-        // If price is not provided, use selling_price as the price
-        if (!isset($validated['price']) || is_null($validated['price'])) {
-            $validated['price'] = $validated['selling_price'];
+
+        if ($validated['category'] === 'freebie') {
+            $validated['cost_price'] = (float) ($validated['cost_price'] ?? 0);
+            $validated['selling_price'] = (float) ($validated['selling_price'] ?? 0);
+            $validated['price'] = 0;
+        } else {
+            // If price is not provided, use selling_price as the price
+            if (!isset($validated['price']) || is_null($validated['price'])) {
+                $validated['price'] = $validated['selling_price'];
+            }
         }
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('products');
+            $validated['image'] = $request->file('image')->store('products', 'public');
         }
 
         DB::transaction(function () use ($validated) {
@@ -181,8 +209,8 @@ class ProductController extends Controller
             'requires_exchange'    => 'nullable|boolean',
             'description'    => 'nullable|string',
             'price'          => 'nullable|numeric|min:0',
-            'cost_price'     => 'required|numeric|min:0',
-            'selling_price'  => 'required|numeric|min:0',
+            'cost_price'     => 'required_unless:category,freebie|nullable|numeric|min:0',
+            'selling_price'  => 'required_unless:category,freebie|nullable|numeric|min:0',
             'stock'          => 'nullable|integer|min:0',
             'weight'         => 'nullable|string|max:255',
             'image'          => 'nullable|image|max:2048',
@@ -196,13 +224,20 @@ class ProductController extends Controller
             unset($validated['requires_exchange']);
         }
         $validated['is_active'] = $request->boolean('is_active');
-        // If price is not provided, use selling_price as the price
-        if (!isset($validated['price']) || is_null($validated['price'])) {
-            $validated['price'] = $validated['selling_price'];
+
+        if ($validated['category'] === 'freebie') {
+            $validated['cost_price'] = (float) ($validated['cost_price'] ?? 0);
+            $validated['selling_price'] = (float) ($validated['selling_price'] ?? 0);
+            $validated['price'] = 0;
+        } else {
+            // If price is not provided, use selling_price as the price
+            if (!isset($validated['price']) || is_null($validated['price'])) {
+                $validated['price'] = $validated['selling_price'];
+            }
         }
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('products');
+            $validated['image'] = $request->file('image')->store('products', 'public');
         }
 
         DB::transaction(function () use ($product, $validated) {
@@ -310,7 +345,7 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('freebies');
+            $validated['image'] = $request->file('image')->store('freebies', 'public');
         }
 
         $validated['reward_points_required'] = (int) ($validated['reward_points_required'] ?? 0);
@@ -344,7 +379,7 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('freebies');
+            $validated['image'] = $request->file('image')->store('freebies', 'public');
         }
 
         $validated['reward_points_required'] = (int) ($validated['reward_points_required'] ?? 0);

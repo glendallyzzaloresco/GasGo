@@ -46,6 +46,30 @@
     </div>
 </div>
 
+<!-- Vehicle Information -->
+@php
+    $riderInfo = auth()->user()->rider;
+@endphp
+<div class="rider-card mb-3">
+    <h6 class="fw-bold mb-3" style="color:var(--gasgo-blue);"><i class="fas fa-motorcycle me-2" style="color:var(--gasgo-orange);"></i>Vehicle & Delivery Info</h6>
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label class="text-muted" style="font-size:.78rem;">Vehicle Type</label>
+            <div class="fw-bold" style="font-size:.9rem;color:#475569;">
+                <i class="fas fa-truck-pickup me-1 text-primary"></i>{{ $riderInfo->vehicle_type ?? 'Motorcycle' }}
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="text-muted" style="font-size:.78rem;">Plate Number</label>
+            <div class="fw-bold" style="font-size:.9rem;color:#475569;">{{ $riderInfo->plate_number ?? 'Not provided' }}</div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="text-muted" style="font-size:.78rem;">License Number</label>
+            <div class="fw-bold" style="font-size:.9rem;color:#475569;">{{ $riderInfo->license_number ?? 'Not provided' }}</div>
+        </div>
+    </div>
+</div>
+
 <!-- Actions -->
 <div class="d-flex flex-column gap-2 mb-4">
     <button class="btn btn-lg" style="background:var(--gasgo-blue);color:#fff;border-radius:12px;font-weight:600;" data-bs-toggle="modal" data-bs-target="#editProfileModal">
@@ -55,31 +79,53 @@
 
 <!-- Edit Profile Modal -->
 <div class="modal fade" id="editProfileModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content" style="border-radius:16px;">
             <div class="modal-header" style="border-bottom:none;">
-                <h6 class="modal-title fw-bold" style="color:var(--gasgo-blue);">Edit Profile</h6>
+                <h6 class="modal-title fw-bold" style="color:var(--gasgo-blue);"><i class="fas fa-user-edit me-2"></i>Edit Profile & Vehicle Information</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="editForm" method="POST" action="{{ route('rider.profile.update') }}">
                 @csrf
                 @method('PUT')
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Full Name</label>
-                        <input type="text" name="name" class="form-control" value="{{ auth()->user()->name }}" required style="border-radius:10px;">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Email Address</label>
-                        <input type="email" name="email" class="form-control" value="{{ auth()->user()->email }}" required style="border-radius:10px;">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Phone Number</label>
-                        <input type="text" name="phone" class="form-control" value="{{ auth()->user()->phone ?? '' }}" placeholder="09XX-XXX-XXXX" style="border-radius:10px;">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Address</label>
-                        <textarea name="address" class="form-control" rows="3" placeholder="Enter your address" style="border-radius:10px;">{{ auth()->user()->address ?? '' }}</textarea>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Full Name</label>
+                            <input type="text" name="name" class="form-control" value="{{ auth()->user()->name }}" required style="border-radius:10px;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Email Address</label>
+                            <input type="email" name="email" class="form-control" value="{{ auth()->user()->email }}" required style="border-radius:10px;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Phone Number</label>
+                            <input type="text" name="phone" class="form-control" value="{{ auth()->user()->phone ?? '' }}" placeholder="09XX-XXX-XXXX" style="border-radius:10px;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Vehicle Type</label>
+                            <select name="vehicle_type" class="form-select" style="border-radius:10px;">
+                                @php $currentVehicle = $riderInfo->vehicle_type ?? 'Motorcycle'; @endphp
+                                <option value="Motorcycle" {{ $currentVehicle === 'Motorcycle' ? 'selected' : '' }}>Motorcycle</option>
+                                <option value="Motorcycle with Sidecar (Tricycle)" {{ in_array($currentVehicle, ['Motorcycle with Sidecar (Tricycle)', 'Tricycle', 'Motorcycle with Sidecar']) ? 'selected' : '' }}>Motorcycle with Sidecar (Tricycle)</option>
+                                <option value="E-Bike" {{ $currentVehicle === 'E-Bike' ? 'selected' : '' }}>E-Bike</option>
+                                <option value="Multicab" {{ $currentVehicle === 'Multicab' ? 'selected' : '' }}>Multicab</option>
+                                <option value="Delivery Van" {{ in_array($currentVehicle, ['Delivery Van', 'Van']) ? 'selected' : '' }}>Delivery Van</option>
+                                <option value="Truck" {{ $currentVehicle === 'Truck' ? 'selected' : '' }}>Truck</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Plate Number</label>
+                            <input type="text" name="plate_number" class="form-control" value="{{ $riderInfo->plate_number ?? '' }}" placeholder="e.g. ABC 1234" style="border-radius:10px;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Driver's License Number</label>
+                            <input type="text" name="license_number" class="form-control" value="{{ $riderInfo->license_number ?? '' }}" placeholder="e.g. N01-12-345678" style="border-radius:10px;">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Address</label>
+                            <textarea name="address" class="form-control" rows="2" placeholder="Enter your address" style="border-radius:10px;">{{ auth()->user()->address ?? '' }}</textarea>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer" style="border-top:none;">

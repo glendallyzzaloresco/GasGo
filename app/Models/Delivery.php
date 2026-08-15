@@ -33,6 +33,25 @@ class Delivery extends Model
         ];
     }
 
+    public function getProofPhotoUrlAttribute(): ?string
+    {
+        if (blank($this->proof_photo)) {
+            return null;
+        }
+
+        $path = ltrim($this->proof_photo, '/');
+
+        if (filter_var($this->proof_photo, FILTER_VALIDATE_URL)) {
+            return $this->proof_photo;
+        }
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            return \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+        }
+
+        return asset('storage/' . $path);
+    }
+
     // ── Relationships ──
 
     public function order()

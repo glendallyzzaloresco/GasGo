@@ -340,9 +340,11 @@
                             <label class="form-label fw-bold" style="font-size:.88rem;">Vehicle Type</label>
                             <select name="vehicle_type" class="form-select" style="border-radius:10px;">
                                 <option value="Motorcycle">Motorcycle</option>
-                                <option value="Tricycle">Tricycle</option>
-                                <option value="Bicycle">Bicycle</option>
-                                <option value="Van / Multicab">Van / Multicab</option>
+                                <option value="Motorcycle with Sidecar (Tricycle)">Motorcycle with Sidecar (Tricycle)</option>
+                                <option value="E-Bike">E-Bike</option>
+                                <option value="Multicab">Multicab</option>
+                                <option value="Delivery Van">Delivery Van</option>
+                                <option value="Truck">Truck</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -410,9 +412,11 @@
                             <label class="form-label fw-bold" style="font-size:.88rem;">Vehicle Type</label>
                             <select id="editVehicleType" name="vehicle_type" class="form-select" style="border-radius:10px;">
                                 <option value="Motorcycle">Motorcycle</option>
-                                <option value="Tricycle">Tricycle</option>
-                                <option value="Bicycle">Bicycle</option>
-                                <option value="Van / Multicab">Van / Multicab</option>
+                                <option value="Motorcycle with Sidecar (Tricycle)">Motorcycle with Sidecar (Tricycle)</option>
+                                <option value="E-Bike">E-Bike</option>
+                                <option value="Multicab">Multicab</option>
+                                <option value="Delivery Van">Delivery Van</option>
+                                <option value="Truck">Truck</option>
                             </select>
                         </div>
                         <div class="col-md-6">

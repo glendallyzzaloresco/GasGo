@@ -32,6 +32,11 @@ class Freebie extends Model
      */
     public function getImageUrlAttribute()
     {
+        return $this->resolved_image ?? asset('images/default-product.png');
+    }
+
+    public function getResolvedImageAttribute()
+    {
         if ($this->image) {
             if (str_starts_with($this->image, 'http://') || str_starts_with($this->image, 'https://')) {
                 return $this->image;
@@ -47,8 +52,13 @@ class Freebie extends Model
                 $normalized = substr($normalized, 8);
             }
 
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($normalized)) {
+                return \Illuminate\Support\Facades\Storage::disk('public')->url($normalized);
+            }
+
             return \Illuminate\Support\Facades\Storage::url($normalized);
         }
-        return asset('images/default-product.png');
+
+        return null;
     }
 }

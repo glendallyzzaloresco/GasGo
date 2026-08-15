@@ -61,48 +61,83 @@
 
     @media (max-width: 767.98px) {
         .cart-item {
-            flex-wrap: wrap;
-            padding: 16px 14px;
-            gap: 10px;
-            position: relative;
+            display: grid;
+            grid-template-columns: 24px 70px 1fr 32px;
+            grid-template-areas:
+                "check img details delete"
+                "check img qty subtotal";
+            padding: 14px 12px;
+            gap: 10px 8px;
+            align-items: center;
+        }
+        .cart-item input[type="checkbox"] {
+            grid-area: check;
+            width: 22px;
+            height: 22px;
         }
         .cart-item img {
-            width: 60px;
-            height: 60px;
+            grid-area: img;
+            width: 70px;
+            height: 70px;
+            border-radius: 10px;
         }
         .cart-item .item-details {
-            min-width: calc(100% - 120px);
-            padding-right: 28px;
+            grid-area: details;
+            min-width: 0;
+            padding-right: 0;
+        }
+        .cart-item .item-name {
+            font-size: .88rem;
+            line-height: 1.25;
+            margin-bottom: 2px;
+        }
+        .cart-item .item-price {
+            font-size: .88rem;
         }
         .qty-control {
-            margin-left: 36px;
+            grid-area: qty;
+            margin-left: 0;
+            display: inline-flex;
+            height: 36px;
         }
         .qty-control button {
-            width: 42px;
-            height: 42px;
-            font-size: 1.1rem;
+            width: 34px;
+            height: 36px;
+            font-size: .95rem;
         }
         .qty-control span {
-            width: 42px;
-            font-size: 1.05rem;
+            width: 32px;
+            font-size: .9rem;
         }
         .cart-item .item-subtotal {
-            margin-left: auto;
-            font-size: 1.1rem;
+            grid-area: subtotal;
+            font-size: .95rem;
+            font-weight: 700;
+            color: var(--gasgo-orange);
+            text-align: right;
+            margin-left: 0;
             min-width: auto;
         }
         .remove-btn {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            padding: 8px;
-            font-size: 1.2rem;
-            color: #999;
+            grid-area: delete;
+            position: static;
+            padding: 4px;
+            font-size: 1.1rem;
+            color: #bbb;
+            text-align: right;
         }
         .cart-summary {
             position: static;
-            margin-top: 20px;
-            padding: 20px;
+            margin-top: 16px;
+            padding: 18px 16px;
+            border-radius: 16px;
+        }
+        .btn-gasgo, .btn-gasgo-outline {
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
         }
     }
 

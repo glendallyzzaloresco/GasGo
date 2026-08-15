@@ -392,7 +392,7 @@ class LoyaltyController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('freebies');
+            $validated['image'] = $request->file('image')->store('freebies', 'public');
         }
 
         $validated['category'] = $request->input('category', 'Rewards');
@@ -417,7 +417,7 @@ class LoyaltyController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('freebies');
+            $validated['image'] = $request->file('image')->store('freebies', 'public');
         }
 
         $validated['category'] = $request->input('category', $reward->category ?: 'Rewards');

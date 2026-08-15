@@ -24,6 +24,10 @@ class SalesForecastService
 
         $products = Product::query()
             ->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereNull('category')
+                  ->orWhereRaw('LOWER(category) != ?', ['freebie']);
+            })
             ->orderBy('name')
             ->get(['id', 'name', 'category']);
 
@@ -171,7 +175,11 @@ class SalesForecastService
             ->leftJoin('users as u', 'u.id', '=', 'o.user_id')
             ->where('sm.full_out', '>', 0)
             ->whereNotNull('o.id')
-            ->whereIn('o.status', ['delivered', 'completed']);
+            ->whereIn('o.status', ['delivered', 'completed'])
+            ->where(function ($q) {
+                $q->whereNull('p.category')
+                  ->orWhereRaw('LOWER(p.category) != ?', ['freebie']);
+            });
     }
 
     private function applyMovementDateRange(Builder $query, Carbon $start, Carbon $end): Builder
