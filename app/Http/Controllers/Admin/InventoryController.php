@@ -359,57 +359,81 @@ class InventoryController extends Controller
     {
         $validated = $request->validate([
             'quantity_change' => 'required|integer|min:1',
-            'type' => 'required|in:stock_in,stock_out,sale,damage,return',
+            'type' => 'required|in:stock_in,stock_out,empty_in,empty_out,sale,damage,return',
             'notes' => 'nullable|string|max:255',
             'movement_date' => 'nullable|string',
         ]);
 
         $isCylinderProduct = $inventory->product?->isCylinder() ? true : false;
 
-        if (!$isCylinderProduct && $request->filled('empty_on_hand')) {
-            throw new \RuntimeException('Empty cylinder counts can only be modified for cylinder products.');
-        }
-
         // Always use server's current time for consistency
         $movementDate = now();
         
-        $quantityChange = $validated['quantity_change'];
+        $quantityChange = (int) $validated['quantity_change'];
         $type = $validated['type'];
 
         DB::transaction(function () use ($inventory, $type, $quantityChange, $movementDate, $validated, $isCylinderProduct) {
             $inventory = Inventory::whereKey($inventory->id)->lockForUpdate()->firstOrFail();
 
-            $emptyOutQuantity = 0;
+            $fullIn = 0;
+            $fullOut = 0;
+            $emptyIn = 0;
+            $emptyOut = 0;
 
             if ($type === 'stock_in') {
                 $inventory->increment('quantity_on_hand', $quantityChange);
                 $inventory->update(['last_restocked' => $movementDate]);
-
-                if ($isCylinderProduct) {
-                    $emptyOutQuantity = min($quantityChange, max((int) $inventory->empty_on_hand, 0));
-                    if ($emptyOutQuantity > 0) {
-                        $inventory->decrement('empty_on_hand', $emptyOutQuantity);
-                    }
-                }
-            } else {
+                $fullIn = $quantityChange;
+            } elseif ($type === 'stock_out') {
                 if ((int) $inventory->quantity_on_hand < $quantityChange) {
                     throw new \RuntimeException('Insufficient stock for this adjustment.');
                 }
                 $inventory->decrement('quantity_on_hand', $quantityChange);
-            }
-
-            if (!$isCylinderProduct) {
-                $inventory->forceFill(['empty_on_hand' => $inventory->empty_on_hand]);
+                $fullOut = $quantityChange;
+            } elseif ($type === 'empty_in') {
+                if (!$isCylinderProduct) {
+                    throw new \RuntimeException('Empty cylinder tracking only applies to cylinders.');
+                }
+                $inventory->increment('empty_on_hand', $quantityChange);
+                $emptyIn = $quantityChange;
+            } elseif ($type === 'empty_out') {
+                if (!$isCylinderProduct) {
+                    throw new \RuntimeException('Empty cylinder tracking only applies to cylinders.');
+                }
+                if ((int) $inventory->empty_on_hand < $quantityChange) {
+                    throw new \RuntimeException('Insufficient empty cylinders on hand for this adjustment.');
+                }
+                $inventory->decrement('empty_on_hand', $quantityChange);
+                $emptyOut = $quantityChange;
+            } elseif ($type === 'return') {
+                $inventory->increment('quantity_on_hand', $quantityChange);
+                $fullIn = $quantityChange;
+            } elseif ($type === 'damage') {
+                if ((int) $inventory->quantity_on_hand < $quantityChange) {
+                    throw new \RuntimeException('Insufficient stock for this adjustment.');
+                }
+                $inventory->decrement('quantity_on_hand', $quantityChange);
+                $fullOut = $quantityChange;
+            } elseif ($type === 'sale') {
+                if ((int) $inventory->quantity_on_hand < $quantityChange) {
+                    throw new \RuntimeException('Insufficient stock for this adjustment.');
+                }
+                $inventory->decrement('quantity_on_hand', $quantityChange);
+                $fullOut = $quantityChange;
+                if ($isCylinderProduct) {
+                    $inventory->increment('empty_on_hand', $quantityChange);
+                    $emptyIn = $quantityChange;
+                }
             }
 
             StockMovement::create([
                 'inventory_id' => $inventory->id,
-                'full_in' => $type === 'stock_in' || $type === 'return' ? $quantityChange : 0,
-                'full_out' => $type === 'stock_in' || $type === 'return' ? 0 : $quantityChange,
-                'empty_in' => 0,
-                'empty_out' => $emptyOutQuantity,
+                'full_in' => $fullIn,
+                'full_out' => $fullOut,
+                'empty_in' => $emptyIn,
+                'empty_out' => $emptyOut,
                 'type' => $type,
-                'notes' => $validated['notes'],
+                'notes' => $validated['notes'] ?? null,
                 'movement_date' => $movementDate,
                 'created_by' => Auth::id(),
             ]);

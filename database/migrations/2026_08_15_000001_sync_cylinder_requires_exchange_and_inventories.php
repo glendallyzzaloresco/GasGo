@@ -72,6 +72,23 @@ return new class extends Migration {
                 ]);
             }
         }
+
+        // 4. Sync empty_on_hand for cylinder inventories based on stock movements
+        $cylinderInventories = DB::table('inventory')
+            ->join('products', 'inventory.product_id', '=', 'products.id')
+            ->where('products.requires_exchange', true)
+            ->select('inventory.id', 'inventory.product_id', 'inventory.empty_on_hand')
+            ->get();
+
+        foreach ($cylinderInventories as $inv) {
+            $sumEmptyIn = (int) DB::table('stock_movements')->where('inventory_id', $inv->id)->sum('empty_in');
+            $sumEmptyOut = (int) DB::table('stock_movements')->where('inventory_id', $inv->id)->sum('empty_out');
+            $calculatedEmpty = max(0, $sumEmptyIn - $sumEmptyOut);
+
+            if ($calculatedEmpty > 0 && $inv->empty_on_hand == 0) {
+                DB::table('inventory')->where('id', $inv->id)->update(['empty_on_hand' => $calculatedEmpty]);
+            }
+        }
     }
 
     /**
