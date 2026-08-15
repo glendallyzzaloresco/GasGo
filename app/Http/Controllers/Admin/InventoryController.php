@@ -24,7 +24,7 @@ class InventoryController extends Controller
         $productsWithoutInventory = Product::whereDoesntHave('inventory')
             ->where(function ($q) {
                 $q->whereNull('category')
-                  ->orWhereRaw('LOWER(category) != ?', ['freebie']);
+                    ->orWhereRaw('LOWER(category) != ?', ['freebie']);
             })
             ->get();
 
@@ -76,18 +76,18 @@ class InventoryController extends Controller
 
         // Get all inventories without pagination first for custom sorting
         $allInventories = $query->get();
-        
+
         // Determine sorting method
         $sortBy = $request->input('sort_by', 'name_asc');
-        
-        $sorted = $allInventories->sortBy(function($item) use ($sortBy) {
+
+        $sorted = $allInventories->sortBy(function ($item) use ($sortBy) {
             $name = strtolower($item->product->name ?? '');
             $category = strtolower($item->product->category ?? '');
-            
-            switch($sortBy) {
+
+            switch ($sortBy) {
                 case 'name_asc':
                     return $name;
-                    
+
                 case 'name_desc':
                     return chr(255) . $name;
 
@@ -96,19 +96,19 @@ class InventoryController extends Controller
 
                 case 'category_desc':
                     return chr(255) . $category . '|' . chr(255) . $name;
-                    
+
                 case 'stock_high':
                     return str_pad(999999 - $item->quantity_on_hand, 10, "0", STR_PAD_LEFT);
-                    
+
                 case 'stock_low':
                     return str_pad($item->quantity_on_hand, 10, "0", STR_PAD_LEFT);
-                    
+
                 case 'lastrestocked_new':
                     return $item->last_restocked ? chr(255) . $item->last_restocked->format('Y-m-d H:i:s') : 'ZZZ';
-                    
+
                 case 'lastrestocked_old':
                     return $item->last_restocked ? $item->last_restocked->format('Y-m-d H:i:s') : 'AAA';
-                    
+
                 case 'stock_level':
                     // Custom method: In Stock, Low Stock, Out of Stock
                     if ($item->quantity_on_hand == 0) {
@@ -142,7 +142,7 @@ class InventoryController extends Controller
         // Get today's summary data
         $today = Carbon::now()->startOfDay();
         $todayEnd = Carbon::now()->endOfDay();
-        
+
         // Today's stock received (include historical purchase aliases; fallback to created_at if movement_date is missing)
         $stockReceived = StockMovement::whereIn('type', ['stock_in', 'purchase'])
             ->whereBetween(
@@ -152,7 +152,7 @@ class InventoryController extends Controller
             ->with('inventory.product')
             ->orderByRaw('COALESCE(movement_date, created_at) DESC')
             ->get();
-        
+
         // Today's total stock received
         $totalStockReceived = $stockReceived->sum('full_in');
 
@@ -190,12 +190,12 @@ class InventoryController extends Controller
             $search = '%' . $request->input('movement_search') . '%';
             $movementsQuery->where(function ($q) use ($search) {
                 $q->where('reference', 'like', $search)
-                  ->orWhere('notes', 'like', $search);
+                    ->orWhere('notes', 'like', $search);
             });
         }
 
         $recentStockMovements = $movementsQuery->limit(20)->get();
-        
+
         // Get current empty tanks count for cylinder products with latest delivery date
         $deliveryDates = \Illuminate\Support\Facades\DB::table('deliveries')
             ->join('orders', 'deliveries.order_id', '=', 'orders.id')
@@ -207,36 +207,36 @@ class InventoryController extends Controller
                     $q->where('products.requires_exchange', true);
                 }
                 $q->orWhereRaw('LOWER(products.category) IN (?, ?, ?, ?)', ['tank', 'tanks', 'cylinder', 'cylinders'])
-                  ->orWhere('products.name', 'LIKE', '%Tank%')
-                  ->orWhere('products.name', 'LIKE', '%Cylinder%');
+                    ->orWhere('products.name', 'LIKE', '%Tank%')
+                    ->orWhere('products.name', 'LIKE', '%Cylinder%');
             })
             ->whereRaw('LOWER(COALESCE(products.category, "")) NOT IN (?, ?, ?)', ['accessories', 'appliances', 'freebie'])
             ->selectRaw('products.id as product_id, MAX(deliveries.updated_at) as latest_delivery_date')
             ->groupBy('products.id')
             ->pluck('latest_delivery_date', 'product_id');
-        
-        $emptyTanksReturned = Inventory::whereHas('product', function($q) {
+
+        $emptyTanksReturned = Inventory::whereHas('product', function ($q) {
             $q->cylinders();
         })
-        ->where('empty_on_hand', '>', 0)
-        ->with('product')
-        ->orderBy('empty_on_hand', 'desc')
-        ->get();
-        
+            ->where('empty_on_hand', '>', 0)
+            ->with('product')
+            ->orderBy('empty_on_hand', 'desc')
+            ->get();
+
         // Attach delivery dates to each inventory record
-        $emptyTanksReturned = $emptyTanksReturned->map(function($inv) use ($deliveryDates) {
+        $emptyTanksReturned = $emptyTanksReturned->map(function ($inv) use ($deliveryDates) {
             $inv->delivery_date = $deliveryDates[$inv->product_id] ?? null;
             return $inv;
         });
-        
+
         // Total empty tanks
         $totalEmptyReturned = $emptyTanksReturned->sum('empty_on_hand');
 
         // Date filter for empty tank returns (show actual inventory.empty_on_hand)
         $selectedEmptyDate = $request->input('empty_date');
-        
+
         $emptyTankReturnsQuery = Inventory::with('product')
-            ->whereHas('product', function($q) {
+            ->whereHas('product', function ($q) {
                 $q->cylinders();
             })
             ->where('empty_on_hand', '>', 0);
@@ -245,12 +245,12 @@ class InventoryController extends Controller
             try {
                 $normalizedDate = Carbon::parse($selectedEmptyDate)->toDateString();
                 $selectedEmptyDate = $normalizedDate;
-                
+
                 // Filter by deliveries that were updated on the selected date
-                $emptyTankReturnsQuery->whereHas('product.orders', function($q) use ($normalizedDate) {
-                    $q->whereHas('delivery', function($dq) use ($normalizedDate) {
+                $emptyTankReturnsQuery->whereHas('product.orders', function ($q) use ($normalizedDate) {
+                    $q->whereHas('delivery', function ($dq) use ($normalizedDate) {
                         $dq->where('status', 'delivered')
-                           ->whereDate('updated_at', $normalizedDate);
+                            ->whereDate('updated_at', $normalizedDate);
                     });
                 });
             } catch (\Exception $e) {
@@ -261,7 +261,7 @@ class InventoryController extends Controller
         $emptyTankReturnsByDate = $emptyTankReturnsQuery
             ->orderBy('empty_on_hand', 'desc')
             ->get()
-            ->map(function($inv) {
+            ->map(function ($inv) {
                 return (object) [
                     'product_id' => $inv->product_id,
                     'product_name' => $inv->product->name,
@@ -368,7 +368,7 @@ class InventoryController extends Controller
 
         // Always use server's current time for consistency
         $movementDate = now();
-        
+
         $quantityChange = (int) $validated['quantity_change'];
         $type = $validated['type'];
 
@@ -435,17 +435,14 @@ class InventoryController extends Controller
                 'type' => $type,
                 'notes' => $validated['notes'] ?? null,
                 'movement_date' => $movementDate,
-                'created_by' => Auth::id(),
+                'created_by' => Auth::id() ?? 1,
             ]);
         });
 
         return back()->with('success', 'Stock adjusted successfully. Movement recorded.');
     }
 
-    /**
-     * Mark a previously completed "new_cylinder" movement as returned.
-     * Creates an empty_in StockMovement and increments inventory.empty_on_hand.
-     */
+
     public function markCylinderReturned(Request $request, \App\Models\StockMovement $movement)
     {
         $user = Auth::user();
@@ -477,7 +474,7 @@ class InventoryController extends Controller
             ->where('inventory_id', $inventory->id)
             ->where(function ($q) use ($movement) {
                 $q->where('reference', $movement->reference)
-                  ->orWhere('notes', 'like', '%returned for ' . $movement->reference . '%');
+                    ->orWhere('notes', 'like', '%returned for ' . $movement->reference . '%');
             })
             ->where('empty_in', '>', 0)
             ->exists();
