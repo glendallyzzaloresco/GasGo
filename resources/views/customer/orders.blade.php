@@ -162,7 +162,7 @@
                 @endphp
                 <div class="order-item-row @if($item->is_reward) reward-item @endif">
                     @if($itemImage)
-                        <img src="{{ $itemImage }}" alt="{{ $item->product_name }}">
+                        <img src="{{ $itemImage }}" alt="{{ $item->product_name }}" onerror="this.onerror=null;this.src='{{ asset('images/default-product.png') }}';">
                     @else
                         <div class="text-muted small" style="padding: 8px; background: #f8f9fa; border-radius: 8px; min-width: 60px; display: flex; align-items: center; justify-content: center;">
                             No image

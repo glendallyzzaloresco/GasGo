@@ -81,16 +81,31 @@ class Product extends Model
      */
     public function getIsCylinderAttribute($value): bool
     {
-        if (array_key_exists('requires_exchange', $this->attributes)) {
-            return $this->attributes['requires_exchange'];
+        if (!empty($this->attributes['requires_exchange'])) {
+            return true;
         }
 
-        // If not set, check the category as fallback
-        if ($this->relationLoaded('category') && $this->category) {
-            return $this->category->slug === 'lpg-tanks';
+        if (!empty($this->attributes['is_cylinder'])) {
+            return true;
         }
 
-        // Default to false if we can't determine
+        $cat = strtolower(trim((string) ($this->attributes['category'] ?? '')));
+        if (in_array($cat, ['tank', 'cylinder', 'lpg', 'lpg-tanks', 'tanks', 'cylinders'], true)) {
+            return true;
+        }
+
+        $name = strtolower(trim((string) ($this->attributes['name'] ?? '')));
+        if (str_contains($name, 'tank') || str_contains($name, 'cylinder') || str_contains($name, 'lpg')) {
+            // Freebies or accessories named like "Free LPG Tank" or "LPG Regulator" check
+            if ($cat === 'accessories') {
+                return false;
+            }
+            if (str_contains($name, 'regulator') || str_contains($name, 'hose') || str_contains($name, 'hanger') || str_contains($name, 'paste')) {
+                return false;
+            }
+            return true;
+        }
+
         return false;
     }
 
@@ -100,7 +115,7 @@ class Product extends Model
      */
     public function setRequiresExchangeAttribute($value)
     {
-        $this->attributes['requires_exchange'] = $value;
+        $this->attributes['requires_exchange'] = (bool) $value;
     }
 
     /**
@@ -108,22 +123,27 @@ class Product extends Model
      */
     public function isCylinder(): bool
     {
-        return (bool) ($this->requires_exchange ?? $this->is_cylinder ?? false);
+        return (bool) $this->is_cylinder;
     }
 
     /**
      * Apply the exchange-product filter using requires_exchange when available.
-     * Falls back to category filter otherwise.
+     * Falls back to category/name filter otherwise.
      */
     public function scopeCylinders($query)
     {
-        $table = $query->getModel()->getTable();
-
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'requires_exchange')) {
-            return $query->where('requires_exchange', true);
-        }
-
-        return $query->whereRaw('LOWER(category) = ?', ['tank']);
+        return $query->where(function ($q) {
+            $table = $q->getModel()->getTable();
+            if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'requires_exchange')) {
+                $q->where('requires_exchange', true);
+            }
+            $q->orWhereRaw('LOWER(category) IN (?, ?, ?, ?, ?)', ['tank', 'cylinder', 'lpg', 'lpg-tanks', 'tanks'])
+              ->orWhere('name', 'LIKE', '%Tank%')
+              ->orWhere('name', 'LIKE', '%Cylinder%');
+        })->where(function ($q) {
+            $q->whereRaw('LOWER(category) != ?', ['accessories'])
+              ->orWhereNull('category');
+        });
     }
 
     /**
@@ -141,7 +161,7 @@ class Product extends Model
     {
         $path = $this->image;
         if (empty($path)) {
-            return null;
+            return asset('images/default-product.png');
         }
 
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
@@ -156,6 +176,18 @@ class Product extends Model
 
         if (str_starts_with($normalized, 'storage/')) {
             $normalized = substr($normalized, 8);
+        }
+
+        if (file_exists(public_path('storage/' . $normalized))) {
+            return asset('storage/' . $normalized);
+        }
+
+        if (file_exists(storage_path('app/public/' . $normalized))) {
+            return asset('storage/' . $normalized);
+        }
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($normalized)) {
+            return \Illuminate\Support\Facades\Storage::disk('public')->url($normalized);
         }
 
         return \Illuminate\Support\Facades\Storage::url($normalized);

@@ -141,6 +141,10 @@
                             <span class="badge" style="background:#fff5e6;color:#e07d0a;font-size:.85rem;font-weight:600;padding:6px 12px;">
                                 <i class="fas fa-plus-circle me-1"></i>New Cylinder
                             </span>
+                        @elseif($txType === 'not_tank')
+                            <span class="badge" style="background:#f1f5f9;color:#64748b;font-size:.85rem;font-weight:600;padding:6px 12px;">
+                                <i class="fas fa-box me-1"></i>Non-Cylinder Item
+                            </span>
                         @else
                             <span class="badge" style="background:#f1f5f9;color:#475569;font-size:.85rem;font-weight:600;padding:6px 12px;">
                                 <i class="fas fa-box me-1"></i>{{ ucfirst(str_replace('_', ' ', $txType)) }}
@@ -179,7 +183,7 @@
                             <tr>
                                 <td>
                                     <div style="width:48px;height:48px;border-radius:10px;background:#f8f9fa;border:1px solid #eee;overflow:hidden;display:flex;align-items:center;justify-content:center;">
-                                        <img src="{{ $itemImg }}" alt="{{ $item->product_name }}" style="width:100%;height:100%;object-fit:cover;">
+                                        <img src="{{ $itemImg }}" alt="{{ $item->product_name }}" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null;this.src='{{ asset('images/default-product.png') }}';">
                                     </div>
                                 </td>
                                 <td>
@@ -334,7 +338,7 @@
                 @if(!empty($selectedPaymentMethod['image_url']))
                     <div class="detail-col" style="flex:0 0 auto; min-width:auto;">
                         <div style="width:64px;height:64px;border:1px solid #dee2e6;border-radius:12px;padding:6px;background:#fff;overflow:hidden;display:flex;align-items:center;justify-content:center;">
-                            <img src="{{ $selectedPaymentMethod['image_url'] }}" alt="{{ $selectedPaymentMethod['label'] ?? '' }}" style="width:100%;height:100%;object-fit:contain;">
+                            <img src="{{ $selectedPaymentMethod['image_url'] }}" alt="{{ $selectedPaymentMethod['label'] ?? '' }}" style="width:100%;height:100%;object-fit:contain;" onerror="this.parentElement.parentElement.style.display='none';">
                         </div>
                     </div>
                 @endif

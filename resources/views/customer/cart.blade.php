@@ -273,11 +273,10 @@
                     @foreach($cartItems as $item)
                         <div class="cart-item" data-product-id="{{ $item->product_id ?? $item->product->id }}" data-quantity="{{ $item->quantity }}" data-unit-price="{{ $item->product->price }}" data-max-stock="{{ $item->product->quantity_on_hand }}" data-product-name="{{ $item->product->name }}">
                             <input type="checkbox" class="item-checkbox" value="{{ $item->product_id ?? $item->product->id }}">
-                            @if($item->product->resolved_image)
-                                <img src="{{ $item->product->resolved_image }}" alt="{{ $item->product->name }}">
-                            @else
-                                <span class="text-muted small">No image available</span>
-                            @endif
+                            @php
+                                $cartItemImage = $item->product->resolved_image ?? asset('images/default-product.png');
+                            @endphp
+                            <img src="{{ $cartItemImage }}" alt="{{ $item->product->name }}" onerror="this.onerror=null;this.src='{{ asset('images/default-product.png') }}';">
                             <div class="item-details">
                                 <div class="item-name">{{ $item->product->name }}</div>
                                 <div class="item-price" data-unit-price="{{ $item->product->price }}">₱{{ number_format($item->product->price, 2) }}</div>
