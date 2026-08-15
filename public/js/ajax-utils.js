@@ -437,12 +437,22 @@ function removeCartItemDisplay(productId) {
     }
 }
 
-// Update cart totals based on remaining items
+// Update cart totals based on remaining/selected items
 function updateCartTotals() {
+    if (typeof window.updateCartTotal === 'function') {
+        window.updateCartTotal();
+        return;
+    }
+
     const cartItems = document.querySelectorAll('.cart-item');
     let subtotal = 0;
     
     cartItems.forEach(item => {
+        const checkbox = item.querySelector('.item-checkbox');
+        if (checkbox && !checkbox.checked) {
+            return;
+        }
+
         const subtotalEl = item.querySelector('.item-subtotal');
         if (subtotalEl) {
             const subtotalText = subtotalEl.textContent.replace('₱', '').replace(/,/g, '');
@@ -450,10 +460,7 @@ function updateCartTotals() {
         }
     });
     
-    const deliveryFee = 50;
-    const total = subtotal + deliveryFee;
-    
-    // Update all summary rows
+    // Update summary rows
     const summaryRows = document.querySelectorAll('.summary-row');
     summaryRows.forEach(row => {
         const firstSpan = row.querySelector('span:first-child');
@@ -466,10 +473,10 @@ function updateCartTotals() {
     });
     
     // Update total
-    const totalElements = document.querySelectorAll('.summary-row.total .value');
-    if (totalElements.length > 0) {
-        totalElements[0].textContent = '₱' + total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    }
+    const totalElements = document.querySelectorAll('.summary-row.total .value, #summary-total');
+    totalElements.forEach(el => {
+        el.textContent = '₱' + subtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    });
 }
 
 // Profile Update AJAX

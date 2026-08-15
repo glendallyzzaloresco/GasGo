@@ -628,7 +628,7 @@ function toggleAllCheckboxes(checked) {
 }
 
 // Update selected count and total in real-time
-function updateCartTotal() {
+window.updateCartTotal = function updateCartTotal() {
     let subtotal = 0;
     const selectedItemsList = document.getElementById('selected-items-list');
     let selectedItemsHTML = '';
