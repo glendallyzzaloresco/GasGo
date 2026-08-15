@@ -965,11 +965,12 @@
                         <label class="form-label fw-semibold">Adjustment Type</label>
                         <select name="type" id="adjustType" class="form-select" required>
                             <option value="">Select type</option>
-                            <option value="stock_in">Stock In</option>
-                            <option value="stock_out">Stock Out</option>
-                            <option value="sale">Sale</option>
-                            <option value="damage">Damage</option>
-                            <option value="return">Return</option>
+                            <option value="stock_in">Stock In (Full Cylinders Received)</option>
+                            <option value="stock_out">Stock Out (Full Cylinders Released)</option>
+                            <option value="empty_in">Empty Cylinders Received (Returned Empties)</option>
+                            <option value="empty_out">Empty Cylinders Released (Sent for Refill)</option>
+                            <option value="return">Customer Return</option>
+                            <option value="damage">Damage / Defective</option>
                         </select>
                     </div>
                     <div class="mb-3">
