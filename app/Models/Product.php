@@ -81,6 +81,21 @@ class Product extends Model
      */
     public function getIsCylinderAttribute($value): bool
     {
+        $name = strtolower(trim((string) ($this->attributes['name'] ?? '')));
+        $cat = strtolower(trim((string) ($this->attributes['category'] ?? '')));
+
+        // Exclude accessories, appliances, freebies and non-tank items
+        if (in_array($cat, ['accessories', 'appliances', 'appliance', 'freebie'], true) ||
+            str_contains($name, 'hanger') ||
+            str_contains($name, 'paste') ||
+            str_contains($name, 'regulator') ||
+            str_contains($name, 'hose') ||
+            str_contains($name, 'clamp') ||
+            str_contains($name, 'stove') ||
+            str_contains($name, 'burner')) {
+            return false;
+        }
+
         if (!empty($this->attributes['requires_exchange'])) {
             return true;
         }
@@ -89,20 +104,11 @@ class Product extends Model
             return true;
         }
 
-        $cat = strtolower(trim((string) ($this->attributes['category'] ?? '')));
         if (in_array($cat, ['tank', 'cylinder', 'lpg', 'lpg-tanks', 'tanks', 'cylinders'], true)) {
             return true;
         }
 
-        $name = strtolower(trim((string) ($this->attributes['name'] ?? '')));
         if (str_contains($name, 'tank') || str_contains($name, 'cylinder') || str_contains($name, 'lpg')) {
-            // Freebies or accessories named like "Free LPG Tank" or "LPG Regulator" check
-            if ($cat === 'accessories') {
-                return false;
-            }
-            if (str_contains($name, 'regulator') || str_contains($name, 'hose') || str_contains($name, 'hanger') || str_contains($name, 'paste')) {
-                return false;
-            }
             return true;
         }
 
