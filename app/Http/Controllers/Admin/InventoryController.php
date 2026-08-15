@@ -20,6 +20,25 @@ class InventoryController extends Controller
      */
     public function index(Request $request)
     {
+        // Auto-ensure all products have an inventory record
+        $productsWithoutInventory = Product::whereDoesntHave('inventory')
+            ->where(function ($q) {
+                $q->whereNull('category')
+                  ->orWhereRaw('LOWER(category) != ?', ['freebie']);
+            })
+            ->get();
+
+        foreach ($productsWithoutInventory as $productWithoutInv) {
+            Inventory::firstOrCreate(
+                ['product_id' => $productWithoutInv->id],
+                [
+                    'quantity_on_hand' => (int) ($productWithoutInv->stock ?? 0),
+                    'empty_on_hand' => 0,
+                    'status' => 'active',
+                ]
+            );
+        }
+
         $query = Inventory::with('product');
 
         // Use normalized categories for filtering/display controls
@@ -139,11 +158,7 @@ class InventoryController extends Controller
 
         $tankMovementQuery = StockMovement::query()
             ->whereHas('inventory.product', function ($query) {
-                if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
-                    $query->where('requires_exchange', true);
-                } else {
-                    $query->whereRaw('LOWER(category) = ?', ['tank']);
-                }
+                $query->cylinders();
             })
             ->whereBetween(DB::raw('COALESCE(movement_date, created_at)'), [$today, $todayEnd]);
 
@@ -186,25 +201,22 @@ class InventoryController extends Controller
             ->join('orders', 'deliveries.order_id', '=', 'orders.id')
             ->join('order_items', 'orders.id', '=', 'order_items.order_id')
             ->join('products', 'order_items.product_id', '=', 'products.id')
-            ->where('deliveries.status', 'delivered');
-
-        if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
-            $deliveryDates->where('products.requires_exchange', true);
-        } else {
-            $deliveryDates->whereRaw('LOWER(products.category) = ?', ['tank']);
-        }
-
-        $deliveryDates = $deliveryDates
+            ->where('deliveries.status', 'delivered')
+            ->where(function ($q) {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
+                    $q->where('products.requires_exchange', true);
+                }
+                $q->orWhereRaw('LOWER(products.category) IN (?, ?, ?, ?)', ['tank', 'tanks', 'cylinder', 'cylinders'])
+                  ->orWhere('products.name', 'LIKE', '%Tank%')
+                  ->orWhere('products.name', 'LIKE', '%Cylinder%');
+            })
+            ->whereRaw('LOWER(COALESCE(products.category, "")) NOT IN (?, ?, ?)', ['accessories', 'appliances', 'freebie'])
             ->selectRaw('products.id as product_id, MAX(deliveries.updated_at) as latest_delivery_date')
             ->groupBy('products.id')
             ->pluck('latest_delivery_date', 'product_id');
         
         $emptyTanksReturned = Inventory::whereHas('product', function($q) {
-            if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
-                $q->where('requires_exchange', true);
-            } else {
-                $q->whereRaw('LOWER(category) = ?', ['tank']);
-            }
+            $q->cylinders();
         })
         ->where('empty_on_hand', '>', 0)
         ->with('product')
@@ -225,11 +237,7 @@ class InventoryController extends Controller
         
         $emptyTankReturnsQuery = Inventory::with('product')
             ->whereHas('product', function($q) {
-                if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
-                    $q->where('requires_exchange', true);
-                } else {
-                    $q->whereRaw('LOWER(category) = ?', ['tank']);
-                }
+                $q->cylinders();
             })
             ->where('empty_on_hand', '>', 0);
 

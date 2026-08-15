@@ -414,18 +414,10 @@
 <div class="container-fluid p-4">
     @php
         $totalFullCylinders = (int) \App\Models\Inventory::whereHas('product', function ($query) {
-            if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
-                $query->where('requires_exchange', true);
-            } else {
-                $query->whereRaw('LOWER(category) = ?', ['tank']);
-            }
+            $query->cylinders();
         })->sum('quantity_on_hand');
         $tankInventoryIds = \App\Models\Inventory::whereHas('product', function ($query) {
-            if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
-                $query->where('requires_exchange', true);
-            } else {
-                $query->whereRaw('LOWER(category) = ?', ['tank']);
-            }
+            $query->cylinders();
         })->pluck('id');
         $totalEmptyCylinders = (int) \App\Models\Inventory::whereIn('id', $tankInventoryIds)->sum('empty_on_hand');
         $totalProducts = (int) \App\Models\Inventory::count();
@@ -467,7 +459,6 @@
                 </div>
             </div>
         </div>
-
         <div class="col-xl-2 col-lg-4 col-md-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">

@@ -27,12 +27,21 @@ class DatabaseSeeder extends Seeder
         );
 
         // Rider account
-        User::firstOrCreate(
+        $riderUser = User::firstOrCreate(
             ['email' => 'rider@gasgo.com'],
             [
                 'name'     => 'Rider',
                 'password' => bcrypt('rider123'),
                 'role'     => 'rider',
+            ]
+        );
+
+        \App\Models\Rider::firstOrCreate(
+            ['user_id' => $riderUser->id],
+            [
+                'availability' => 'available',
+                'vehicle_type' => 'Motorcycle',
+                'plate_number' => 'ABC-1234',
             ]
         );
 
