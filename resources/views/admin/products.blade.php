@@ -522,11 +522,11 @@
                             <label class="mb-1">Product Name</label>
                             <input type="text" class="form-control" name="name" id="productName" placeholder="e.g. Solane 11kg" required>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-3" id="productCostPriceCol">
                             <label class="mb-1">Cost Price (₱)</label>
                             <input type="number" class="form-control" name="cost_price" id="productCostPrice" placeholder="0.00" min="0" step="0.01" required>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-3" id="productSellingPriceCol">
                             <label class="mb-1">Selling Price (₱)</label>
                             <input type="number" class="form-control" name="selling_price" id="productSellingPrice" placeholder="0.00" min="0" step="0.01" required>
                         </div>
@@ -536,7 +536,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="mb-1">Category</label>
-                            <select class="form-select" name="category" id="productCategory" required>
+                            <select class="form-select" name="category" id="productCategory" onchange="handleProductCategoryChange()" required>
                                 <option value="tank">Tank</option>
                                 <option value="accessories">Accessories</option>
                                 <option value="appliances">Appliances</option>
@@ -724,6 +724,26 @@
     }
 
     // Product functions
+    function handleProductCategoryChange() {
+        const category = (document.getElementById('productCategory')?.value || '').toLowerCase();
+        const costCol = document.getElementById('productCostPriceCol');
+        const sellCol = document.getElementById('productSellingPriceCol');
+        const costInput = document.getElementById('productCostPrice');
+        const sellInput = document.getElementById('productSellingPrice');
+        
+        if (category === 'freebie') {
+            if (costCol) costCol.style.display = 'none';
+            if (sellCol) sellCol.style.display = 'none';
+            if (costInput) { costInput.removeAttribute('required'); costInput.value = '0'; }
+            if (sellInput) { sellInput.removeAttribute('required'); sellInput.value = '0'; }
+        } else {
+            if (costCol) costCol.style.display = 'block';
+            if (sellCol) sellCol.style.display = 'block';
+            if (costInput) { costInput.setAttribute('required', 'required'); }
+            if (sellInput) { sellInput.setAttribute('required', 'required'); }
+        }
+    }
+
     function openAddProduct() {
         document.getElementById('productModalTitle').textContent = 'Add New Product';
         document.getElementById('productForm').action = "{{ route('admin.products.store') }}";
@@ -737,6 +757,7 @@
         document.getElementById('productSellingPrice').value = '';
         document.getElementById('productWeight').value = '';
         document.getElementById('prodActive').checked = true;
+        handleProductCategoryChange();
     }
 
     function openEditProduct(button) {
@@ -751,6 +772,7 @@
         document.getElementById('productSellingPrice').value = button.dataset.sellingPrice || '';
         document.getElementById('productWeight').value = button.dataset.weight || '';
         document.getElementById('prodActive').checked = (button.dataset.isActive === '1');
+        handleProductCategoryChange();
     }
     
     function filterProducts() {

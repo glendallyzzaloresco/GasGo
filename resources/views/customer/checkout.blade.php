@@ -301,6 +301,7 @@
                                 data-instructions="{{ $method['instructions'] ?? '' }}"
                                 data-account-name="{{ $method['account_name'] ?? '' }}"
                                 data-account-number="{{ $method['account_number'] ?? '' }}"
+                                data-image-url="{{ $method['image_url'] ?? '' }}"
                                 data-requires-proof="{{ !empty($method['requires_proof']) ? '1' : '0' }}"
                                 style="position:relative;"
                             >

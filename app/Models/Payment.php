@@ -27,6 +27,25 @@ class Payment extends Model
         ];
     }
 
+    public function getProofImageUrlAttribute(): ?string
+    {
+        if (blank($this->proof_of_payment)) {
+            return null;
+        }
+
+        $path = ltrim($this->proof_of_payment, '/');
+
+        if (filter_var($this->proof_of_payment, FILTER_VALIDATE_URL)) {
+            return $this->proof_of_payment;
+        }
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            return \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+        }
+
+        return asset('storage/' . $path);
+    }
+
     // ── Relationships ──
 
     public function order()

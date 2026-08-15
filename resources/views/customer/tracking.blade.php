@@ -426,6 +426,37 @@
 
                 <!-- Delivery Details -->
                 <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted" style="font-size:.88rem;">Transaction Type</span>
+                        <div>
+                            @php
+                                $txType = $order->transaction_type ?? 'exchange';
+                            @endphp
+                            @if($txType === 'exchange')
+                                <span class="badge" style="background:#e8f4fc;color:#1a6db0;font-size:.78rem;font-weight:600;padding:4px 10px;">
+                                    <i class="fas fa-exchange-alt me-1"></i>Exchange
+                                </span>
+                            @elseif($txType === 'new_cylinder')
+                                <span class="badge" style="background:#fff5e6;color:#e07d0a;font-size:.78rem;font-weight:600;padding:4px 10px;">
+                                    <i class="fas fa-plus-circle me-1"></i>New Cylinder
+                                </span>
+                            @else
+                                <span class="badge" style="background:#f1f5f9;color:#475569;font-size:.78rem;font-weight:600;padding:4px 10px;">
+                                    <i class="fas fa-box me-1"></i>{{ ucfirst(str_replace('_', ' ', $txType)) }}
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted" style="font-size:.88rem;">Recipient</span>
+                        <span class="fw-bold text-end" style="font-size:.88rem;">{{ $order->customer_name ?: ($order->user?->name ?? 'Customer') }}</span>
+                    </div>
+                    @if($order->contact_number)
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted" style="font-size:.88rem;">Contact</span>
+                        <span class="fw-bold" style="font-size:.88rem;">{{ $order->contact_number }}</span>
+                    </div>
+                    @endif
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted" style="font-size:.88rem;">Payment</span>
                         <span class="fw-bold" style="font-size:.88rem;">{{ ucfirst($order->payment_method) }}</span>
@@ -434,6 +465,12 @@
                         <span class="text-muted" style="font-size:.88rem;">Delivery To</span>
                         <span class="fw-bold text-end" style="font-size:.82rem;max-width:60%;">{{ $order->delivery_address }}</span>
                     </div>
+                    @if($order->notes)
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted" style="font-size:.88rem;">Notes</span>
+                        <span class="text-muted text-end" style="font-size:.82rem;max-width:60%;">{{ $order->notes }}</span>
+                    </div>
+                    @endif
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted" style="font-size:.88rem;">Delivery Fee</span>
                         <span class="fw-bold">₱{{ number_format($order->delivery_fee, 2) }}</span>

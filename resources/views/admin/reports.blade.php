@@ -171,43 +171,42 @@
             <h6 class="fw-bold mb-1" style="color:var(--gasgo-blue);">Section 1: Sales Reports (Historical Data)</h6>
             <p class="section-note">Historical sales computed from Inventory OUT transactions for {{ $periodLabel }}.</p>
         </div>
+        <div>
+            <button type="button" class="btn btn-sm btn-outline-success fw-semibold" onclick="exportSalesForecastCsv()" style="border-radius:8px;">
+                <i class="fas fa-file-csv me-1"></i>Export Sales Data (CSV)
+            </button>
+        </div>
     </div>
 
     <div class="row g-3">
-        <div class="col-lg-2 col-md-4 col-sm-6">
+        <div class="col-xl col-lg-4 col-md-6 col-sm-6">
             <div class="stat-card" style="cursor: pointer;" onclick="openSalesDetails()">
                 <p>Total Sales</p>
                 <h3>₱{{ number_format($salesSummary['totalSales'] ?? 0, 2) }}</h3>
             </div>
         </div>
-        <div class="col-lg-2 col-md-4 col-sm-6">
+        <div class="col-xl col-lg-4 col-md-6 col-sm-6">
             <div class="stat-card">
                 <p>Total Orders</p>
                 <h3>{{ number_format($salesSummary['totalOrders'] ?? 0) }}</h3>
             </div>
         </div>
-        <div class="col-lg-2 col-md-4 col-sm-6">
+        <div class="col-xl col-lg-4 col-md-6 col-sm-6">
             <div class="stat-card">
                 <p>Avg Order Value</p>
                 <h3>₱{{ number_format($salesSummary['avgOrderValue'] ?? 0, 2) }}</h3>
             </div>
         </div>
-        <div class="col-lg-2 col-md-4 col-sm-6">
+        <div class="col-xl col-lg-4 col-md-6 col-sm-6">
             <div class="stat-card">
                 <p>Total Items Sold</p>
                 <h3>{{ number_format($salesSummary['totalItemsSold'] ?? 0) }}</h3>
             </div>
         </div>
-        <div class="col-lg-2 col-md-4 col-sm-6">
+        <div class="col-xl col-lg-4 col-md-6 col-sm-6">
             <div class="stat-card">
                 <p>Delivery Success</p>
                 <h3>{{ number_format($salesSummary['deliverySuccessRate'] ?? 0, 1) }}%</h3>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-4 col-sm-6">
-            <div class="stat-card">
-                <p>This Month Items</p>
-                <h3>{{ number_format($salesSummary['monthItemsSold'] ?? 0) }}</h3>
             </div>
         </div>
     </div>
@@ -870,5 +869,59 @@ const inventoryForecast = @json(collect($restockRecommendations)->pluck('forecas
         });
     }
 });
+
+function exportSalesForecastCsv() {
+    const productsData = @json($salesByProduct ?? []);
+    const datesData = @json($salesByDate ?? []);
+    const periodLabel = @json($periodLabel ?? 'Sales Period');
+    const dateFrom = @json($dateFrom ?? '');
+    const dateTo = @json($dateTo ?? '');
+
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "GasGo Sales Report & Forecast Analytics\r\n";
+    csvContent += `Period:,"${periodLabel}"\r\n`;
+    if (dateFrom && dateTo) {
+        csvContent += `Date Range:,"${dateFrom} to ${dateTo}"\r\n`;
+    }
+    csvContent += `Generated:,"${new Date().toLocaleString()}"\r\n\r\n`;
+
+    // Section: Product Sales Breakdown
+    csvContent += "PRODUCT SALES BREAKDOWN\r\n";
+    csvContent += "Product Name,Quantity (Units Sold),Sales Amount (PHP),Period\r\n";
+    if (productsData && productsData.length > 0) {
+        productsData.forEach(row => {
+            const name = (row.product || '').replace(/"/g, '""');
+            const qty = row.units_sold || 0;
+            const amt = (Number(row.sales_amount) || 0).toFixed(2);
+            csvContent += `"${name}",${qty},${amt},"${periodLabel}"\r\n`;
+        });
+    } else {
+        csvContent += "No product sales data available,0,0.00\r\n";
+    }
+
+    csvContent += "\r\n";
+
+    // Section: Daily Sales Breakdown
+    csvContent += "DAILY SALES BREAKDOWN\r\n";
+    csvContent += "Date,Transactions,Sales Amount (PHP)\r\n";
+    if (datesData && datesData.length > 0) {
+        datesData.forEach(row => {
+            const d = row.date || '';
+            const tx = row.transactions || 0;
+            const amt = (Number(row.sales_amount) || 0).toFixed(2);
+            csvContent += `"${d}",${tx},${amt}\r\n`;
+        });
+    } else {
+        csvContent += "No daily sales data available,0,0.00\r\n";
+    }
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `GasGo_Sales_Report_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 </script>
 @endsection
