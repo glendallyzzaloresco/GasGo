@@ -427,10 +427,14 @@
 
         $movementSnapshot = $recentStockMovements ?? collect();
         
-        // Today's Sales - count only successfully delivered orders
-        $todaySales = (int) \App\Models\Order::whereDate('created_at', today())
-            ->where('status', 'delivered')
-            ->count();
+        // Today's Sales - total revenue amount from delivered orders today
+        $todaySales = (float) \App\Models\Order::where('status', 'delivered')
+            ->where(function ($query) {
+                $query->whereDate('delivered_at', today())
+                    ->orWhereDate('created_at', today());
+            })
+            ->selectRaw('COALESCE(SUM(CASE WHEN total_amount > 0 THEN total_amount ELSE (subtotal - discount) END), 0) as total_sales')
+            ->value('total_sales') ?? 0;
 
         // Today's Deliveries - count only ongoing orders (assigned, out_for_delivery, pending)
         $todayDeliveries = (int) \App\Models\Delivery::whereDate('created_at', today())
@@ -506,10 +510,10 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <div class="text-uppercase small fw-semibold text-muted"><i class="bi bi-cart-check me-2"></i>Today's Sales</div>
-                            <div class="h3 fw-bold mt-2 mb-0">{{ number_format($todaySales) }}</div>
+                            <div class="text-uppercase small fw-semibold text-muted"><i class="bi bi-cash-stack me-2"></i>Today's Sales</div>
+                            <div class="h3 fw-bold mt-2 mb-0">₱{{ number_format($todaySales, 2) }}</div>
                         </div>
-                        <div class="rounded-circle bg-info-subtle p-3 text-info"><i class="bi bi-cart-check fs-5"></i></div>
+                        <div class="rounded-circle bg-info-subtle p-3 text-info"><i class="bi bi-cash-stack fs-5"></i></div>
                     </div>
                 </div>
             </div>
