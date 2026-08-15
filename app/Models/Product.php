@@ -141,8 +141,14 @@ class Product extends Model
               ->orWhere('name', 'LIKE', '%Tank%')
               ->orWhere('name', 'LIKE', '%Cylinder%');
         })->where(function ($q) {
-            $q->whereRaw('LOWER(category) != ?', ['accessories'])
-              ->orWhereNull('category');
+            $q->whereRaw('LOWER(COALESCE(category, "")) NOT IN (?, ?, ?)', ['accessories', 'appliances', 'freebie'])
+              ->where('name', 'NOT LIKE', '%Regulator%')
+              ->where('name', 'NOT LIKE', '%Hose%')
+              ->where('name', 'NOT LIKE', '%Clamp%')
+              ->where('name', 'NOT LIKE', '%Stove%')
+              ->where('name', 'NOT LIKE', '%Burner%')
+              ->where('name', 'NOT LIKE', '%Hanger%')
+              ->where('name', 'NOT LIKE', '%Paste%');
         });
     }
 

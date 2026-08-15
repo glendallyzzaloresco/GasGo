@@ -16,6 +16,11 @@ class RiderController extends Controller
     // Rider: dashboard with active deliveries and stats
     public function dashboard()
     {
+        $rider = Rider::firstOrCreate(
+            ['user_id' => Auth::id()],
+            ['availability' => 'available']
+        );
+
         $activeDeliveries = Delivery::with('order.user', 'order.orderItems.product')
             ->where('rider_id', Auth::id())
             ->whereNotIn('status', ['delivered', 'failed'])
@@ -26,7 +31,7 @@ class RiderController extends Controller
             ->whereDate('delivered_at', today())
             ->count();
 
-        return view('rider.dashboard', compact('activeDeliveries', 'completedCount'));
+        return view('rider.dashboard', compact('activeDeliveries', 'completedCount', 'rider'));
     }
 
     // Rider: accept an available order
@@ -43,8 +48,11 @@ class RiderController extends Controller
         }
 
         // Check rider availability
-        $rider = Rider::where('user_id', Auth::id())->first();
-        if (!$rider || $rider->availability !== 'available') {
+        $rider = Rider::firstOrCreate(
+            ['user_id' => Auth::id()],
+            ['availability' => 'available']
+        );
+        if ($rider->availability !== 'available') {
             return response()->json([
                 'success' => false,
                 'message' => 'Please set your status to "Available" before accepting orders.'
@@ -75,7 +83,10 @@ class RiderController extends Controller
     // Rider: view and update own profile
     public function profile()
     {
-        $rider = Rider::where('user_id', Auth::id())->first();
+        $rider = Rider::firstOrCreate(
+            ['user_id' => Auth::id()],
+            ['availability' => 'available']
+        );
 
         return view('rider.profile', compact('rider'));
     }
@@ -114,44 +125,47 @@ class RiderController extends Controller
             $user->update($userUpdates);
         }
 
-        // Update rider information if exists
-        $rider = Rider::where('user_id', Auth::id())->first();
-        $previousStatus = $rider?->availability;
+        // Update rider information (automatically create rider row if not existing)
+        $rider = Rider::firstOrCreate(
+            ['user_id' => Auth::id()],
+            ['availability' => 'available']
+        );
+        $previousStatus = $rider->availability;
 
-        if ($rider) {
-            $riderData = [];
+        $riderData = [];
 
-            if (array_key_exists('vehicle_type', $validated)) {
-                $riderData['vehicle_type'] = $validated['vehicle_type'];
-            }
-            if (array_key_exists('plate_number', $validated)) {
-                $riderData['plate_number'] = $validated['plate_number'];
-            }
-            if (array_key_exists('license_number', $validated)) {
-                $riderData['license_number'] = $validated['license_number'];
-            }
-            if (array_key_exists('availability', $validated)) {
-                $riderData['availability'] = $validated['availability'];
-            }
+        if (array_key_exists('vehicle_type', $validated)) {
+            $riderData['vehicle_type'] = $validated['vehicle_type'];
+        }
+        if (array_key_exists('plate_number', $validated)) {
+            $riderData['plate_number'] = $validated['plate_number'];
+        }
+        if (array_key_exists('license_number', $validated)) {
+            $riderData['license_number'] = $validated['license_number'];
+        }
+        if (array_key_exists('availability', $validated)) {
+            $riderData['availability'] = $validated['availability'];
+        }
 
-            if (! empty($riderData)) {
-                $rider->update($riderData);
-            }
+        if (! empty($riderData)) {
+            $rider->update($riderData);
+        }
 
-            if (array_key_exists('availability', $validated) && $validated['availability'] !== $previousStatus) {
-                Log::info('Rider Status Changed', [
-                    'rider_id' => Auth::id(),
-                    'rider_name' => Auth::user()->name,
-                    'from_status' => $previousStatus,
-                    'to_status' => $validated['availability'],
-                    'timestamp' => now(),
-                ]);
-            }
+        if (array_key_exists('availability', $validated) && $validated['availability'] !== $previousStatus) {
+            Log::info('Rider Status Changed', [
+                'rider_id' => Auth::id(),
+                'rider_name' => Auth::user()->name,
+                'from_status' => $previousStatus,
+                'to_status' => $validated['availability'],
+                'timestamp' => now(),
+            ]);
         }
 
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
-                'message' => 'Profile updated successfully.',
+                'success' => true,
+                'message' => 'Status updated successfully.',
+                'availability' => $rider->fresh()->availability,
             ]);
         }
 

@@ -135,8 +135,9 @@ class ProductController extends Controller
         ]);
 
         $validated['category'] = strtolower((string) $validated['category']);
+        $isTankCategory = in_array($validated['category'], ['tank', 'tanks', 'cylinder', 'cylinders']) || str_contains(strtolower($validated['name']), 'tank');
         if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
-            $validated['requires_exchange'] = $request->boolean('requires_exchange');
+            $validated['requires_exchange'] = $request->has('requires_exchange') ? $request->boolean('requires_exchange') : $isTankCategory;
         } else {
             unset($validated['requires_exchange']);
         }
@@ -240,8 +241,9 @@ class ProductController extends Controller
         ]);
 
         $validated['category'] = strtolower((string) $validated['category']);
+        $isTankCategory = in_array($validated['category'], ['tank', 'tanks', 'cylinder', 'cylinders']) || str_contains(strtolower($validated['name']), 'tank');
         if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
-            $validated['requires_exchange'] = $request->boolean('requires_exchange');
+            $validated['requires_exchange'] = $request->has('requires_exchange') ? $request->boolean('requires_exchange') : ($product->requires_exchange ?? $isTankCategory);
         } else {
             unset($validated['requires_exchange']);
         }
