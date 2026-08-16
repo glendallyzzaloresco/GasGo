@@ -119,8 +119,10 @@ class ProductController extends Controller
             'is_active'      => 'boolean',
         ]);
 
-        $validated['category'] = strtolower((string) $validated['category']);
-        $isTankCategory = in_array($validated['category'], ['tank', 'tanks', 'cylinder', 'cylinders']) || str_contains(strtolower($validated['name']), 'tank');
+        $rawCategory = strtolower((string) $validated['category']);
+        $isFreebie = ($rawCategory === 'freebie');
+        $isTankCategory = in_array($rawCategory, ['tank', 'tanks', 'cylinder', 'cylinders']) || str_contains(strtolower($validated['name']), 'tank');
+
         if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
             $validated['requires_exchange'] = $request->has('requires_exchange') ? $request->boolean('requires_exchange') : $isTankCategory;
         } else {
@@ -129,42 +131,13 @@ class ProductController extends Controller
         $validated['is_active'] = $request->boolean('is_active');
         $validated['stock'] = (int) ($validated['stock'] ?? 0);
 
-        if ($validated['category'] === 'freebie') {
-            $validated['cost_price'] = (float) ($validated['cost_price'] ?? 0);
-            $validated['selling_price'] = (float) ($validated['selling_price'] ?? 0);
-            $validated['price'] = 0;
-        } else {
-            // If price is not provided, use selling_price as the price
-            if (!isset($validated['price']) || is_null($validated['price'])) {
-                $validated['price'] = $validated['selling_price'];
-            }
-
-            // Map category string to category_id
-            $catLower = $validated['category'];
-            $targetSlug = match ($catLower) {
-                'tank', 'tanks', 'cylinder', 'cylinders' => 'lpg-tanks',
-                'accessories', 'accessory' => 'accessories',
-                'appliances', 'appliance' => 'appliances',
-                default => \Illuminate\Support\Str::slug($catLower),
-            };
-
-            $matchedCategory = \App\Models\Category::where('slug', $targetSlug)
-                ->orWhereRaw('LOWER(name) = ?', [$catLower])
-                ->first();
-
-            if ($matchedCategory) {
-                $validated['category_id'] = $matchedCategory->id;
-            }
-            unset($validated['category']);
-        }
-
         if ($request->hasFile('image')) {
             $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
             $validated['image'] = $request->file('image')->store('products', $disk);
         }
 
         // If category is freebie, save into freebies table
-        if ($validated['category'] === 'freebie') {
+        if ($isFreebie) {
             $freebie = Freebie::create([
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
@@ -184,6 +157,30 @@ class ProductController extends Controller
 
             return redirect()->route('admin.products', ['tab' => 'freebies'])->with('success', $message);
         }
+
+        // For regular products:
+        $validated['cost_price'] = (float) ($validated['cost_price'] ?? 0);
+        $validated['selling_price'] = (float) ($validated['selling_price'] ?? 0);
+        if (!isset($validated['price']) || is_null($validated['price'])) {
+            $validated['price'] = $validated['selling_price'];
+        }
+
+        // Map category string to category_id
+        $targetSlug = match ($rawCategory) {
+            'tank', 'tanks', 'cylinder', 'cylinders' => 'lpg-tanks',
+            'accessories', 'accessory' => 'accessories',
+            'appliances', 'appliance' => 'appliances',
+            default => \Illuminate\Support\Str::slug($rawCategory),
+        };
+
+        $matchedCategory = \App\Models\Category::where('slug', $targetSlug)
+            ->orWhereRaw('LOWER(name) = ?', [$rawCategory])
+            ->first();
+
+        if ($matchedCategory) {
+            $validated['category_id'] = $matchedCategory->id;
+        }
+        unset($validated['category']);
 
         DB::transaction(function () use ($validated) {
             $product = Product::create($validated);
@@ -244,8 +241,10 @@ class ProductController extends Controller
             'is_active'      => 'boolean',
         ]);
 
-        $validated['category'] = strtolower((string) $validated['category']);
-        $isTankCategory = in_array($validated['category'], ['tank', 'tanks', 'cylinder', 'cylinders']) || str_contains(strtolower($validated['name']), 'tank');
+        $rawCategory = strtolower((string) $validated['category']);
+        $isFreebie = ($rawCategory === 'freebie');
+        $isTankCategory = in_array($rawCategory, ['tank', 'tanks', 'cylinder', 'cylinders']) || str_contains(strtolower($validated['name']), 'tank');
+
         if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
             $validated['requires_exchange'] = $request->has('requires_exchange') ? $request->boolean('requires_exchange') : ($product->requires_exchange ?? $isTankCategory);
         } else {
@@ -253,7 +252,12 @@ class ProductController extends Controller
         }
         $validated['is_active'] = $request->boolean('is_active');
 
-        if ($validated['category'] === 'freebie') {
+        if ($request->hasFile('image')) {
+            $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+            $validated['image'] = $request->file('image')->store('products', $disk);
+        }
+
+        if ($isFreebie) {
             $freebie = Freebie::create([
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
@@ -279,35 +283,29 @@ class ProductController extends Controller
             }
 
             return redirect()->route('admin.products', ['tab' => 'freebies'])->with('success', $message);
-        } else {
-            // If price is not provided, use selling_price as the price
-            if (!isset($validated['price']) || is_null($validated['price'])) {
-                $validated['price'] = $validated['selling_price'];
-            }
-
-            // Map category string to category_id
-            $catLower = $validated['category'];
-            $targetSlug = match ($catLower) {
-                'tank', 'tanks', 'cylinder', 'cylinders' => 'lpg-tanks',
-                'accessories', 'accessory' => 'accessories',
-                'appliances', 'appliance' => 'appliances',
-                default => \Illuminate\Support\Str::slug($catLower),
-            };
-
-            $matchedCategory = \App\Models\Category::where('slug', $targetSlug)
-                ->orWhereRaw('LOWER(name) = ?', [$catLower])
-                ->first();
-
-            if ($matchedCategory) {
-                $validated['category_id'] = $matchedCategory->id;
-            }
-            unset($validated['category']);
         }
 
-        if ($request->hasFile('image')) {
-            $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
-            $validated['image'] = $request->file('image')->store('products', $disk);
+        // If price is not provided, use selling_price as the price
+        if (!isset($validated['price']) || is_null($validated['price'])) {
+            $validated['price'] = $validated['selling_price'];
         }
+
+        // Map category string to category_id
+        $targetSlug = match ($rawCategory) {
+            'tank', 'tanks', 'cylinder', 'cylinders' => 'lpg-tanks',
+            'accessories', 'accessory' => 'accessories',
+            'appliances', 'appliance' => 'appliances',
+            default => \Illuminate\Support\Str::slug($rawCategory),
+        };
+
+        $matchedCategory = \App\Models\Category::where('slug', $targetSlug)
+            ->orWhereRaw('LOWER(name) = ?', [$rawCategory])
+            ->first();
+
+        if ($matchedCategory) {
+            $validated['category_id'] = $matchedCategory->id;
+        }
+        unset($validated['category']);
 
         DB::transaction(function () use ($product, $validated) {
             $product->update($validated);
