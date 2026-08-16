@@ -11,7 +11,7 @@ class GeocodingController extends Controller
     private function nominatimHeaders(): array
     {
         return [
-            'User-Agent' => 'GasGo/1.0',
+            'User-Agent' => 'GasGo-App/1.0 (gasgo.delivery.ph@gmail.com)',
             'Accept-Language' => 'en',
         ];
     }
@@ -154,6 +154,19 @@ class GeocodingController extends Controller
                     'lon' => $lng,
                     'zoom' => $zoom,
                 ]);
+
+            if (! $response->successful() || empty($response->json()['display_name'])) {
+                // Retry at zoom level 14 (Barangay/City level)
+                $response = Http::withHeaders($this->nominatimHeaders())
+                    ->timeout(8)
+                    ->get('https://nominatim.openstreetmap.org/reverse', [
+                        'format' => 'json',
+                        'addressdetails' => 1,
+                        'lat' => $lat,
+                        'lon' => $lng,
+                        'zoom' => 14,
+                    ]);
+            }
 
             if ($response->successful()) {
                 $payload = $response->json();
