@@ -684,7 +684,7 @@
                                         <td class="text-muted small">{{ $inventory->updated_at ? $inventory->updated_at->format('M d, Y') : '—' }}</td>
                                         <td>
                                             <div class="inventory-card-actions">
-                                                <button type="button" class="btn btn-sm btn-success" onclick="setAdjustInventory('{{ $inventory->id }}', '{{ addslashes($inventory->product->name) }}')" data-bs-toggle="modal" data-bs-target="#adjustStockModal">
+                                                <button type="button" class="btn btn-sm btn-success" onclick="setAdjustInventory('{{ $inventory->id }}', '{{ addslashes($inventory->product->name) }}', true)" data-bs-toggle="modal" data-bs-target="#adjustStockModal">
                                                     <i class="bi bi-plus-circle me-1"></i>Add Stock
                                                 </button>
                                                 <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-outline-primary">
@@ -738,7 +738,7 @@
                                         <td><span class="badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
                                         <td class="text-muted small">{{ $inventory->updated_at ? $inventory->updated_at->format('M d, Y') : '—' }}</td>
                                         <td>
-                                            <button type="button" class="btn btn-sm btn-success" onclick="setAdjustInventory('{{ $inventory->id }}', '{{ addslashes($inventory->product->name) }}')" data-bs-toggle="modal" data-bs-target="#adjustStockModal">
+                                            <button type="button" class="btn btn-sm btn-success" onclick="setAdjustInventory('{{ $inventory->id }}', '{{ addslashes($inventory->product->name) }}', false)" data-bs-toggle="modal" data-bs-target="#adjustStockModal">
                                                 <i class="bi bi-plus-circle me-1"></i>Add Stock
                                             </button>
                                         </td>
@@ -992,10 +992,49 @@
 </div>
 
 <script>
-function setAdjustInventory(inventoryId, productName) {
+function setAdjustInventory(inventoryId, productName, isCylinder = false) {
     document.getElementById('adjustInventoryId').value = inventoryId;
     document.getElementById('adjustProductName').textContent = productName;
-    document.getElementById('adjustType').value = '';
+    
+    const select = document.getElementById('adjustType');
+    select.innerHTML = '';
+    
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = 'Select type';
+    select.appendChild(defaultOpt);
+
+    if (isCylinder) {
+        const options = [
+            { value: 'stock_in', label: 'Stock In (Full Cylinders Received)' },
+            { value: 'stock_out', label: 'Stock Out (Full Cylinders Released)' },
+            { value: 'empty_in', label: 'Empty Cylinders Received (Returned Empties)' },
+            { value: 'empty_out', label: 'Empty Cylinders Released (Sent for Refill)' },
+            { value: 'return', label: 'Customer Return' },
+            { value: 'damage', label: 'Damage / Defective' }
+        ];
+        options.forEach(opt => {
+            const el = document.createElement('option');
+            el.value = opt.value;
+            el.textContent = opt.label;
+            select.appendChild(el);
+        });
+    } else {
+        const options = [
+            { value: 'stock_in', label: 'Stock In (Add Stock / Restock)' },
+            { value: 'stock_out', label: 'Stock Out (Manual Stock Out)' },
+            { value: 'return', label: 'Customer Return' },
+            { value: 'damage', label: 'Damage / Defective' }
+        ];
+        options.forEach(opt => {
+            const el = document.createElement('option');
+            el.value = opt.value;
+            el.textContent = opt.label;
+            select.appendChild(el);
+        });
+    }
+
+    select.value = '';
     document.getElementById('adjustQuantity').value = '';
     document.getElementById('adjustStockForm').setAttribute('action', `/admin/inventory/${inventoryId}/adjust`);
 }
