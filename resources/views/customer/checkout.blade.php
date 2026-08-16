@@ -153,6 +153,8 @@
     }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="stylesheet" href="{{ asset('css/leaflet-custom.css') }}" />
 @endsection
 
 @section('content')
@@ -270,7 +272,7 @@
                                     <button type="button" class="search-btn" id="mapSearchBtn"><i class="fas fa-search" id="mapSearchBtnIcon"></i></button>
                                 <div class="map-search-results" id="searchResults"></div>
                             </div>
-                            <div id="checkoutMap"></div>
+                            <div id="checkoutMap" style="height: 320px; width: 100%; border-radius: 14px; z-index: 1; border: 2px solid #eee; background: #f8f9fa;"></div>
                             <div class="d-flex justify-content-between align-items-center" style="margin-top: 12px;">
                                 <p class="map-hint mb-0"><i class="fas fa-info-circle me-1"></i>Click on the map or drag the pin to set your exact delivery location</p>
                                       <button type="button" id="useMyLocationBtn" class="btn btn-sm mt-1" style="background:var(--gasgo-blue);color:white;border-radius:8px;font-size:.78rem;"><i class="fas fa-crosshairs me-1"></i>Use My Location</button>
@@ -565,8 +567,9 @@
 </section>
 @endsection
 
-@push('scripts')
+@section('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ asset('js/leaflet-utils.js') }}"></script>
 <script>
 function selectPayment(el, method) {
     document.querySelectorAll('.payment-option').forEach(o => o.classList.remove('selected'));
@@ -1126,11 +1129,34 @@ async function searchAddress(autoSelectFirst = false) {
 }
 
 function initMap() {
-    map = L.map('checkoutMap').setView([defaultLat, defaultLng], 14);
+    const mapElement = document.getElementById('checkoutMap');
+    if (!mapElement) {
+        return;
+    }
+
+    if (typeof L === 'undefined') {
+        console.warn('Leaflet is still loading, retrying map initialization in 200ms...');
+        setTimeout(initMap, 200);
+        return;
+    }
+
+    if (map) {
+        map.remove();
+        map = null;
+    }
+    if (mapElement._leaflet_id) {
+        mapElement._leaflet_id = null;
+    }
+
+    map = L.map('checkoutMap', {
+        zoomControl: true,
+        scrollWheelZoom: true
+    }).setView([defaultLat, defaultLng], 14);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19
+        maxZoom: 19,
+        crossOrigin: true
     }).addTo(map);
 
     marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
@@ -1172,6 +1198,18 @@ function initMap() {
         map.setView([defaultLat, defaultLng], 14);
         marker.setLatLng([defaultLat, defaultLng]);
     }
+
+    // Force Leaflet to recalculate tile layout after CSS painting
+    setTimeout(() => {
+        if (map) {
+            map.invalidateSize();
+        }
+    }, 150);
+    setTimeout(() => {
+        if (map) {
+            map.invalidateSize();
+        }
+    }, 500);
 }
 
 function useMyLocation() {
@@ -1581,37 +1619,19 @@ document.addEventListener('DOMContentLoaded', async function () {
             selectPayment(initialSelectedPayment, initialSelectedPayment.dataset.paymentMethod);
         }
 
-        // Map search button
-        const mapSearchBtn = document.getElementById('mapSearchBtn');
-        if (mapSearchBtn) {
-            mapSearchBtn.addEventListener('click', function(e) {
+        // Voucher apply buttons - event delegation
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.voucher-apply-btn')) {
                 e.preventDefault();
-                searchAddress();
-            });
-        }
-
-        // Use my location button
-            const useLocationBtn = document.getElementById('useMyLocationBtn');
-        if (useLocationBtn) {
-            useLocationBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                useMyLocation();
-            });
-        }
-
-            // Voucher apply buttons - event delegation
-            document.addEventListener('click', function(e) {
-                if (e.target.closest('.voucher-apply-btn')) {
-                    e.preventDefault();
-                    const btn = e.target.closest('.voucher-apply-btn');
-                    const voucherId = btn.dataset.voucherId;
-                    const discount = btn.dataset.discount;
-                    if (voucherId && discount) {
-                        applyVoucher(voucherId, discount);
-                    }
+                const btn = e.target.closest('.voucher-apply-btn');
+                const voucherId = btn.dataset.voucherId;
+                const discount = btn.dataset.discount;
+                if (voucherId && discount) {
+                    applyVoucher(voucherId, discount);
                 }
-            });
+            }
+        });
 });
 </script>
-@endpush
+@endsection
 
