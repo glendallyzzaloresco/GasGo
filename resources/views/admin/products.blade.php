@@ -125,16 +125,32 @@
         ->filter(fn ($f) => ! (bool) $f->is_active)
         ->values();
 
+    $isTankCategory = function ($cat) {
+        return in_array(strtolower(trim((string) $cat)), ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'lpg-tanks', 'lpg tank', 'lpg tanks']);
+    };
+
+    $isAccessoryCategory = function ($cat) {
+        return in_array(strtolower(trim((string) $cat)), ['accessories', 'accessory', 'tools', 'tool', 'hanger', 'hangers', 'hardware', 'part', 'parts']);
+    };
+
+    $isApplianceCategory = function ($cat) {
+        return in_array(strtolower(trim((string) $cat)), ['appliances', 'appliance', 'stove', 'burner', 'burners', 'kitchen']);
+    };
+
     $lpgTankProducts = $saleProducts
-        ->filter(fn ($p) => strtolower((string) ($p->category ?? '')) === 'tank')
+        ->filter(fn ($p) => $isTankCategory($p->category))
         ->values();
 
     $accessoriesProducts = $saleProducts
-        ->filter(fn ($p) => strtolower((string) ($p->category ?? '')) === 'accessories')
+        ->filter(fn ($p) => $isAccessoryCategory($p->category))
         ->values();
 
     $appliancesProducts = $saleProducts
-        ->filter(fn ($p) => strtolower((string) ($p->category ?? '')) === 'appliances')
+        ->filter(fn ($p) => $isApplianceCategory($p->category))
+        ->values();
+
+    $otherProducts = $saleProducts
+        ->reject(fn ($p) => $isTankCategory($p->category) || $isAccessoryCategory($p->category) || $isApplianceCategory($p->category))
         ->values();
 
     // Active Freebies Catalog
@@ -455,8 +471,76 @@
         @endforeach
         @endif
 
+        <!-- Other Products Section -->
+        @if($otherProducts->count() > 0)
+        <div class="col-12">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #e0e0e0;margin-top:20px;">
+                <i class="fas fa-boxes-stacked" style="font-size:1.5rem;color:#8e44ad;"></i>
+                <h6 style="margin:0;color:var(--gasgo-blue);font-weight:700;font-size:1.1rem;">Other Products</h6>
+                <span style="margin-left:auto;background:#f0f0f0;padding:6px 12px;border-radius:20px;font-size:0.85rem;color:#666;font-weight:600;">{{ $otherProducts->count() }} items</span>
+            </div>
+        </div>
+        @foreach($otherProducts as $product)
+        <div class="col-lg-3 col-md-4 col-sm-6 product-item">
+            <div class="product-card">
+                @php $productImageUrl = $resolveImageUrl($product->image); @endphp
+                @php $qty = (int) ($product->quantity_on_hand ?? 0); @endphp
+                @if($productImageUrl)
+                    <img src="{{ $productImageUrl }}" alt="{{ $product->name }}">
+                @else
+                    <div style="width:100%;height:240px;background:linear-gradient(135deg,var(--gasgo-blue-light),#fff);display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-box" style="font-size:3rem;color:var(--gasgo-blue);opacity:.5;"></i>
+                    </div>
+                @endif
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-0">{{ $product->name }}</h6>
+                        @if($qty == 0)
+                            <span class="badge bg-danger stock-badge">Out</span>
+                        @elseif($qty <= 5)
+                            <span class="badge bg-warning text-dark stock-badge">Low Stock</span>
+                        @else
+                            <span class="badge bg-success stock-badge">In Stock</span>
+                        @endif
+                    </div>
+                    <p class="text-muted mb-2" style="font-size:.82rem;">{{ $product->description ?? 'No description' }}</p>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="price">₱{{ number_format($product->price, 2) }}</span>
+                        <span class="text-muted" style="font-size:.82rem;">Stock: <strong class="{{ $qty <= 5 ? 'text-danger' : '' }}">{{ $qty }}</strong></span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button
+                            class="btn btn-sm flex-grow-1"
+                            style="background:var(--gasgo-blue);color:#fff;border-radius:8px;font-weight:600;"
+                            data-bs-toggle="modal"
+                            data-bs-target="#productModal"
+                            onclick="openEditProduct(this)"
+                            data-id="{{ $product->id }}"
+                            data-name="{{ $product->name }}"
+                            data-category="{{ $product->category ?? 'accessories' }}"
+                            data-description="{{ $product->description }}"
+                            data-cost-price="{{ $product->cost_price ?? 0 }}"
+                            data-selling-price="{{ $product->selling_price ?? $product->price ?? 0 }}"
+                            data-stock="{{ $qty }}"
+                            data-weight="{{ $product->weight }}"
+                            data-requires-exchange="{{ $product->requires_exchange ? '1' : '0' }}"
+                            data-is-active="{{ $product->is_active ? '1' : '0' }}"
+                            data-update-url="{{ route('admin.products.update', $product) }}"
+                        ><i class="fas fa-edit me-1"></i>Edit</button>
+                        <form action="{{ route('admin.products.destroy', $product) }}" method="POST" onsubmit="return confirm('Delete this product? If it is linked to past orders, it will be moved to Archived Products safely.');">
+                            @csrf
+                            @method('DELETE')
+                            <button class="btn btn-sm" type="submit" style="background:#f8d7da;color:#dc3545;border-radius:8px;" title="Delete"><i class="fas fa-trash"></i></button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endforeach
+        @endif
+
         <!-- Empty State -->
-        @if($lpgTankProducts->count() === 0 && $accessoriesProducts->count() === 0 && $appliancesProducts->count() === 0)
+        @if($saleProducts->count() === 0)
         <div class="col-12">
             <p class="text-muted text-center py-5">No active products found. <a href="#" onclick="openAddProduct()" class="text-decoration-none">Add your first product</a></p>
         </div>
