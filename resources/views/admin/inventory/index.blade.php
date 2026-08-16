@@ -627,7 +627,7 @@
                         @php
                             $tankInventories = $inventories->filter(fn($inventory) => $inventory->product?->isCylinder());
                             $nonTankInventories = $inventories->reject(function ($inventory) {
-                                return $inventory->product?->isCylinder();
+                                return $inventory->product?->isCylinder() || strtolower((string) ($inventory->product?->category ?? '')) === 'freebie';
                             });
                             $inventoryRowCount = $tankInventories->count() + $nonTankInventories->count() + (!$freebies->isEmpty() ? $freebies->count() : 0);
                         @endphp

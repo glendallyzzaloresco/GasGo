@@ -30,5 +30,12 @@ class ProductObserver
                 'quantity_on_hand' => $product->stock,
             ]);
         }
+
+        // Keep inventory status in sync with product is_active state
+        if ($product->isDirty('is_active') && $product->inventory) {
+            $product->inventory->update([
+                'status' => $product->is_active ? 'active' : 'discontinued',
+            ]);
+        }
     }
 }
