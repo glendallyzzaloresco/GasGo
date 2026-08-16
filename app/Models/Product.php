@@ -36,7 +36,45 @@ class Product extends Model
         ];
     }
 
+    protected static function booted()
+    {
+        static::saving(function (Product $product) {
+            if ($product->category && empty($product->category_id)) {
+                $catLower = strtolower(trim((string) $product->category));
+                $targetSlug = match ($catLower) {
+                    'tank', 'tanks', 'cylinder', 'cylinders' => 'lpg-tanks',
+                    'accessories', 'accessory' => 'accessories',
+                    'appliances', 'appliance' => 'appliances',
+                    default => \Illuminate\Support\Str::slug($catLower),
+                };
+
+                $category = Category::where('slug', $targetSlug)
+                    ->orWhereRaw('LOWER(name) = ?', [$catLower])
+                    ->first();
+
+                if ($category) {
+                    $product->category_id = $category->id;
+                }
+            } elseif ($product->category_id && empty($product->category)) {
+                $category = Category::find($product->category_id);
+                if ($category) {
+                    $product->category = $category->slug ?: strtolower($category->name);
+                }
+            }
+        });
+    }
+
     // ── Relationships ──
+
+    public function categoryModel()
+    {
+        return $this->belongsTo(Category::class, 'category_id');
+    }
+
+    public function categoryRelation()
+    {
+        return $this->belongsTo(Category::class, 'category_id');
+    }
 
     public function inventory()
     {

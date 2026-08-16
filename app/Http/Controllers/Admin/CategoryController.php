@@ -12,10 +12,7 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = Category::orderBy('name')->get()->map(function ($cat) {
-            $cat->products_count = Product::whereRaw('LOWER(category) = ?', [strtolower($cat->name)])->count();
-            return $cat;
-        });
+        $categories = Category::withCount('products')->orderBy('name')->get();
 
         return view('admin.categories', compact('categories'));
     }
