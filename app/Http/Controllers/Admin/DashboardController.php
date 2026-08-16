@@ -75,7 +75,7 @@ class DashboardController extends Controller
         // Get product-category freebies
         $productFreebies = Product::with('inventory')
             ->where('is_active', true)
-            ->where('category', 'freebie')
+            ->where('price', 0)
             ->get()
             ->map(function ($item) {
                 $item->stock = (int) ($item->quantity_on_hand ?? 0);

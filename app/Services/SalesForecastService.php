@@ -24,12 +24,9 @@ class SalesForecastService
 
         $products = Product::query()
             ->where('is_active', true)
-            ->where(function ($q) {
-                $q->whereNull('category')
-                  ->orWhereRaw('LOWER(category) != ?', ['freebie']);
-            })
+            ->where('price', '>', 0)
             ->orderBy('name')
-            ->get(['id', 'name', 'category']);
+            ->get(['id', 'name', 'category_id']);
 
         $selectedProductId = (int) ($options['forecast_product_id'] ?? 0);
         if ($selectedProductId <= 0 || !$products->contains('id', $selectedProductId)) {
@@ -175,11 +172,7 @@ class SalesForecastService
             ->leftJoin('users as u', 'u.id', '=', 'o.user_id')
             ->where('sm.full_out', '>', 0)
             ->whereNotNull('o.id')
-            ->whereIn('o.status', ['delivered', 'completed'])
-            ->where(function ($q) {
-                $q->whereNull('p.category')
-                  ->orWhereRaw('LOWER(p.category) != ?', ['freebie']);
-            });
+            ->whereIn('o.status', ['delivered', 'completed']);
     }
 
     private function applyMovementDateRange(Builder $query, Carbon $start, Carbon $end): Builder
@@ -259,14 +252,9 @@ class SalesForecastService
     private function salesByCategory(Carbon $start, Carbon $end): Collection
     {
         $rows = $this->applyMovementDateRange($this->baseOutMovementsQuery(), $start, $end)
-            ->selectRaw("CASE
-                    WHEN LOWER(COALESCE(p.category, '')) LIKE '%tank%' THEN 'LPG Tanks'
-                    WHEN LOWER(COALESCE(p.category, '')) LIKE '%appliance%' OR LOWER(COALESCE(p.category, '')) LIKE '%stove%' THEN 'Appliances'
-                    WHEN LOWER(COALESCE(p.category, '')) LIKE '%accessor%' OR LOWER(COALESCE(p.category, '')) LIKE '%regulator%' OR LOWER(COALESCE(p.category, '')) LIKE '%hose%' OR LOWER(COALESCE(p.category, '')) LIKE '%clamp%' THEN 'Accessories'
-                    ELSE 'Others'
-                END as category_bucket,
-                SUM(sm.full_out) as units_sold")
-            ->groupBy('category_bucket')
+            ->leftJoin('categories as cat', 'cat.id', '=', 'p.category_id')
+            ->selectRaw("COALESCE(cat.name, 'Others') as category_bucket, SUM(sm.full_out) as units_sold")
+            ->groupBy('cat.name')
             ->orderByDesc('units_sold')
             ->get();
 
