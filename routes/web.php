@@ -213,10 +213,12 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::post('/products', [ProductController::class, 'store'])->name('admin.products.store');
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('admin.products.update');
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('admin.products.destroy');
+    Route::post('/products/{product}/restore', [ProductController::class, 'restore'])->name('admin.products.restore');
     Route::post('/freebies', [ProductController::class, 'storeFreebie'])->name('admin.freebies.store');
     Route::put('/freebies/{freebie}', [ProductController::class, 'updateFreebie'])->name('admin.freebies.update');
     Route::post('/freebies/{freebie}/adjust-stock', [ProductController::class, 'adjustFreebieStock'])->name('admin.freebies.adjust-stock');
     Route::delete('/freebies/{freebie}', [ProductController::class, 'destroyFreebie'])->name('admin.freebies.destroy');
+    Route::post('/freebies/{freebie}/restore', [ProductController::class, 'restoreFreebie'])->name('admin.freebies.restore');
 
     // Inventory Management
     Route::prefix('inventory')->group(function () {

@@ -72,7 +72,7 @@ class ProductController extends Controller
     public function adminIndex()
     {
         // Sorted for readability: tanks first, freebies next, out-of-stock items last.
-        $products = Product::with('inventory')
+        $products = Product::with(['inventory', 'orderItems'])
             ->get()
             ->sortBy(function ($product) {
                 $category = strtolower((string) ($product->category ?? ''));
@@ -156,7 +156,8 @@ class ProductController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('products', 'public');
+            $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+            $validated['image'] = $request->file('image')->store('products', $disk);
         }
 
         // If category is freebie, save into freebies table
@@ -261,7 +262,8 @@ class ProductController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('products', 'public');
+            $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+            $validated['image'] = $request->file('image')->store('products', $disk);
         }
 
         DB::transaction(function () use ($product, $validated) {
@@ -340,9 +342,9 @@ class ProductController extends Controller
                 ]);
             });
 
-            return redirect()->route('admin.products')->with(
+            return redirect()->route('admin.products', ['tab' => 'archived'])->with(
                 'success',
-                'Product is linked to existing orders and was archived instead of permanently deleted.'
+                'Product is linked to existing orders and was moved to Archived Products instead of permanently deleted.'
             );
         }
 
@@ -351,7 +353,61 @@ class ProductController extends Controller
             $product->delete();
         });
 
-        return redirect()->route('admin.products')->with('success', 'Product deleted successfully.');
+        return redirect()->route('admin.products')->with('success', 'Product deleted permanently.');
+    }
+
+    // Admin: restore an archived product
+    public function restore(Request $request, Product $product)
+    {
+        $stock = $request->filled('stock') ? max(0, (int) $request->input('stock')) : 0;
+
+        DB::transaction(function () use ($product, $stock) {
+            $product->update([
+                'is_active' => true,
+                'stock' => $stock,
+            ]);
+
+            $inventory = Inventory::firstOrCreate(
+                ['product_id' => $product->id],
+                [
+                    'quantity_on_hand' => 0,
+                    'reorder_level' => 5,
+                    'status' => 'active',
+                ]
+            );
+
+            $inventory->update([
+                'quantity_on_hand' => $stock,
+                'status' => 'active',
+                'last_restocked' => $stock > 0 ? Carbon::now() : $inventory->last_restocked,
+            ]);
+
+            if ($stock > 0) {
+                try {
+                    StockMovement::create([
+                        'inventory_id' => $inventory->id,
+                        'full_in' => $stock,
+                        'full_out' => 0,
+                        'empty_in' => 0,
+                        'empty_out' => 0,
+                        'type' => 'stock_in',
+                        'notes' => 'Stock initialized on product restoration',
+                        'movement_date' => now(),
+                        'created_by' => Auth::id() ?? 1,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('StockMovement restore creation failed: ' . $e->getMessage());
+                }
+            }
+        });
+
+        $message = "Product '{$product->name}' was restored successfully and is now active.";
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
+        return redirect()->route('admin.products', ['tab' => 'products'])->with('success', $message);
     }
 
     // Admin: store a new freebie
@@ -369,7 +425,8 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('freebies', 'public');
+            $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+            $validated['image'] = $request->file('image')->store('freebies', $disk);
         }
 
         $validated['reward_points_required'] = (int) ($validated['reward_points_required'] ?? 0);
@@ -403,7 +460,8 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('freebies', 'public');
+            $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+            $validated['image'] = $request->file('image')->store('freebies', $disk);
         }
 
         $validated['reward_points_required'] = (int) ($validated['reward_points_required'] ?? 0);
@@ -427,7 +485,21 @@ class ProductController extends Controller
     {
         $freebie->delete();
 
-        return redirect()->route('admin.products')->with('success', 'Freebie deleted successfully.');
+        return redirect()->route('admin.products', ['tab' => 'freebies'])->with('success', 'Freebie deleted successfully.');
+    }
+
+    // Admin: restore an archived freebie
+    public function restoreFreebie(Request $request, Freebie $freebie)
+    {
+        $freebie->update(['is_active' => true]);
+
+        $message = "Freebie '{$freebie->name}' was restored successfully.";
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
+        return redirect()->route('admin.products', ['tab' => 'freebies'])->with('success', $message);
     }
 
     // Admin: adjust freebie stock
