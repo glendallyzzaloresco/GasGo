@@ -418,7 +418,7 @@
                             <th>Rank</th>
                             <th>Product</th>
                             <th class="text-end">Forecast Units</th>
-                            <th class="text-end">Growth</th>
+                         
                         </tr>
                     </thead>
                     <tbody>
@@ -427,7 +427,7 @@
                                 <td>{{ $row['rank'] }}</td>
                                 <td>{{ $row['product'] }}</td>
                                 <td class="text-end">{{ number_format($row['forecast_units'], 2) }}</td>
-                                <td class="text-end">{{ $row['growth'] >= 0 ? '+' : '' }}{{ number_format($row['growth'], 1) }}%</td>
+                               
                             </tr>
                         @empty
                             <tr><td colspan="4" class="text-center text-muted py-3">No forecast product ranking available.</td></tr>
@@ -484,7 +484,7 @@
             <div class="summary-row"><span>Highest Forecast Product</span><strong>{{ $forecastInsights['highest_forecast_product'] }}</strong></div>
             <div class="summary-row"><span>Seasonal Product</span><strong>{{ $forecastInsights['seasonal_product'] }}</strong></div>
             <div class="summary-row"><span>Peak Season</span><strong>{{ $forecastInsights['peak_season'] }}</strong></div>
-            <div class="summary-row"><span>Forecast Demand</span><strong>{{ number_format($forecastInsights['forecast_demand'], 2) }} Units</strong></div>
+           
             <div class="summary-row">
                 <span>Inventory Recommendation</span>
                 <span class="status-pill {{ str_contains(strtolower($forecastInsights['inventory_recommendation']), 'sufficient') ? 'good' : 'warn' }}">{{ $forecastInsights['inventory_recommendation'] }}</span>
@@ -543,7 +543,7 @@
                             <th>Product</th>
                             <th class="text-end">Current</th>
                             <th class="text-end">Forecast</th>
-                            <th class="text-end">Restock</th>
+                         
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -553,7 +553,7 @@
                                 <td>{{ $row['product'] }}</td>
                                 <td class="text-end">{{ number_format($row['current_stock']) }}</td>
                                 <td class="text-end">{{ number_format($row['forecast_units'], 2) }}</td>
-                                <td class="text-end">{{ number_format($row['restock_qty']) }}</td>
+                              
                                 <td>
                                     <span class="status-pill {{ str_contains(strtolower($row['status']), 'sufficient') ? 'good' : 'warn' }}">{{ $row['status'] }}</span>
                                 </td>
