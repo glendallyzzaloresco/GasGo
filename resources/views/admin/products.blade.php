@@ -932,7 +932,6 @@
                                     <option value="tank">Tank</option>
                                     <option value="accessories">Accessories</option>
                                     <option value="appliances">Appliances</option>
-                                    <option value="freebie">Freebie</option>
                                 </select>
                             </div>
                             <div class="col-md-6 d-flex align-items-center">

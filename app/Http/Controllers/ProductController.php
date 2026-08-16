@@ -251,9 +251,31 @@ class ProductController extends Controller
         $validated['is_active'] = $request->boolean('is_active');
 
         if ($validated['category'] === 'freebie') {
-            $validated['cost_price'] = (float) ($validated['cost_price'] ?? 0);
-            $validated['selling_price'] = (float) ($validated['selling_price'] ?? 0);
-            $validated['price'] = 0;
+            $freebie = Freebie::create([
+                'name' => $validated['name'],
+                'description' => $validated['description'] ?? null,
+                'stock' => (int) ($validated['stock'] ?? 0),
+                'category' => 'Promotional Gifts',
+                'reward_points_required' => 0,
+                'redemption_type' => 'promotional',
+                'image' => $validated['image'] ?? $product->image,
+                'is_active' => $validated['is_active'] ?? true,
+            ]);
+
+            Inventory::where('product_id', $product->id)->delete();
+            try {
+                $product->delete();
+            } catch (\Exception $e) {
+                $product->update(['is_active' => false]);
+            }
+
+            $message = 'Item saved into Freebies successfully.';
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['success' => true, 'message' => $message, 'freebie_id' => $freebie->id], 200);
+            }
+
+            return redirect()->route('admin.products', ['tab' => 'freebies'])->with('success', $message);
         } else {
             // If price is not provided, use selling_price as the price
             if (!isset($validated['price']) || is_null($validated['price'])) {

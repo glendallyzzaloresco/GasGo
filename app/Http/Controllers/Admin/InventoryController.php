@@ -20,8 +20,9 @@ class InventoryController extends Controller
      */
     public function index(Request $request)
     {
-        // Auto-ensure all products have an inventory record
+        // Auto-ensure all active products have an inventory record
         $productsWithoutInventory = Product::whereDoesntHave('inventory')
+            ->where('is_active', true)
             ->where(function ($q) {
                 $q->whereNull('category')
                     ->orWhereRaw('LOWER(category) != ?', ['freebie']);
@@ -39,7 +40,15 @@ class InventoryController extends Controller
             );
         }
 
-        $query = Inventory::with('product');
+        $query = Inventory::with('product')
+            ->whereHas('product', function ($q) {
+                $q->where('is_active', true)
+                    ->where(function ($catQuery) {
+                        $catQuery->whereNull('category')
+                            ->orWhereRaw('LOWER(category) != ?', ['freebie']);
+                    });
+            })
+            ->where('status', '!=', 'discontinued');
 
         // Use normalized categories for filtering/display controls
         $categories = collect(['tank', 'accessories', 'appliances', 'freebie']);
@@ -216,8 +225,9 @@ class InventoryController extends Controller
             ->pluck('latest_delivery_date', 'product_id');
 
         $emptyTanksReturned = Inventory::whereHas('product', function ($q) {
-            $q->cylinders();
+            $q->cylinders()->where('is_active', true);
         })
+            ->where('status', '!=', 'discontinued')
             ->where('empty_on_hand', '>', 0)
             ->with('product')
             ->orderBy('empty_on_hand', 'desc')
@@ -237,8 +247,9 @@ class InventoryController extends Controller
 
         $emptyTankReturnsQuery = Inventory::with('product')
             ->whereHas('product', function ($q) {
-                $q->cylinders();
+                $q->cylinders()->where('is_active', true);
             })
+            ->where('status', '!=', 'discontinued')
             ->where('empty_on_hand', '>', 0);
 
         if (!empty($selectedEmptyDate)) {
@@ -511,6 +522,14 @@ class InventoryController extends Controller
     public function reorderReport()
     {
         $lowStockItems = Inventory::with('product')
+            ->whereHas('product', function ($q) {
+                $q->where('is_active', true)
+                    ->where(function ($cq) {
+                        $cq->whereNull('category')
+                            ->orWhereRaw('LOWER(category) != ?', ['freebie']);
+                    });
+            })
+            ->where('status', '!=', 'discontinued')
             ->where('quantity_on_hand', '<=', 5)
             ->orderBy('quantity_on_hand')
             ->get();
@@ -524,12 +543,26 @@ class InventoryController extends Controller
     public function expiryReport()
     {
         $expiredItems = Inventory::with('product')
+            ->whereHas('product', function ($q) {
+                $q->where('is_active', true)
+                    ->where(function ($cq) {
+                        $cq->whereNull('category')
+                            ->orWhereRaw('LOWER(category) != ?', ['freebie']);
+                    });
+            })
             ->where('expiry_date', '<', now())
             ->where('status', '!=', 'discontinued')
             ->orderBy('expiry_date')
             ->get();
 
         $upcomingExpiry = Inventory::with('product')
+            ->whereHas('product', function ($q) {
+                $q->where('is_active', true)
+                    ->where(function ($cq) {
+                        $cq->whereNull('category')
+                            ->orWhereRaw('LOWER(category) != ?', ['freebie']);
+                    });
+            })
             ->whereBetween('expiry_date', [now(), now()->addMonths(1)])
             ->where('status', '!=', 'discontinued')
             ->orderBy('expiry_date')
@@ -543,7 +576,16 @@ class InventoryController extends Controller
      */
     public function exportCsv()
     {
-        $inventories = Inventory::with('product')->get();
+        $inventories = Inventory::with('product')
+            ->whereHas('product', function ($q) {
+                $q->where('is_active', true)
+                    ->where(function ($cq) {
+                        $cq->whereNull('category')
+                            ->orWhereRaw('LOWER(category) != ?', ['freebie']);
+                    });
+            })
+            ->where('status', '!=', 'discontinued')
+            ->get();
 
         $csv = "Product Name,SKU,Current Stock,Reorder Level,Status,Supplier,Expiry Date,Last Restocked\n";
 
