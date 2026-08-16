@@ -275,7 +275,7 @@
                                 <p class="map-hint mb-0"><i class="fas fa-info-circle me-1"></i>Click on the map or drag the pin to set your exact delivery location</p>
                                       <button type="button" id="useMyLocationBtn" class="btn btn-sm mt-1" style="background:var(--gasgo-blue);color:white;border-radius:8px;font-size:.78rem;"><i class="fas fa-crosshairs me-1"></i>Use My Location</button>
                             </div>
-                            <div class="alert alert-info mt-3 mb-3" role="alert" style="border-radius: 12px;">
+                            <div class="alert alert-info mt-3 mb-3" id="locationRequiredAlert" role="alert" style="border-radius: 12px;">
                                 <i class="fas fa-map-pin me-2"></i>
                                 <strong>Location required:</strong> Please pin your exact delivery location on the map before placing your order.
                             </div>
@@ -867,8 +867,11 @@ function setMapSearchButtonLoading(isLoading) {
 }
 
 function updateLocationFields(mapLabel, fullAddress, lat, lng, onlyIfEmpty = false, updateDeliveryAddress = false) {
-    document.getElementById('mapSearch').value = mapLabel || fullAddress || '';
-    document.getElementById('addressFull').value = fullAddress || mapLabel || '';
+    const addressToUse = fullAddress || mapLabel || '';
+    if (addressToUse) {
+        document.getElementById('mapSearch').value = addressToUse;
+        document.getElementById('addressFull').value = addressToUse;
+    }
 
     if (typeof lat === 'number' && typeof lng === 'number') {
         document.getElementById('latitude').value = lat.toFixed(7);
@@ -889,22 +892,63 @@ function updateLocationFields(mapLabel, fullAddress, lat, lng, onlyIfEmpty = fal
 
     // Only update delivery address if explicitly requested or if it's empty
     const deliveryAddress = document.querySelector('[name="delivery_address"]');
-    if (updateDeliveryAddress && (!onlyIfEmpty || !deliveryAddress.value.trim())) {
-        deliveryAddress.value = fullAddress || mapLabel || '';
+    if (deliveryAddress && addressToUse) {
+        if (updateDeliveryAddress || !deliveryAddress.value.trim()) {
+            deliveryAddress.value = addressToUse;
+        }
+    }
+
+    // Update location alert indicator
+    const locationAlert = document.getElementById('locationRequiredAlert');
+    if (locationAlert) {
+        const curLat = document.getElementById('latitude').value;
+        const curLng = document.getElementById('longitude').value;
+        if (curLat && curLng) {
+            locationAlert.className = 'alert alert-success mt-3 mb-3';
+            locationAlert.style.borderRadius = '12px';
+            locationAlert.innerHTML = '<i class="fas fa-check-circle me-2"></i><strong>Location pinned:</strong> ' + (addressToUse || (curLat + ', ' + curLng));
+        }
     }
 }
 
 function parseReversePayload(payload, lat, lng) {
-    const street = payload.street || null;
-    const suburb = payload.suburb || payload.address?.barangay || payload.address?.suburb || payload.address?.village || null;
-    const city = payload.city || payload.address?.city || payload.address?.town || payload.address?.municipality || null;
-    const state = payload.address?.state || payload.address?.province || null;
+    const address = payload.address || {};
+    const street = payload.street 
+        || address.road 
+        || address.street 
+        || address.address_line1 
+        || address.name 
+        || address.pedestrian 
+        || null;
+    const suburb = payload.suburb 
+        || address.barangay 
+        || address.suburb 
+        || address.neighbourhood 
+        || address.village 
+        || address.district 
+        || address.quarter 
+        || null;
+    const city = payload.city 
+        || address.city 
+        || address.town 
+        || address.municipality 
+        || address.county 
+        || address.city_district 
+        || null;
+    const state = address.state 
+        || address.province 
+        || address.state_district 
+        || address.region 
+        || null;
     
     // Compose clean full address with only essential parts (street, barangay, city, state)
     const cleanParts = [street, suburb, city, state].filter(Boolean);
-    const full = cleanParts.length > 0 ? cleanParts.join(', ') : formatPinnedLocation(lat, lng);
+    let full = payload.display_name || payload.address?.formatted || (cleanParts.length > 0 ? cleanParts.join(', ') : formatPinnedLocation(lat, lng));
+    if (!full || !full.trim()) {
+        full = formatPinnedLocation(lat, lng);
+    }
     
-    const mapLabel = composeMapLabel(street, suburb, city, full) || full;
+    const mapLabel = composeMapLabel(street, suburb, city, full) || payload.display_name || full;
     return { street, suburb, city, full, mapLabel };
 }
 
@@ -970,6 +1014,7 @@ function applySearchResult(result) {
     // Selecting a search result is considered an explicit user action
     userPinnedLocation = true;
     setUserPinnedFlag();
+    updateLocationFields(result.display_name, result.display_name, lat, lng, false, true);
     reverseGeocode(lat, lng, 17, true);  // Update delivery address when applying search result
     document.getElementById('searchResults').style.display = 'none';
 }
@@ -1092,10 +1137,10 @@ function initMap() {
 
     marker.on('dragend', function () {
         const pos = marker.getLatLng();
-        // User dragged the pin -> mark as user-pinned to avoid auto overrides
+        // User dragged the pin -> mark as user-pinned
         userPinnedLocation = true;
         setUserPinnedFlag();
-        reverseGeocode(pos.lat, pos.lng, map.getZoom());
+        reverseGeocode(pos.lat, pos.lng, map.getZoom(), true);
     });
 
     map.on('click', function (e) {
@@ -1103,12 +1148,12 @@ function initMap() {
         // User clicked on map to set pin
         userPinnedLocation = true;
         setUserPinnedFlag();
-        reverseGeocode(e.latlng.lat, e.latlng.lng, map.getZoom());
+        reverseGeocode(e.latlng.lat, e.latlng.lng, map.getZoom(), true);
     });
 
     map.on('zoomend', function () {
         const pos = marker.getLatLng();
-        reverseGeocode(pos.lat, pos.lng, map.getZoom());
+        reverseGeocode(pos.lat, pos.lng, map.getZoom(), false);
     });
 
     const existingLat = document.getElementById('latitude').value;
@@ -1119,12 +1164,11 @@ function initMap() {
         const lng = parseFloat(existingLng);
         map.setView([lat, lng], 16);
         marker.setLatLng([lat, lng]);
-        // Treat pre-filled coordinates as user-pinned to avoid auto overrides
         userPinnedLocation = true;
         setUserPinnedFlag();
-        // Don't call reverseGeocode here to preserve address field
+        const addressText = document.getElementById('addressFull').value || document.querySelector('[name="delivery_address"]')?.value || '';
+        updateLocationFields(addressText, addressText, lat, lng, false, false);
     } else {
-        // On initial load, just set default view without modifying address
         map.setView([defaultLat, defaultLng], 14);
         marker.setLatLng([defaultLat, defaultLng]);
     }
@@ -1136,22 +1180,23 @@ function useMyLocation() {
         return;
     }
 
+    document.getElementById('mapSearch').value = 'Getting your GPS location...';
+
     navigator.geolocation.getCurrentPosition(
         function (position) {
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
             map.setView([lat, lng], 17);
             marker.setLatLng([lat, lng]);
-            // Using 'Use My Location' is a deliberate user action
             userPinnedLocation = true;
             setUserPinnedFlag();
-            document.getElementById('mapSearch').value = 'Getting your address...';
-            reverseGeocode(lat, lng, 17, true);  // Update delivery address when using geolocation
+            reverseGeocode(lat, lng, 17, true);
         },
-        function () {
-            alert('Unable to get your location. Please allow location access.');
+        function (error) {
+            alert('Unable to get your location: ' + (error.message || 'Please enable location permissions in your browser.'));
+            document.getElementById('mapSearch').value = '';
         },
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
 }
 
@@ -1165,31 +1210,29 @@ function resetPinnedLocation() {
     document.getElementById('addressFull').value = '';
     userPinnedLocation = false;
     setUserPinnedFlag();
+    const locationAlert = document.getElementById('locationRequiredAlert');
+    if (locationAlert) {
+        locationAlert.className = 'alert alert-info mt-3 mb-3';
+        locationAlert.innerHTML = '<i class="fas fa-map-pin me-2"></i><strong>Location required:</strong> Please pin your exact delivery location on the map before placing your order.';
+    }
 }
 
 // Geocode customer's default address when page loads
 async function geocodeDefaultAddress() {
-    const deliveryAddress = document.querySelector('[name="delivery_address"]').value.trim();
+    const deliveryAddressInput = document.querySelector('[name="delivery_address"]');
+    const deliveryAddress = (deliveryAddressInput?.value || '').trim();
     
-    console.log('Geocoding address:', deliveryAddress);
-    
-    // If latitude/longitude already exist (from previous submission), skip auto-geocoding
+    // If latitude/longitude already exist, skip auto-geocoding
     const hasStoredCoordinates = document.getElementById('latitude').value && document.getElementById('longitude').value;
-    // If user has already pinned a location, do not auto-geocode or reposition
-    if (userPinnedLocation) {
-        console.log('Skipping auto-geocode because userPinnedLocation is true');
+    if (userPinnedLocation && hasStoredCoordinates) {
         return;
     }
-    if (hasStoredCoordinates || !deliveryAddress) {
-        console.log('Skipping geocode - stored coords:', hasStoredCoordinates, 'address:', deliveryAddress);
+    if (!deliveryAddress) {
         return;
     }
 
     try {
-        // Build search queries for the address (includes variations and context)
         const variants = buildSearchQueries(deliveryAddress);
-        console.log('Search variants:', variants);
-        
         const settled = await Promise.allSettled(variants.map(fetchSearchCandidates));
         const merged = [];
 
@@ -1198,15 +1241,11 @@ async function geocodeDefaultAddress() {
                 merged.push(...item.value);
             }
         });
-
-        console.log('Merged results count:', merged.length);
         
         if (merged.length === 0) {
-            console.log('No results found');
             return;
         }
 
-        // Rank results
         const unique = [];
         const seen = new Set();
         merged.forEach(item => {
@@ -1218,25 +1257,18 @@ async function geocodeDefaultAddress() {
         });
 
         const ranked = unique.sort((a, b) => scoreResult(b, deliveryAddress) - scoreResult(a, deliveryAddress));
-        console.log('Top result:', ranked[0]);
         
         if (ranked.length > 0) {
             const result = ranked[0];
             const lat = parseFloat(result.lat);
             const lng = parseFloat(result.lon);
             
-            console.log('Positioning map to:', lat, lng);
-            
-            // Position map at the address
-            map.setView([lat, lng], 17);
+            map.setView([lat, lng], 16);
             marker.setLatLng([lat, lng]);
             
-            // Set hidden coordinate fields
-            document.getElementById('latitude').value = lat.toFixed(7);
-            document.getElementById('longitude').value = lng.toFixed(7);
-            document.getElementById('addressFull').value = result.display_name || '';
-            
-            console.log('Map positioned successfully');
+            userPinnedLocation = true;
+            setUserPinnedFlag();
+            updateLocationFields(result.display_name, result.display_name, lat, lng, true, false);
         }
     } catch (error) {
         console.error('Auto-geocode error:', error);
@@ -1253,7 +1285,35 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Wait a bit for map to fully render, then geocode customer's default address
     setTimeout(() => {
         geocodeDefaultAddress();
-    }, 500);
+    }, 600);
+
+    // Bind Use My Location button
+    const useLocationBtn = document.getElementById('useMyLocationBtn');
+    if (useLocationBtn) {
+        useLocationBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            useMyLocation();
+        });
+    }
+
+    // Bind Map Search Button
+    const searchBtn = document.getElementById('mapSearchBtn');
+    if (searchBtn) {
+        searchBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            searchAddress(true);
+        });
+    }
+
+    // Bind delivery address input change
+    const deliveryAddressInput = document.querySelector('[name="delivery_address"]');
+    if (deliveryAddressInput) {
+        deliveryAddressInput.addEventListener('change', function() {
+            if (this.value.trim()) {
+                geocodeDefaultAddress();
+            }
+        });
+    }
 
     const searchInput = document.getElementById('mapSearch');
     searchInput.addEventListener('input', function () {
