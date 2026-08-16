@@ -971,49 +971,26 @@ function parseReversePayload(payload, lat, lng) {
     return { street, suburb, city, full, mapLabel };
 }
 
-function reverseGeocodeClientFallback(lat, lng, updateDeliveryAddress) {
-    // Direct browser-side call to Nominatim as fallback (when server-side proxy returns empty)
-    const params = new URLSearchParams({
-        lat: String(lat),
-        lon: String(lng),
-        format: 'json',
-        addressdetails: '1',
-        zoom: '14'
-    });
-    fetch('https://nominatim.openstreetmap.org/reverse?' + params.toString(), {
-        headers: { 'Accept-Language': 'en', 'Accept': 'application/json' }
-    })
-        .then(r => r.json())
-        .then(data => {
-            if (data && data.display_name) {
-                const address = data.address || {};
-                const street = address.road || address.pedestrian || address.residential || null;
-                const suburb = address.barangay || address.suburb || address.neighbourhood || address.village || address.hamlet || null;
-                const city = address.city || address.town || address.municipality || address.county || null;
-                const state = address.state || address.province || null;
-                const cleanParts = [street, suburb, city, state].filter(Boolean);
-                const full = cleanParts.length > 0 ? cleanParts.join(', ') : data.display_name;
-                const mapLabel = composeMapLabel(street, suburb, city, full) || full;
-                updateLocationFields(mapLabel, full, lat, lng, false, updateDeliveryAddress);
-            } else {
-                // Even if we cannot retrieve address text, still mark the location as pinned
-                updateLocationFields('', '', lat, lng, false, updateDeliveryAddress);
-            }
-        })
-        .catch(() => {
-            // No address text, but still mark location as pinned
-            updateLocationFields('', '', lat, lng, false, updateDeliveryAddress);
-        })
-        .finally(() => setMapSearchButtonLoading(false));
+function parseNominatimResponse(data) {
+    if (!data || !data.display_name) return null;
+    const address = data.address || {};
+    const street = address.road || address.pedestrian || address.residential || null;
+    const suburb = address.barangay || address.suburb || address.neighbourhood || address.village || address.hamlet || null;
+    const city = address.city || address.town || address.municipality || address.county || null;
+    const state = address.state || address.province || null;
+    const cleanParts = [street, suburb, city, state].filter(Boolean);
+    const full = cleanParts.length > 0 ? cleanParts.join(', ') : data.display_name;
+    const mapLabel = composeMapLabel(street, suburb, city, full) || full;
+    return { street, suburb, city, full, mapLabel };
 }
 
 function reverseGeocode(lat, lng, zoomLevel = null, updateDeliveryAddress = false) {
     const zoom = Math.max(5, Math.min(18, Number.isFinite(zoomLevel) ? Math.round(zoomLevel) : 18));
-    const key = lat.toFixed(5) + ':' + lng.toFixed(5) + ':' + zoom;
+    const cacheKey = lat.toFixed(5) + ':' + lng.toFixed(5) + ':' + zoom;
     setMapSearchButtonLoading(true);
 
-    if (reverseCache.has(key)) {
-        const cached = reverseCache.get(key);
+    if (reverseCache.has(cacheKey)) {
+        const cached = reverseCache.get(cacheKey);
         updateLocationFields(cached.mapLabel, cached.full, lat, lng, false, updateDeliveryAddress);
         setMapSearchButtonLoading(false);
         return;
@@ -1023,31 +1000,54 @@ function reverseGeocode(lat, lng, zoomLevel = null, updateDeliveryAddress = fals
         reverseAbortController.abort();
     }
     reverseAbortController = new AbortController();
+    const signal = reverseAbortController.signal;
 
-    const params = new URLSearchParams({ lat: String(lat), lng: String(lng), zoom: String(zoom) });
-    fetch(locationReverseUrl + '?' + params.toString(), { signal: reverseAbortController.signal })
+    // Server-side proxy promise (goes through Laravel -> Nominatim/Geoapify)
+    const serverParams = new URLSearchParams({ lat: String(lat), lng: String(lng), zoom: String(zoom) });
+    const serverPromise = fetch(locationReverseUrl + '?' + serverParams.toString(), { signal })
         .then(r => r.json())
         .then(data => {
             const parsed = parseReversePayload(data, lat, lng);
-            if (parsed.full || parsed.mapLabel) {
-                reverseCache.set(key, parsed);
-                updateLocationFields(parsed.mapLabel, parsed.full, lat, lng, false, updateDeliveryAddress);
-                setMapSearchButtonLoading(false);
-            } else {
-                // Server returned empty — try direct Nominatim from browser
-                console.info('Server geocoding returned empty, trying browser-side fallback...');
-                reverseGeocodeClientFallback(lat, lng, updateDeliveryAddress);
+            if (parsed && (parsed.full || parsed.mapLabel)) {
+                return parsed;
             }
+            return null; // treat empty as failure so browser fallback wins
         })
-        .catch(error => {
-            if (error && error.name === 'AbortError') {
-                setMapSearchButtonLoading(false);
-                return;
-            }
-            // Server fetch failed — try direct Nominatim from browser
-            console.info('Server geocoding failed, trying browser-side fallback...');
-            reverseGeocodeClientFallback(lat, lng, updateDeliveryAddress);
-        });
+        .catch(() => null);
+
+    // Browser-side direct Nominatim promise (uses user's own IP — never rate-limited)
+    const browserParams = new URLSearchParams({
+        lat: String(lat), lon: String(lng),
+        format: 'json', addressdetails: '1', zoom: '14'
+    });
+    const browserPromise = fetch('https://nominatim.openstreetmap.org/reverse?' + browserParams.toString(), {
+        headers: { 'Accept-Language': 'en', 'Accept': 'application/json' }
+    })
+        .then(r => r.json())
+        .then(data => parseNominatimResponse(data))
+        .catch(() => null);
+
+    // Race both — use whichever valid result arrives first
+    let resolved = false;
+    function applyResult(parsed) {
+        if (resolved) return;
+        if (!parsed) return;
+        resolved = true;
+        reverseCache.set(cacheKey, parsed);
+        updateLocationFields(parsed.mapLabel, parsed.full, lat, lng, false, updateDeliveryAddress);
+        setMapSearchButtonLoading(false);
+    }
+
+    Promise.all([
+        serverPromise.then(applyResult),
+        browserPromise.then(applyResult),
+    ]).then(() => {
+        if (!resolved) {
+            // Both returned null — still mark location as pinned without address text
+            updateLocationFields('', '', lat, lng, false, updateDeliveryAddress);
+            setMapSearchButtonLoading(false);
+        }
+    });
 }
 
 function scoreResult(result, query) {
