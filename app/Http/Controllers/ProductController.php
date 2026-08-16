@@ -17,47 +17,36 @@ class ProductController extends Controller
     // Display all active products with optional category filter
     public function index(Request $request)
     {
-        $query = Product::with('inventory')
+        $query = Product::with(['inventory', 'categoryModel'])
             ->where('is_active', true)
-            ->where('price', '>', 0)
-            ->where(function ($q) {
-                $q->whereNull('category')
-                  ->orWhereRaw('LOWER(category) != ?', ['freebie']);
-            });
+            ->where('price', '>', 0);
 
         // Apply category filter if provided (case-insensitive & handles aliases)
         $category = $request->query('category');
         if ($category) {
             $catLower = strtolower(trim($category));
-            if (in_array($catLower, ['tank', 'tanks', 'cylinder', 'cylinders'])) {
-                $query->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(category)'), ['tank', 'tanks', 'cylinder', 'cylinders']);
-                $category = 'tank';
-            } else {
-                $query->whereRaw('LOWER(category) = ?', [$catLower]);
+            $targetSlug = match ($catLower) {
+                'tank', 'tanks', 'cylinder', 'cylinders' => 'lpg-tanks',
+                'accessories', 'accessory' => 'accessories',
+                'appliances', 'appliance' => 'appliances',
+                default => \Illuminate\Support\Str::slug($catLower),
+            };
+
+            $matchedCategory = \App\Models\Category::where('slug', $targetSlug)
+                ->orWhereRaw('LOWER(name) = ?', [$catLower])
+                ->first();
+
+            if ($matchedCategory) {
+                $query->where('category_id', $matchedCategory->id);
             }
         }
 
         $products = $query->orderBy('name')->get();
         $activeCategory = $category;
 
-        // Fetch distinct categories, normalize tank/tanks aliases, and exclude freebie
-        $rawCategories = Product::where('is_active', true)
-            ->whereNotNull('category')
-            ->where('category', '!=', '')
-            ->where('price', '>', 0)
-            ->whereRaw('LOWER(category) != ?', ['freebie'])
-            ->pluck('category');
-
-        $categories = $rawCategories
-            ->map(function ($c) {
-                $trimmed = strtolower(trim($c));
-                if (in_array($trimmed, ['tank', 'tanks', 'cylinder', 'cylinders'])) {
-                    return 'Tank';
-                }
-                return ucfirst($trimmed);
-            })
-            ->unique()
-            ->values();
+        $categories = \App\Models\Category::where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name');
 
         return view('customer.product', compact('products', 'activeCategory', 'categories'));
     }
@@ -72,12 +61,12 @@ class ProductController extends Controller
     public function adminIndex()
     {
         // Sorted for readability: tanks first, freebies next, out-of-stock items last.
-        $products = Product::with(['inventory', 'orderItems'])
+        $products = Product::with(['inventory', 'orderItems', 'categoryModel'])
             ->get()
             ->sortBy(function ($product) {
                 $category = strtolower((string) ($product->category ?? ''));
                 $categoryOrder = match ($category) {
-                    'tank' => 0,
+                    'lpg-tanks', 'tank' => 0,
                     'freebie' => 1,
                     default => 2,
                 };
@@ -93,13 +82,9 @@ class ProductController extends Controller
             })
             ->values();
 
-        $productCategories = Product::query()
-            ->whereNotNull('category')
-            ->where('category', '!=', '')
-            ->select('category')
-            ->distinct()
-            ->orderBy('category')
-            ->pluck('category');
+        $productCategories = \App\Models\Category::where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name');
         
         // Freebies (separate from products)
         $freebies = Freebie::query()
@@ -153,6 +138,24 @@ class ProductController extends Controller
             if (!isset($validated['price']) || is_null($validated['price'])) {
                 $validated['price'] = $validated['selling_price'];
             }
+
+            // Map category string to category_id
+            $catLower = $validated['category'];
+            $targetSlug = match ($catLower) {
+                'tank', 'tanks', 'cylinder', 'cylinders' => 'lpg-tanks',
+                'accessories', 'accessory' => 'accessories',
+                'appliances', 'appliance' => 'appliances',
+                default => \Illuminate\Support\Str::slug($catLower),
+            };
+
+            $matchedCategory = \App\Models\Category::where('slug', $targetSlug)
+                ->orWhereRaw('LOWER(name) = ?', [$catLower])
+                ->first();
+
+            if ($matchedCategory) {
+                $validated['category_id'] = $matchedCategory->id;
+            }
+            unset($validated['category']);
         }
 
         if ($request->hasFile('image')) {
@@ -281,6 +284,24 @@ class ProductController extends Controller
             if (!isset($validated['price']) || is_null($validated['price'])) {
                 $validated['price'] = $validated['selling_price'];
             }
+
+            // Map category string to category_id
+            $catLower = $validated['category'];
+            $targetSlug = match ($catLower) {
+                'tank', 'tanks', 'cylinder', 'cylinders' => 'lpg-tanks',
+                'accessories', 'accessory' => 'accessories',
+                'appliances', 'appliance' => 'appliances',
+                default => \Illuminate\Support\Str::slug($catLower),
+            };
+
+            $matchedCategory = \App\Models\Category::where('slug', $targetSlug)
+                ->orWhereRaw('LOWER(name) = ?', [$catLower])
+                ->first();
+
+            if ($matchedCategory) {
+                $validated['category_id'] = $matchedCategory->id;
+            }
+            unset($validated['category']);
         }
 
         if ($request->hasFile('image')) {

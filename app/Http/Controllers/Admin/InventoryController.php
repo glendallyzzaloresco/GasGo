@@ -23,10 +23,7 @@ class InventoryController extends Controller
         // Auto-ensure all active products have an inventory record
         $productsWithoutInventory = Product::whereDoesntHave('inventory')
             ->where('is_active', true)
-            ->where(function ($q) {
-                $q->whereNull('category')
-                    ->orWhereRaw('LOWER(category) != ?', ['freebie']);
-            })
+            ->where('price', '>', 0)
             ->get();
 
         foreach ($productsWithoutInventory as $productWithoutInv) {
@@ -40,18 +37,15 @@ class InventoryController extends Controller
             );
         }
 
-        $query = Inventory::with('product')
+        $query = Inventory::with(['product.categoryModel'])
             ->whereHas('product', function ($q) {
                 $q->where('is_active', true)
-                    ->where(function ($catQuery) {
-                        $catQuery->whereNull('category')
-                            ->orWhereRaw('LOWER(category) != ?', ['freebie']);
-                    });
+                    ->where('price', '>', 0);
             })
             ->where('status', '!=', 'discontinued');
 
         // Use normalized categories for filtering/display controls
-        $categories = collect(['tank', 'accessories', 'appliances', 'freebie']);
+        $categories = \App\Models\Category::where('is_active', true)->orderBy('name')->pluck('slug');
 
         // Filter by stock status (In Stock / Out of Stock)
         if ($request->filled('status')) {
@@ -72,15 +66,22 @@ class InventoryController extends Controller
         // Filter by product category from DB (normalized, with appliance aliases)
         if ($request->filled('category')) {
             $normalizedCategory = strtolower(trim((string) $request->category));
+            $targetSlug = match ($normalizedCategory) {
+                'tank', 'tanks', 'cylinder', 'cylinders' => 'lpg-tanks',
+                'accessories', 'accessory' => 'accessories',
+                'appliances', 'appliance' => 'appliances',
+                default => \Illuminate\Support\Str::slug($normalizedCategory),
+            };
 
-            $query = $query->whereHas('product', function ($q) use ($normalizedCategory) {
-                if ($normalizedCategory === 'appliances' || $normalizedCategory === 'appliance') {
-                    $q->whereRaw('LOWER(category) IN (?, ?, ?, ?)', ['appliances', 'appliance', 'stove', 'burner']);
-                    return;
-                }
+            $matchedCategory = \App\Models\Category::where('slug', $targetSlug)
+                ->orWhereRaw('LOWER(name) = ?', [$normalizedCategory])
+                ->first();
 
-                $q->whereRaw('LOWER(category) = ?', [$normalizedCategory]);
-            });
+            if ($matchedCategory) {
+                $query = $query->whereHas('product', function ($q) use ($matchedCategory) {
+                    $q->where('category_id', $matchedCategory->id);
+                });
+            }
         }
 
         // Get all inventories without pagination first for custom sorting
@@ -523,11 +524,7 @@ class InventoryController extends Controller
     {
         $lowStockItems = Inventory::with('product')
             ->whereHas('product', function ($q) {
-                $q->where('is_active', true)
-                    ->where(function ($cq) {
-                        $cq->whereNull('category')
-                            ->orWhereRaw('LOWER(category) != ?', ['freebie']);
-                    });
+                $q->where('is_active', true);
             })
             ->where('status', '!=', 'discontinued')
             ->where('quantity_on_hand', '<=', 5)
@@ -544,11 +541,7 @@ class InventoryController extends Controller
     {
         $expiredItems = Inventory::with('product')
             ->whereHas('product', function ($q) {
-                $q->where('is_active', true)
-                    ->where(function ($cq) {
-                        $cq->whereNull('category')
-                            ->orWhereRaw('LOWER(category) != ?', ['freebie']);
-                    });
+                $q->where('is_active', true);
             })
             ->where('expiry_date', '<', now())
             ->where('status', '!=', 'discontinued')
@@ -557,11 +550,7 @@ class InventoryController extends Controller
 
         $upcomingExpiry = Inventory::with('product')
             ->whereHas('product', function ($q) {
-                $q->where('is_active', true)
-                    ->where(function ($cq) {
-                        $cq->whereNull('category')
-                            ->orWhereRaw('LOWER(category) != ?', ['freebie']);
-                    });
+                $q->where('is_active', true);
             })
             ->whereBetween('expiry_date', [now(), now()->addMonths(1)])
             ->where('status', '!=', 'discontinued')
@@ -578,11 +567,7 @@ class InventoryController extends Controller
     {
         $inventories = Inventory::with('product')
             ->whereHas('product', function ($q) {
-                $q->where('is_active', true)
-                    ->where(function ($cq) {
-                        $cq->whereNull('category')
-                            ->orWhereRaw('LOWER(category) != ?', ['freebie']);
-                    });
+                $q->where('is_active', true);
             })
             ->where('status', '!=', 'discontinued')
             ->get();

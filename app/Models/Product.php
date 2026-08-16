@@ -11,7 +11,7 @@ class Product extends Model
 
     protected $fillable = [
         'name',
-        'category',
+        'category_id',
         'description',
         'price',
         'cost_price',
@@ -22,7 +22,6 @@ class Product extends Model
         'requires_exchange',
         'is_active',
         'status',
-        'category_id',
     ];
 
     protected function casts(): array
@@ -39,26 +38,10 @@ class Product extends Model
     protected static function booted()
     {
         static::saving(function (Product $product) {
-            if ($product->category && empty($product->category_id)) {
-                $catLower = strtolower(trim((string) $product->category));
-                $targetSlug = match ($catLower) {
-                    'tank', 'tanks', 'cylinder', 'cylinders' => 'lpg-tanks',
-                    'accessories', 'accessory' => 'accessories',
-                    'appliances', 'appliance' => 'appliances',
-                    default => \Illuminate\Support\Str::slug($catLower),
-                };
-
-                $category = Category::where('slug', $targetSlug)
-                    ->orWhereRaw('LOWER(name) = ?', [$catLower])
-                    ->first();
-
-                if ($category) {
-                    $product->category_id = $category->id;
-                }
-            } elseif ($product->category_id && empty($product->category)) {
-                $category = Category::find($product->category_id);
-                if ($category) {
-                    $product->category = $category->slug ?: strtolower($category->name);
+            if (empty($product->category_id)) {
+                $defaultCategory = Category::first();
+                if ($defaultCategory) {
+                    $product->category_id = $defaultCategory->id;
                 }
             }
         });
@@ -99,6 +82,37 @@ class Product extends Model
     // ── Accessors & Helpers ──
 
     /**
+     * Dynamically resolve category slug from Category relation
+     */
+    public function getCategoryAttribute(): string
+    {
+        return $this->categoryModel?->slug ?? ($this->categoryModel?->name ? strtolower($this->categoryModel->name) : 'tank');
+    }
+
+    /**
+     * Mutator to allow setting category by slug/name
+     */
+    public function setCategoryAttribute($value): void
+    {
+        if (empty($value)) return;
+        $catLower = strtolower(trim((string) $value));
+        $targetSlug = match ($catLower) {
+            'tank', 'tanks', 'cylinder', 'cylinders' => 'lpg-tanks',
+            'accessories', 'accessory' => 'accessories',
+            'appliances', 'appliance' => 'appliances',
+            default => \Illuminate\Support\Str::slug($catLower),
+        };
+
+        $category = Category::where('slug', $targetSlug)
+            ->orWhereRaw('LOWER(name) = ?', [$catLower])
+            ->first();
+
+        if ($category) {
+            $this->attributes['category_id'] = $category->id;
+        }
+    }
+
+    /**
      * Get the quantity on hand from inventory
      */
     public function getQuantityOnHandAttribute()
@@ -120,7 +134,7 @@ class Product extends Model
     public function getIsCylinderAttribute($value): bool
     {
         $name = strtolower(trim((string) ($this->attributes['name'] ?? '')));
-        $cat = strtolower(trim((string) ($this->attributes['category'] ?? '')));
+        $cat = strtolower(trim((string) $this->category));
 
         // Exclude accessories, appliances, freebies and non-tank items
         if (in_array($cat, ['accessories', 'appliances', 'appliance', 'freebie'], true) ||
@@ -181,12 +195,11 @@ class Product extends Model
             if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'requires_exchange')) {
                 $q->where('requires_exchange', true);
             }
-            $q->orWhereRaw('LOWER(category) IN (?, ?, ?, ?, ?)', ['tank', 'cylinder', 'lpg', 'lpg-tanks', 'tanks'])
+            $q->orWhere('category_id', 1)
               ->orWhere('name', 'LIKE', '%Tank%')
               ->orWhere('name', 'LIKE', '%Cylinder%');
         })->where(function ($q) {
-            $q->whereRaw('LOWER(COALESCE(category, "")) NOT IN (?, ?, ?)', ['accessories', 'appliances', 'freebie'])
-              ->where('name', 'NOT LIKE', '%Regulator%')
+            $q->where('name', 'NOT LIKE', '%Regulator%')
               ->where('name', 'NOT LIKE', '%Hose%')
               ->where('name', 'NOT LIKE', '%Clamp%')
               ->where('name', 'NOT LIKE', '%Stove%')

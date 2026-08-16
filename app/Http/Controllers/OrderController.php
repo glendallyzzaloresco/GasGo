@@ -99,7 +99,7 @@ class OrderController extends Controller
         $productFreebies = Product::query()
             ->with('inventory')
             ->where('is_active', true)
-            ->where('category', 'freebie')
+            ->where('price', 0)
             ->whereHas('inventory', function ($query) {
                 $query->where('quantity_on_hand', '>', 0);
             })
@@ -417,7 +417,7 @@ class OrderController extends Controller
                     $selectedFreebieProduct = Product::query()
                         ->whereKey($selectedProductFreebieId)
                         ->where('is_active', true)
-                        ->where('category', 'freebie')
+                        ->where('price', 0)
                         ->lockForUpdate()
                         ->first();
 
