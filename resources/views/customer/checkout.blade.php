@@ -872,8 +872,14 @@ function setMapSearchButtonLoading(isLoading) {
 function updateLocationFields(mapLabel, fullAddress, lat, lng, onlyIfEmpty = false, updateDeliveryAddress = false) {
     const addressToUse = fullAddress || mapLabel || '';
     if (addressToUse) {
-        document.getElementById('mapSearch').value = addressToUse;
-        document.getElementById('addressFull').value = addressToUse;
+        const searchInput = document.getElementById('mapSearch');
+        if (searchInput) {
+            searchInput.value = addressToUse;
+        }
+        const addressFullInput = document.getElementById('addressFull');
+        if (addressFullInput) {
+            addressFullInput.value = addressToUse;
+        }
     }
 
     if (typeof lat === 'number' && typeof lng === 'number') {
@@ -985,7 +991,7 @@ function reverseGeocode(lat, lng, zoomLevel = null, updateDeliveryAddress = fals
                 return;
             }
             const fallback = formatPinnedLocation(lat, lng);
-            updateLocationFields(fallback, fallback, lat, lng, true, updateDeliveryAddress);
+            updateLocationFields(fallback, fallback, lat, lng, false, updateDeliveryAddress);
         })
         .finally(() => setMapSearchButtonLoading(false));
 }
@@ -1177,11 +1183,6 @@ function initMap() {
         reverseGeocode(e.latlng.lat, e.latlng.lng, map.getZoom(), true);
     });
 
-    map.on('zoomend', function () {
-        const pos = marker.getLatLng();
-        reverseGeocode(pos.lat, pos.lng, map.getZoom(), false);
-    });
-
     const existingLat = document.getElementById('latitude').value;
     const existingLng = document.getElementById('longitude').value;
 
@@ -1218,23 +1219,40 @@ function useMyLocation() {
         return;
     }
 
-    document.getElementById('mapSearch').value = 'Getting your GPS location...';
+    const searchInput = document.getElementById('mapSearch');
+    if (searchInput) {
+        searchInput.value = 'Locating GPS position...';
+    }
+    setMapSearchButtonLoading(true);
 
     navigator.geolocation.getCurrentPosition(
         function (position) {
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
-            map.setView([lat, lng], 17);
-            marker.setLatLng([lat, lng]);
+            
             userPinnedLocation = true;
             setUserPinnedFlag();
+            
+            // Set hidden coordinate fields
+            document.getElementById('latitude').value = lat.toFixed(7);
+            document.getElementById('longitude').value = lng.toFixed(7);
+
+            if (map && marker) {
+                marker.setLatLng([lat, lng]);
+                map.setView([lat, lng], 17);
+            }
+
+            // Immediately reverse geocode and update delivery address & search box
             reverseGeocode(lat, lng, 17, true);
         },
         function (error) {
+            setMapSearchButtonLoading(false);
+            if (searchInput) {
+                searchInput.value = '';
+            }
             alert('Unable to get your location: ' + (error.message || 'Please enable location permissions in your browser.'));
-            document.getElementById('mapSearch').value = '';
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
     );
 }
 
