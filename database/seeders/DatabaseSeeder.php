@@ -20,9 +20,9 @@ class DatabaseSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'admin@gasgo.com'],
             [
-                'name'     => 'Admin',
+                'name' => 'Admin',
                 'password' => bcrypt('admin123'),
-                'role'     => 'admin',
+                'role' => 'admin',
             ]
         );
 
@@ -30,9 +30,9 @@ class DatabaseSeeder extends Seeder
         $riderUser = User::firstOrCreate(
             ['email' => 'rider@gasgo.com'],
             [
-                'name'     => 'Rider',
+                'name' => 'Rider',
                 'password' => bcrypt('rider123'),
-                'role'     => 'rider',
+                'role' => 'rider',
             ]
         );
 
@@ -49,9 +49,9 @@ class DatabaseSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'customer@gasgo.com'],
             [
-                'name'     => 'Customer',
+                'name' => 'Customer',
                 'password' => bcrypt('customer123'),
-                'role'     => 'customer',
+                'role' => 'customer',
             ]
         );
 
@@ -59,92 +59,52 @@ class DatabaseSeeder extends Seeder
         Product::updateOrCreate(
             ['name' => 'LPG Tank 11kg'],
             [
-                'category'    => 'tank',
+                'category' => 'tank',
                 'description' => '11 Kilogram LPG Tank',
-                'price'       => 850.00,
-                'stock'       => 100,
-                'weight'      => '11kg',
-                'image'       => 'images/11kg.jpg',
-                'is_active'   => true,
+                'price' => 850.00,
+                'stock' => 100,
+                'weight' => '11kg',
+                'image' => 'images/11kg.jpg',
+                'is_active' => true,
             ]
         );
 
         Product::updateOrCreate(
             ['name' => 'LPG Tank 22kg'],
             [
-                'category'    => 'tank',
+                'category' => 'tank',
                 'description' => '22 Kilogram LPG Tank',
-                'price'       => 1600.00,
-                'stock'       => 50,
-                'weight'      => '22kg',
-                'image'       => 'images/22kg.jpg',
-                'is_active'   => true,
+                'price' => 1600.00,
+                'stock' => 50,
+                'weight' => '22kg',
+                'image' => 'images/22kg.jpg',
+                'is_active' => true,
             ]
         );
 
         Product::updateOrCreate(
             ['name' => 'LPG Tank 2kg'],
             [
-                'category'    => 'tank',
+                'category' => 'tank',
                 'description' => '2 Kilogram LPG Tank',
-                'price'       => 350.00,
-                'stock'       => 200,
-                'weight'      => '2kg',
-                'image'       => 'images/2kg.jpg',
-                'is_active'   => true,
+                'price' => 350.00,
+                'stock' => 200,
+                'weight' => '2kg',
+                'image' => 'images/2kg.jpg',
+                'is_active' => true,
             ]
         );
 
         Product::updateOrCreate(
             ['name' => 'LPG Regulator'],
             [
-                'category'    => 'accessories',
+                'category' => 'accessories',
                 'description' => 'Safety LPG Regulator',
-                'price'       => 450.00,
-                'stock'       => 150,
-                'weight'      => '0.5kg',
-                'image'       => null,
-                'is_active'   => true,
-            ]
-        );
-
-        // Freebie Products for Loyalty Rewards
-        Product::updateOrCreate(
-            ['name' => 'Free LPG Tank (Reward)'],
-            [
-                'category'    => 'freebie',
-                'description' => 'Complimentary LPG Tank - Loyalty Reward for Bulk Orders',
-                'price'       => 0.00,
-                'stock'       => 999,
-                'weight'      => '11kg',
-                'image'       => 'images/11kg.jpg',
-                'is_active'   => true,
-            ]
-        );
-
-        Product::updateOrCreate(
-            ['name' => 'Dish Washer Paste (Freebie)'],
-            [
-                'category'    => 'freebie',
-                'description' => 'Free Dish Washer Paste - Small Order Loyalty Reward',
-                'price'       => 0.00,
-                'stock'       => 999,
-                'weight'      => '0.2kg',
-                'image'       => null,
-                'is_active'   => true,
-            ]
-        );
-
-        Product::updateOrCreate(
-            ['name' => 'Cloth Hanger Set (Freebie)'],
-            [
-                'category'    => 'freebie',
-                'description' => 'Free Cloth Hanger Set - Small Order Loyalty Reward',
-                'price'       => 0.00,
-                'stock'       => 999,
-                'weight'      => '0.1kg',
-                'image'       => null,
-                'is_active'   => true,
+                'price' => 450.00,
+                'stock' => 150,
+                'weight' => '0.5kg',
+                'image' => null,
+                'is_active' => true,
             ]
         );
     }

@@ -392,7 +392,8 @@ class LoyaltyController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('freebies', 'public');
+            $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+            $validated['image'] = $request->file('image')->store('freebies', $disk);
         }
 
         $validated['category'] = $request->input('category', 'Rewards');
@@ -417,7 +418,8 @@ class LoyaltyController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('freebies', 'public');
+            $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+            $validated['image'] = $request->file('image')->store('freebies', $disk);
         }
 
         $validated['category'] = $request->input('category', $reward->category ?: 'Rewards');
