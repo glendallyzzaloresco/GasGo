@@ -804,7 +804,12 @@ const searchCache = new Map();
 const reverseCache = new Map();
 
 function formatPinnedLocation(lat, lng) {
-    return 'Pinned location (' + lat.toFixed(6) + ', ' + lng.toFixed(6) + ')';
+    return '';
+}
+
+function isCoordinateString(str) {
+    if (!str) return false;
+    return /pinned location|\d+\.\d{3,}\s*,\s*\d+\.\d{3,}/i.test(str);
 }
 
 function normalizeBarangayQuery(query) {
@@ -850,14 +855,12 @@ function composeMapLabel(street, suburb, city, full) {
         return parts.join(', ');
     }
 
-    if (full) {
+    if (full && !isCoordinateString(full)) {
         return full.split(',').slice(0, 3).join(', ').trim();
     }
 
     return '';
 }
-
-
 
 function setMapSearchButtonLoading(isLoading) {
     const btn = document.getElementById('mapSearchBtn');
@@ -870,7 +873,11 @@ function setMapSearchButtonLoading(isLoading) {
 }
 
 function updateLocationFields(mapLabel, fullAddress, lat, lng, onlyIfEmpty = false, updateDeliveryAddress = false) {
-    const addressToUse = fullAddress || mapLabel || '';
+    let addressToUse = fullAddress || mapLabel || '';
+    if (isCoordinateString(addressToUse)) {
+        addressToUse = '';
+    }
+
     if (addressToUse) {
         const searchInput = document.getElementById('mapSearch');
         if (searchInput) {
@@ -899,7 +906,7 @@ function updateLocationFields(mapLabel, fullAddress, lat, lng, onlyIfEmpty = fal
         console.debug('Debug panel update failed', err);
     }
 
-    // Only update delivery address if explicitly requested or if it's empty
+    // Only update delivery address if explicitly requested or if it's empty, never with coordinate strings
     const deliveryAddress = document.querySelector('[name="delivery_address"]');
     if (deliveryAddress && addressToUse) {
         if (updateDeliveryAddress || !deliveryAddress.value.trim()) {
@@ -907,7 +914,7 @@ function updateLocationFields(mapLabel, fullAddress, lat, lng, onlyIfEmpty = fal
         }
     }
 
-    // Update location alert indicator
+    // Update location alert indicator without displaying raw numbers
     const locationAlert = document.getElementById('locationRequiredAlert');
     if (locationAlert) {
         const curLat = document.getElementById('latitude').value;
@@ -915,7 +922,11 @@ function updateLocationFields(mapLabel, fullAddress, lat, lng, onlyIfEmpty = fal
         if (curLat && curLng) {
             locationAlert.className = 'alert alert-success mt-3 mb-3';
             locationAlert.style.borderRadius = '12px';
-            locationAlert.innerHTML = '<i class="fas fa-check-circle me-2"></i><strong>Location pinned:</strong> ' + (addressToUse || (curLat + ', ' + curLng));
+            if (addressToUse) {
+                locationAlert.innerHTML = '<i class="fas fa-check-circle me-2"></i><strong>Location pinned:</strong> ' + addressToUse;
+            } else {
+                locationAlert.innerHTML = '<i class="fas fa-check-circle me-2"></i><strong>Location pinned on map</strong>';
+            }
         }
     }
 }
@@ -952,12 +963,11 @@ function parseReversePayload(payload, lat, lng) {
     
     // Compose clean full address with only essential parts (street, barangay, city, state)
     const cleanParts = [street, suburb, city, state].filter(Boolean);
-    let full = payload.display_name || payload.address?.formatted || (cleanParts.length > 0 ? cleanParts.join(', ') : formatPinnedLocation(lat, lng));
-    if (!full || !full.trim()) {
-        full = formatPinnedLocation(lat, lng);
+    let full = (cleanParts.length > 0 ? cleanParts.join(', ') : '') || payload.display_name || payload.address?.formatted || '';
+    if (isCoordinateString(full)) {
+        full = '';
     }
     
-    const mapLabel = composeMapLabel(street, suburb, city, full) || payload.display_name || full;
     return { street, suburb, city, full, mapLabel };
 }
 
