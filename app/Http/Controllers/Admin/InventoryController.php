@@ -211,16 +211,31 @@ class InventoryController extends Controller
             ->join('orders', 'deliveries.order_id', '=', 'orders.id')
             ->join('order_items', 'orders.id', '=', 'order_items.order_id')
             ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
             ->where('deliveries.status', 'delivered')
             ->where(function ($q) {
                 if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
                     $q->where('products.requires_exchange', true);
                 }
-                $q->orWhereRaw('LOWER(products.category) IN (?, ?, ?, ?)', ['tank', 'tanks', 'cylinder', 'cylinders'])
+                $q->orWhere('products.category_id', 1)
+                    ->orWhere('categories.slug', 'lpg-tanks')
+                    ->orWhereRaw('LOWER(categories.name) IN (?, ?, ?, ?)', ['tank', 'tanks', 'cylinder', 'cylinders'])
                     ->orWhere('products.name', 'LIKE', '%Tank%')
                     ->orWhere('products.name', 'LIKE', '%Cylinder%');
             })
-            ->whereRaw('LOWER(COALESCE(products.category, "")) NOT IN (?, ?, ?)', ['accessories', 'appliances', 'freebie'])
+            ->where(function ($q) {
+                $q->whereNull('categories.slug')
+                    ->orWhereNotIn('categories.slug', ['accessories', 'appliances', 'freebie']);
+            })
+            ->where(function ($q) {
+                $q->where('products.name', 'NOT LIKE', '%Regulator%')
+                    ->where('products.name', 'NOT LIKE', '%Hose%')
+                    ->where('products.name', 'NOT LIKE', '%Clamp%')
+                    ->where('products.name', 'NOT LIKE', '%Stove%')
+                    ->where('products.name', 'NOT LIKE', '%Burner%')
+                    ->where('products.name', 'NOT LIKE', '%Hanger%')
+                    ->where('products.name', 'NOT LIKE', '%Paste%');
+            })
             ->selectRaw('products.id as product_id, MAX(deliveries.updated_at) as latest_delivery_date')
             ->groupBy('products.id')
             ->pluck('latest_delivery_date', 'product_id');
