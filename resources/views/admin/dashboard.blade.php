@@ -167,6 +167,54 @@
         overflow-y: auto;
         padding-right: 2px;
     }
+    @media (max-width: 768px) {
+        .stat-card {
+            padding: 10px 12px;
+            min-height: 84px;
+            border-radius: 12px;
+        }
+        .stat-card p {
+            font-size: 0.7rem;
+            margin-bottom: 2px;
+        }
+        .stat-card h3 {
+            font-size: 1.1rem;
+        }
+        .stat-card .stat-icon {
+            width: 32px;
+            height: 32px;
+            font-size: 0.95rem;
+            border-radius: 8px;
+        }
+        .stat-card small {
+            font-size: 0.7rem;
+        }
+        .modal-detail-content {
+            width: 95%;
+            max-height: 88vh;
+            border-radius: 14px;
+        }
+        .modal-header-custom {
+            padding: 14px 16px;
+            border-radius: 14px 14px 0 0;
+        }
+        .modal-header-custom h4 {
+            font-size: 1rem;
+        }
+        .modal-body-custom {
+            padding: 14px 12px;
+        }
+        .detail-item {
+            padding: 10px 12px;
+            margin-bottom: 8px;
+        }
+        .dashboard-section-title {
+            font-size: 0.95rem;
+        }
+        .dashboard-section-subtitle {
+            font-size: 0.78rem;
+        }
+    }
 </style>
 @endsection
 
@@ -179,7 +227,7 @@
 </div>
 
 <!-- Stats Row -->
-<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-5 g-3 mb-3">
+<div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-2 g-md-3 mb-3">
     <div class="col">
         <div class="stat-card" onclick="showModal('totalOrdersModal')">
             <div class="d-flex justify-content-between align-items-start">

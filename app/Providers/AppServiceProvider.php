@@ -40,7 +40,7 @@ class AppServiceProvider extends ServiceProvider
                 'products_section_title' => 'Our Products',
                 'products_section_subtitle' => 'Choose from our range of products',
                 'products_view_all_label' => 'View All Products',
-                'promo_title' => 'New User? Get FREE Delivery on Your First Order!',
+                'promo_title' => 'Get FREE items with every order!',
                 'promo_subtitle' => 'Register now and start earning loyalty points with every purchase.',
                 'promo_button_label' => 'Register Now',
                 'footer_description' => 'Your trusted partner for fast, reliable delivery. Track your orders in real-time and earn rewards with every purchase.',

@@ -20,6 +20,23 @@
     }
     .loyalty-stat h3 { font-size:1.8rem; font-weight:800; margin:8px 0 4px; }
     .loyalty-stat p { font-size:.82rem; color:#888; margin:0; }
+
+    @media (max-width: 768px) {
+        .loyalty-stat {
+            padding: 12px 10px;
+            border-radius: 14px;
+        }
+        .loyalty-stat h3 {
+            font-size: 1.4rem !important;
+        }
+        .loyalty-stat p {
+            font-size: 0.74rem;
+        }
+        .reward-card {
+            padding: 14px 12px;
+            border-radius: 14px;
+        }
+    }
 </style>
 @endsection
 
@@ -44,26 +61,26 @@
 @endif
 
 <!-- Loyalty Stats -->
-<div class="row g-3 mb-5">
-    <div class="col-md-3">
+<div class="row row-cols-2 row-cols-md-4 g-2 g-md-3 mb-4">
+    <div class="col">
         <div class="loyalty-stat">
             <h3 style="font-size:2.2rem; color:var(--gasgo-orange);">{{ $loyaltyMembers }}</h3>
             <p>Loyalty Members</p>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col">
         <div class="loyalty-stat">
             <h3 style="font-size:2.2rem; color:var(--gasgo-blue);">{{ $totalPointsEarned }}</h3>
             <p>Total Points Earned</p>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col">
         <div class="loyalty-stat">
             <h3 style="font-size:2.2rem; color:#28a745;">{{ $totalPointsRedeemed }}</h3>
             <p>Points Redeemed</p>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col">
         <div class="loyalty-stat">
             <h3 style="font-size:2.2rem; color:#6f42c1;">{{ $activePoints }}</h3>
             <p>Active Points</p>

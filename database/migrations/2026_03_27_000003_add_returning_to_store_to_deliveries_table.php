@@ -16,7 +16,9 @@ return new class extends Migration
 
         // Update the enum to include 'returning_to_store'
         // Note: For MySQL, we need to modify the column definition
-        DB::statement("ALTER TABLE deliveries MODIFY COLUMN status ENUM('assigned', 'picked_up', 'out_for_delivery', 'delivered', 'returning_to_store', 'failed') DEFAULT 'assigned'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE deliveries MODIFY COLUMN status ENUM('assigned', 'picked_up', 'out_for_delivery', 'delivered', 'returning_to_store', 'failed') DEFAULT 'assigned'");
+        }
     }
 
     public function down(): void
@@ -26,6 +28,8 @@ return new class extends Migration
         });
 
         // Revert the enum
-        DB::statement("ALTER TABLE deliveries MODIFY COLUMN status ENUM('assigned', 'picked_up', 'out_for_delivery', 'delivered', 'failed') DEFAULT 'assigned'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE deliveries MODIFY COLUMN status ENUM('assigned', 'picked_up', 'out_for_delivery', 'delivered', 'failed') DEFAULT 'assigned'");
+        }
     }
 };
