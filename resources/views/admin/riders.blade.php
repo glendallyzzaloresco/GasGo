@@ -17,12 +17,23 @@
     }
     .rider-stat { text-align:center; }
     .rider-stat .value { font-size:1.3rem; font-weight:700; color:var(--gasgo-blue); }
-    .rider-stat .label { font-size:.72rem; color:#888; }
-    .avail-dot { width:12px;height:12px;border-radius:50%;display:inline-block; }
-    .avail-available { background:#27ae60; }
-    .avail-busy { background:#f7941d; }
     .avail-returning { background:#0dcaf0; }
     .avail-offline { background:#999; }
+
+    @media (max-width: 768px) {
+        .rider-card {
+            padding: 14px 12px;
+            border-radius: 14px;
+        }
+        .rider-avatar {
+            width: 48px;
+            height: 48px;
+            font-size: 1.2rem;
+        }
+        .rider-stat .value {
+            font-size: 1.05rem;
+        }
+    }
 </style>
 @endsection
 

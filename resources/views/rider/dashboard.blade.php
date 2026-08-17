@@ -118,18 +118,19 @@
                 throw new Error(errorMsg);
             }
             console.log('Status updated:', data);
-            // Show success message
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-success alert-dismissible fade show';
-            alertDiv.innerHTML = '<i class="fas fa-check-circle me-2"></i>Status updated successfully.<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-            document.body.insertAdjacentElement('afterbegin', alertDiv);
-            setTimeout(() => alertDiv.remove(), 3000);
+            if (typeof window.showAlert === 'function') {
+                window.showAlert('success', 'Status updated successfully.');
+            }
         })
         .catch(error => {
             console.error('Error updating status:', error);
-            alert('Failed to update status: ' + error.message);
+            if (typeof window.showAlert === 'function') {
+                window.showAlert('error', 'Failed to update status: ' + error.message);
+            } else {
+                alert('Failed to update status: ' + error.message);
+            }
             // Reset button to previous state on error
-            location.reload();
+            setTimeout(() => location.reload(), 1500);
         });
     }
 </script>

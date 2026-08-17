@@ -102,7 +102,8 @@
         }
 
         @media (max-width: 576px) {
-            .brand-text { display: none; }
+            .brand-text { display: inline-block; font-size: 1.05rem; }
+            .navbar-brand img { height: 42px; }
         }
         
         .navbar-brand:hover img {

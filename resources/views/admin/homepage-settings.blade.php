@@ -75,6 +75,41 @@
         background: #ffffff;
         box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
     }
+
+    @media (max-width: 768px) {
+        .hp-header {
+            padding: 16px 14px;
+        }
+        .hp-header-title {
+            font-size: 1.1rem;
+        }
+        .hp-header-title i {
+            width: 34px;
+            height: 34px;
+            font-size: 0.95rem;
+        }
+        .hp-nav-tabs-wrapper {
+            padding: 8px 10px;
+        }
+        .hp-nav-tabs {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            gap: 6px;
+        }
+        .hp-nav-tabs::-webkit-scrollbar { display: none; }
+        .hp-nav-tabs .nav-link {
+            flex-shrink: 0;
+            padding: 7px 12px;
+            font-size: 0.78rem;
+            white-space: nowrap;
+        }
+        .preset-studio-box {
+            padding: 14px 12px;
+        }
+    }
     
     /* Preset Studio Box */
     .preset-studio-box {
@@ -718,7 +753,7 @@
                 subtitle: 'Fast, reliable LPG delivery right to your door. Earn loyalty rewards with every order.',
                 button_label: 'Browse LPG Tanks', products_title: 'Our LPG Products',
                 products_subtitle: 'Choose from our range of 11kg, 22kg tanks and safety accessories',
-                promo_title: 'Get FREE Delivery on Your First Order!',
+                promo_title: 'Get FREE items with every order!',
                 promo_subtitle: 'Register now and start earning points with every tank purchase.',
                 footer_desc: 'Your trusted partner for fast, reliable LPG delivery. Real-time order tracking.',
                 how_title: 'How It Works', how_sub: 'Order your LPG cylinder in 4 easy steps',

@@ -16,9 +16,20 @@
     }
     .promo-header.active-promo { background:linear-gradient(135deg,var(--gasgo-orange),#ff6b35); }
     .promo-header.expired-promo { background:linear-gradient(135deg,#999,#bbb); }
-    .promo-header.upcoming-promo { background:linear-gradient(135deg,var(--gasgo-blue),#2196f3); }
     .promo-body { padding:20px 24px; }
     .promo-stat { font-size:.82rem; color:#888; }
+
+    @media (max-width: 768px) {
+        .promo-card {
+            border-radius: 14px;
+        }
+        .promo-header {
+            padding: 14px 16px;
+        }
+        .promo-body {
+            padding: 14px 16px;
+        }
+    }
 </style>
 @endsection
 

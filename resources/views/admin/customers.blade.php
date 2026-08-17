@@ -31,8 +31,8 @@
 
 @section('content')
 <!-- Stats -->
-<div class="row g-4 mb-4">
-    <div class="col-lg-3 col-md-6">
+<div class="row row-cols-2 row-cols-md-4 g-2 g-md-4 mb-4">
+    <div class="col">
         <div class="stat-card">
             <div class="d-flex justify-content-between align-items-start">
                 <div><p>Total Customers</p><h3>{{ $totalCustomers }}</h3></div>
@@ -40,7 +40,7 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-3 col-md-6">
+    <div class="col">
         <div class="stat-card">
             <div class="d-flex justify-content-between align-items-start">
                 <div><p>Active This Month</p><h3>{{ $activeThisMonth }}</h3></div>
@@ -48,7 +48,7 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-3 col-md-6">
+    <div class="col">
         <div class="stat-card">
             <div class="d-flex justify-content-between align-items-start">
                 <div><p>Loyalty Members</p><h3>{{ $loyaltyMembers }}</h3></div>
@@ -56,7 +56,7 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-3 col-md-6">
+    <div class="col">
         <div class="stat-card">
             <div class="d-flex justify-content-between align-items-start">
                 <div><p>New This Month</p><h3>{{ $newThisMonth }}</h3></div>

@@ -98,17 +98,50 @@
         border: 2px solid #dee2e6;
         margin-top: 10px;
     }
+
+    @media (max-width: 768px) {
+        .detail-card {
+            padding: 14px 12px;
+            border-radius: 14px;
+            margin-bottom: 14px;
+        }
+        .detail-card h5 {
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+        }
+        .detail-row {
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .detail-col {
+            min-width: 100%;
+        }
+        .detail-label {
+            font-size: 0.8rem;
+            margin-bottom: 2px;
+        }
+        .detail-value {
+            font-size: 0.92rem;
+        }
+        .item-table th, .item-table td {
+            padding: 8px;
+            font-size: 0.82rem;
+        }
+        .proof-image {
+            max-width: 100%;
+        }
+    }
 </style>
 @endsection
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
     <div>
-        <h2 class="mb-1">Order #{{ $order->order_number ?? $order->id }}</h2>
-        <p class="text-muted mb-0">{{ $order->created_at ? $order->created_at->format('F j, Y - g:i A') : 'N/A' }}</p>
+        <h3 class="mb-0 fw-bold" style="font-size: 1.25rem;">Order #{{ $order->order_number ?? $order->id }}</h3>
+        <p class="text-muted mb-0" style="font-size: 0.8rem;">{{ $order->created_at ? $order->created_at->format('F j, Y - g:i A') : 'N/A' }}</p>
     </div>
-    <a href="{{ route('admin.orders') }}" class="btn btn-outline-secondary">
-        <i class="fas fa-arrow-left me-2"></i>Back to Orders
+    <a href="{{ route('admin.orders') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Back
     </a>
 </div>
 

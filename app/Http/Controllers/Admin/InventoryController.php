@@ -387,7 +387,8 @@ class InventoryController extends Controller
         $validated = $request->validate([
             'quantity_change' => 'required|integer|min:1',
             'type' => 'required|in:stock_in,stock_out,empty_in,empty_out,sale,damage,return',
-            'notes' => 'nullable|string|max:255',
+            'reference' => 'required|string|max:100',
+            'notes' => 'required|string|max:255',
             'movement_date' => 'nullable|string',
         ]);
 
@@ -460,7 +461,8 @@ class InventoryController extends Controller
                 'empty_in' => $emptyIn,
                 'empty_out' => $emptyOut,
                 'type' => $type,
-                'notes' => $validated['notes'] ?? null,
+                'reference' => $validated['reference'],
+                'notes' => $validated['notes'],
                 'movement_date' => $movementDate,
                 'created_by' => Auth::id() ?? 1,
             ]);

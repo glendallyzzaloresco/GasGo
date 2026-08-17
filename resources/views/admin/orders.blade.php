@@ -98,6 +98,46 @@
     .badge-out_for_delivery { background: #f3e8ff; color: #581c87; }
     .badge-delivered { background: #dcfce7; color: #166534; }
     .badge-cancelled { background: #fee2e2; color: #991b1b; }
+
+    @media (max-width: 768px) {
+        .filter-tabs {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 6px;
+            gap: 6px;
+            scrollbar-width: none;
+        }
+        .filter-tabs::-webkit-scrollbar { display: none; }
+        .filter-tab {
+            flex-shrink: 0;
+            padding: 6px 14px;
+            font-size: 0.78rem;
+        }
+        .search-box {
+            max-width: 100%;
+            width: 100%;
+        }
+        .gasgo-table {
+            border-radius: 12px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .gasgo-table thead th {
+            padding: 10px 8px;
+            font-size: 0.72rem;
+            white-space: nowrap;
+        }
+        .gasgo-table tbody td {
+            padding: 10px 8px;
+            font-size: 0.82rem;
+        }
+        .btn-action {
+            padding: 4px 8px;
+            font-size: 0.74rem;
+        }
+    }
 </style>
 @endsection
 
