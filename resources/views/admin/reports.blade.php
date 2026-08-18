@@ -523,7 +523,7 @@
                             <tr>
                                 <th>Product</th>
                                 <th>Peak Season</th>
-                                <th class="text-end">Expected Increase</th>
+                               
                             </tr>
                         </thead>
                         <tbody>
@@ -531,7 +531,7 @@
                                 <tr>
                                     <td>{{ $row['product'] }}</td>
                                     <td>{{ $row['peak_season'] }}</td>
-                                    <td class="text-end">{{ number_format($row['expected_increase'], 1) }}%</td>
+                                   
                                 </tr>
                             @empty
                                 <tr>
