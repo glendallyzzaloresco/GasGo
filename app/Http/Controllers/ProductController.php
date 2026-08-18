@@ -195,7 +195,6 @@ class ProductController extends Controller
                 ]
             );
 
-            // Create stock movement record if initial stock is added
             if ((int) $validated['stock'] > 0) {
                 try {
                     StockMovement::create([
@@ -213,6 +212,8 @@ class ProductController extends Controller
                     Log::error('StockMovement creation failed: ' . $e->getMessage());
                 }
             }
+
+            \App\Services\ActivityLogger::log('products', 'created', "Admin created new product: {$product->name} (Price: ₱" . number_format($product->price ?? $product->selling_price ?? 0, 2) . ", Stock: {$product->stock})", ['product_id' => $product->id, 'name' => $product->name, 'stock' => $product->stock]);
         });
 
         $message = 'Product created successfully.';
@@ -351,6 +352,8 @@ class ProductController extends Controller
                     }
                 }
             }
+
+            \App\Services\ActivityLogger::log('products', 'updated', "Admin updated product: {$product->name} (Price: ₱" . number_format($product->price ?? $product->selling_price ?? 0, 2) . ", Stock: {$product->stock})", ['product_id' => $product->id, 'name' => $product->name, 'stock' => $product->stock]);
         });
 
         $message = 'Product updated successfully.';
@@ -365,9 +368,10 @@ class ProductController extends Controller
     // Admin: delete a product
     public function destroy(Product $product)
     {
+        $productName = $product->name;
         // Keep historical order integrity: products used in order items cannot be hard-deleted.
         if ($product->orderItems()->exists()) {
-            DB::transaction(function () use ($product) {
+            DB::transaction(function () use ($product, $productName) {
                 // Remove any active cart rows so it can no longer be purchased.
                 $product->carts()->delete();
 
@@ -381,6 +385,8 @@ class ProductController extends Controller
                     'quantity_on_hand' => 0,
                     'status' => 'discontinued',
                 ]);
+
+                \App\Services\ActivityLogger::log('products', 'deleted', "Admin moved product to archive (linked to existing orders): {$productName}", ['product_id' => $product->id, 'name' => $productName]);
             });
 
             return redirect()->route('admin.products', ['tab' => 'archived'])->with(
@@ -389,9 +395,11 @@ class ProductController extends Controller
             );
         }
 
-        DB::transaction(function () use ($product) {
+        DB::transaction(function () use ($product, $productName) {
             $product->carts()->delete();
             $product->delete();
+
+            \App\Services\ActivityLogger::log('products', 'deleted', "Admin permanently deleted product: {$productName}", ['product_id' => $product->id, 'name' => $productName]);
         });
 
         return redirect()->route('admin.products')->with('success', 'Product deleted permanently.');
@@ -407,6 +415,8 @@ class ProductController extends Controller
                 'is_active' => true,
                 'stock' => $stock,
             ]);
+
+            \App\Services\ActivityLogger::log('products', 'updated', "Admin restored archived product: {$product->name} (Restored Stock: {$stock})", ['product_id' => $product->id, 'name' => $product->name, 'stock' => $stock]);
 
             $inventory = Inventory::firstOrCreate(
                 ['product_id' => $product->id],

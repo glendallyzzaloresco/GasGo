@@ -137,18 +137,39 @@
                             </div>
                         </div>
 
-                        {{-- Log Viewer --}}
+                        {{-- System Activity Logs & Audit Trail Portal Card --}}
+                        <div class="col-md-6">
+                            <div class="border rounded-3 p-4">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div style="width:48px;height:48px;background:#e0f2fe;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i class="fas fa-history" style="color:#0284c7;font-size:1.3rem;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <h6 class="fw-bold mb-0">System Activity Logs & Audit Trail</h6>
+                                            <span class="badge bg-primary rounded-pill">{{ number_format($recentLogsCount ?? 0) }} Records</span>
+                                        </div>
+                                        <p class="text-muted small mb-3">Audit products, orders, live deliveries, user logins, registrations, password resets, and store settings.</p>
+                                        <a href="{{ route('admin.activity-logs') }}" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-external-link-alt me-1"></i>Open Activity Logs Portal
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Developer Error Log Viewer --}}
                         <div class="col-md-6">
                             <div class="border rounded-3 p-4">
                                 <div class="d-flex align-items-start gap-3">
                                     <div style="width:48px;height:48px;background:#d1ecf1;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                        <i class="fas fa-eye" style="color:#0c5460;font-size:1.3rem;"></i>
+                                        <i class="fas fa-terminal" style="color:#0c5460;font-size:1.3rem;"></i>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <h6 class="fw-bold mb-1">Log Viewer</h6>
-                                        <p class="text-muted small mb-3">View the last 50 lines of the Laravel error log to diagnose issues.</p>
+                                        <h6 class="fw-bold mb-1">Developer Error Log Viewer</h6>
+                                        <p class="text-muted small mb-3">View the last 50 lines of the Laravel error stack trace for debugging.</p>
                                         <button class="btn btn-info btn-sm text-white" type="button" data-bs-toggle="collapse" data-bs-target="#logViewer">
-                                            <i class="fas fa-eye me-1"></i>View Logs
+                                            <i class="fas fa-eye me-1"></i>View Raw Laravel Log
                                         </button>
                                     </div>
                                 </div>

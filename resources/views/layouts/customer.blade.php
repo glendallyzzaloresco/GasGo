@@ -926,10 +926,33 @@
                         {{ $homepageSettings->footer_description ?? 'Your trusted partner for fast, reliable LPG delivery. Track your orders in real-time and earn loyalty & promos with every purchase.' }}
                     </p>
                     <div class="social-links">
-                        <a href="#"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#"><i class="fab fa-twitter"></i></a>
-                        <a href="#"><i class="fab fa-instagram"></i></a>
-                        <a href="#"><i class="fab fa-youtube"></i></a>
+                        @if(!empty($homepageSettings->facebook_url))
+                            <a href="{{ $homepageSettings->facebook_url }}" target="_blank" rel="noopener noreferrer" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        @else
+                            <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        @endif
+
+                        @if(!empty($homepageSettings->twitter_url))
+                            <a href="{{ $homepageSettings->twitter_url }}" target="_blank" rel="noopener noreferrer" title="Twitter / X"><i class="fab fa-twitter"></i></a>
+                        @else
+                            <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+                        @endif
+
+                        @if(!empty($homepageSettings->instagram_url))
+                            <a href="{{ $homepageSettings->instagram_url }}" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="fab fa-instagram"></i></a>
+                        @else
+                            <a href="#" title="Instagram"><i class="fab fa-instagram"></i></a>
+                        @endif
+
+                        @if(!empty($homepageSettings->youtube_url))
+                            <a href="{{ $homepageSettings->youtube_url }}" target="_blank" rel="noopener noreferrer" title="YouTube"><i class="fab fa-youtube"></i></a>
+                        @else
+                            <a href="#" title="YouTube"><i class="fab fa-youtube"></i></a>
+                        @endif
+
+                        @if(!empty($homepageSettings->tiktok_url))
+                            <a href="{{ $homepageSettings->tiktok_url }}" target="_blank" rel="noopener noreferrer" title="TikTok"><i class="fab fa-tiktok"></i></a>
+                        @endif
                     </div>
                 </div>
                 
@@ -959,7 +982,7 @@
             </div>
             
             <div class="footer-bottom">
-                <p>&copy; {{ date('Y') }} {{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }}. All rights reserved. | <a href="#" class="text-decoration-none" style="color: var(--gasgo-orange);">Privacy Policy</a> | <a href="#" class="text-decoration-none" style="color: var(--gasgo-orange);">Terms of Service</a></p>
+                <p>&copy; {{ date('Y') }} {{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }}. All rights reserved. | <a href="{{ route('privacy.policy') }}" class="text-decoration-none" style="color: var(--gasgo-orange);">Privacy Policy</a> | <a href="{{ route('terms.service') }}" class="text-decoration-none" style="color: var(--gasgo-orange);">Terms of Service</a></p>
             </div>
         </div>
     </footer>

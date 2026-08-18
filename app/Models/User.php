@@ -95,4 +95,9 @@ class User extends Authenticatable
     {
         return $this->role === 'customer';
     }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new \App\Notifications\CustomResetPasswordNotification($token));
+    }
 }

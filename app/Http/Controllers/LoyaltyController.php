@@ -351,6 +351,8 @@ class LoyaltyController extends Controller
                 'type' => 'redeemed',
                 'description' => 'Points redeemed to claim ' . $voucher->name,
             ]);
+
+            \App\Services\ActivityLogger::log('loyalty', 'redeemed', "Customer claimed voucher: {$voucher->name} (₱{$voucher->discount_amount} Off for {$voucher->reward_points_required} pts)", ['voucher_name' => $voucher->name, 'points' => $voucher->reward_points_required]);
         });
 
         return redirect()->route('customer.loyalty')
@@ -400,7 +402,9 @@ class LoyaltyController extends Controller
         $validated['redemption_type'] = 'loyalty_points';
         $validated['is_active'] = $request->boolean('is_active');
 
-        Freebie::create($validated);
+        $reward = Freebie::create($validated);
+
+        \App\Services\ActivityLogger::log('loyalty', 'created', "Admin created new reward item: {$reward->name} ({$reward->reward_points_required} pts)", ['reward_id' => $reward->id, 'name' => $reward->name]);
 
         return redirect()->route('admin.rewards')->with('success', 'Reward created successfully.');
     }
@@ -428,13 +432,18 @@ class LoyaltyController extends Controller
 
         $reward->update($validated);
 
+        \App\Services\ActivityLogger::log('loyalty', 'updated', "Admin updated reward item: {$reward->name} ({$reward->reward_points_required} pts)", ['reward_id' => $reward->id, 'name' => $reward->name]);
+
         return redirect()->route('admin.rewards')->with('success', 'Reward updated successfully.');
     }
 
     // Admin: delete reward
     public function destroyReward(Freebie $reward)
     {
+        $rewardName = $reward->name;
         $reward->delete();
+
+        \App\Services\ActivityLogger::log('loyalty', 'deleted', "Admin deleted reward item: {$rewardName}", ['name' => $rewardName]);
 
         return redirect()->route('admin.rewards')->with('success', 'Reward deleted successfully.');
     }

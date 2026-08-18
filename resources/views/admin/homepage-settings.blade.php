@@ -670,6 +670,37 @@
                                             <input type="text" name="contact_hours" class="form-control" value="{{ old('contact_hours', $settings->contact_hours) }}" placeholder="Mon-Sun: 6:00 AM - 9:00 PM">
                                         </div>
                                     </div>
+
+                                    <hr class="my-4">
+
+                                    <div class="d-flex align-items-center gap-2 mb-3">
+                                        <i class="fas fa-share-alt text-primary"></i>
+                                        <h6 class="fw-bold mb-0">Social Media Links (Footer Icons)</h6>
+                                    </div>
+                                    <p class="text-muted small mb-3">Setup your official social media profile URLs. Leave blank to hide the icon from the customer footer.</p>
+
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold"><i class="fab fa-facebook text-primary me-1"></i>Facebook URL</label>
+                                            <input type="url" name="facebook_url" class="form-control" value="{{ old('facebook_url', $settings->facebook_url) }}" placeholder="https://facebook.com/yourbrand">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold"><i class="fab fa-twitter text-info me-1"></i>Twitter / X URL</label>
+                                            <input type="url" name="twitter_url" class="form-control" value="{{ old('twitter_url', $settings->twitter_url) }}" placeholder="https://twitter.com/yourbrand">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold"><i class="fab fa-instagram text-danger me-1"></i>Instagram URL</label>
+                                            <input type="url" name="instagram_url" class="form-control" value="{{ old('instagram_url', $settings->instagram_url) }}" placeholder="https://instagram.com/yourbrand">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold"><i class="fab fa-youtube text-danger me-1"></i>YouTube URL</label>
+                                            <input type="url" name="youtube_url" class="form-control" value="{{ old('youtube_url', $settings->youtube_url) }}" placeholder="https://youtube.com/@yourbrand">
+                                        </div>
+                                        <div class="col-md-12">
+                                            <label class="form-label fw-semibold"><i class="fab fa-tiktok text-dark me-1"></i>TikTok URL (Optional)</label>
+                                            <input type="url" name="tiktok_url" class="form-control" value="{{ old('tiktok_url', $settings->tiktok_url) }}" placeholder="https://tiktok.com/@yourbrand">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
