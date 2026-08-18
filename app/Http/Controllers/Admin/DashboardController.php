@@ -454,58 +454,85 @@ class DashboardController extends Controller
 
     public function activityLogs(Request $request)
     {
-        $query = \App\Models\ActivityLog::with('user')->orderBy('created_at', 'desc');
-
-        // Filter by module
-        if ($request->filled('module') && $request->module !== 'all') {
-            $query->where('module', $request->module);
+        if (!\Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
+            $logs = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 30);
+            $stats = [
+                'totalCount' => 0,
+                'todayCount' => 0,
+                'ordersCount' => 0,
+                'authCount' => 0,
+                'productCount' => 0,
+            ];
+            session()->flash('error', 'The activity_logs table does not exist yet. Please run "php artisan migrate" in your terminal.');
+            return view('admin.activity-logs', compact('logs', 'stats'));
         }
 
-        // Filter by role
-        if ($request->filled('role') && $request->role !== 'all') {
-            $query->where('user_role', $request->role);
-        }
+        try {
+            $query = \App\Models\ActivityLog::with('user')->orderBy('created_at', 'desc');
 
-        // Filter by date range
-        if ($request->filled('date_range')) {
-            if ($request->date_range === 'today') {
-                $query->whereDate('created_at', today());
-            } elseif ($request->date_range === 'week') {
-                $query->where('created_at', '>=', now()->subDays(7));
-            } elseif ($request->date_range === 'month') {
-                $query->where('created_at', '>=', now()->subDays(30));
+            // Filter by module
+            if ($request->filled('module') && $request->module !== 'all') {
+                $query->where('module', $request->module);
             }
+
+            // Filter by role
+            if ($request->filled('role') && $request->role !== 'all') {
+                $query->where('user_role', $request->role);
+            }
+
+            // Filter by date range
+            if ($request->filled('date_range')) {
+                if ($request->date_range === 'today') {
+                    $query->whereDate('created_at', today());
+                } elseif ($request->date_range === 'week') {
+                    $query->where('created_at', '>=', now()->subDays(7));
+                } elseif ($request->date_range === 'month') {
+                    $query->where('created_at', '>=', now()->subDays(30));
+                }
+            }
+
+            // Keyword Search
+            if ($request->filled('search')) {
+                $search = '%' . trim($request->search) . '%';
+                $query->where(function ($q) use ($search) {
+                    $q->where('description', 'like', $search)
+                      ->orWhere('user_name', 'like', $search)
+                      ->orWhere('action', 'like', $search)
+                      ->orWhere('ip_address', 'like', $search);
+                });
+            }
+
+            $logs = $query->paginate(30)->withQueryString();
+
+            // Statistics
+            $totalCount = \App\Models\ActivityLog::count();
+            $todayCount = \App\Models\ActivityLog::whereDate('created_at', today())->count();
+            $ordersCount = \App\Models\ActivityLog::where('module', 'orders')->count();
+            $authCount = \App\Models\ActivityLog::where('module', 'auth')->count();
+            $productCount = \App\Models\ActivityLog::where('module', 'products')->count();
+
+            $stats = compact('totalCount', 'todayCount', 'ordersCount', 'authCount', 'productCount');
+        } catch (\Throwable $e) {
+            $logs = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 30);
+            $stats = [
+                'totalCount' => 0,
+                'todayCount' => 0,
+                'ordersCount' => 0,
+                'authCount' => 0,
+                'productCount' => 0,
+            ];
+            session()->flash('error', 'Could not load activity logs: ' . $e->getMessage());
         }
-
-        // Keyword Search
-        if ($request->filled('search')) {
-            $search = '%' . trim($request->search) . '%';
-            $query->where(function ($q) use ($search) {
-                $q->where('description', 'like', $search)
-                  ->orWhere('user_name', 'like', $search)
-                  ->orWhere('action', 'like', $search)
-                  ->orWhere('ip_address', 'like', $search);
-            });
-        }
-
-        $logs = $query->paginate(30)->withQueryString();
-
-        // Statistics
-        $totalCount = \App\Models\ActivityLog::count();
-        $todayCount = \App\Models\ActivityLog::whereDate('created_at', today())->count();
-        $ordersCount = \App\Models\ActivityLog::where('module', 'orders')->count();
-        $authCount = \App\Models\ActivityLog::where('module', 'auth')->count();
-        $productCount = \App\Models\ActivityLog::where('module', 'products')->count();
-
-        $stats = compact('totalCount', 'todayCount', 'ordersCount', 'authCount', 'productCount');
 
         return view('admin.activity-logs', compact('logs', 'stats'));
     }
 
     public function clearActivityLogs(Request $request)
     {
-        \App\Models\ActivityLog::truncate();
-        \App\Services\ActivityLogger::log('settings', 'deleted', "Admin cleared all system activity logs");
+        if (\Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
+            \App\Models\ActivityLog::truncate();
+            \App\Services\ActivityLogger::log('settings', 'deleted', "Admin cleared all system activity logs");
+        }
 
         return redirect()->route('admin.activity-logs')->with('success', 'All system activity logs cleared successfully.');
     }
