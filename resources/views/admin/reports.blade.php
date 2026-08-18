@@ -231,24 +231,14 @@
                     <h3>{{ number_format($salesSummary['totalOrders'] ?? 0) }}</h3>
                 </div>
             </div>
-            <div class="col-xl col-lg-4 col-md-6 col-sm-6">
-                <div class="stat-card">
-                    <p>Avg Order Value</p>
-                    <h3>₱{{ number_format($salesSummary['avgOrderValue'] ?? 0, 2) }}</h3>
-                </div>
-            </div>
+           
             <div class="col-xl col-lg-4 col-md-6 col-sm-6">
                 <div class="stat-card">
                     <p>Total Items Sold</p>
                     <h3>{{ number_format($salesSummary['totalItemsSold'] ?? 0) }}</h3>
                 </div>
             </div>
-            <div class="col-xl col-lg-4 col-md-6 col-sm-6">
-                <div class="stat-card">
-                    <p>Delivery Success</p>
-                    <h3>{{ number_format($salesSummary['deliverySuccessRate'] ?? 0, 1) }}%</h3>
-                </div>
-            </div>
+        
         </div>
     </div>
 
