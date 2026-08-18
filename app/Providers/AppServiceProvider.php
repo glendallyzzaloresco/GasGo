@@ -5,9 +5,10 @@ namespace App\Providers;
 use App\Models\HomepageSetting;
 use App\Models\Inventory;
 use App\Observers\InventoryObserver;
-use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +25,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Register Brevo HTTPS API Mail Transport
+        Mail::extend('brevo', function (array $config = []) {
+            $key = $config['key'] ?? config('services.brevo.key') ?? env('BREVO_API_KEY');
+            return new \App\Mail\BrevoTransport($key);
+        });
         View::composer('*', function ($view) {
             $defaults = (object) [
                 'brand_name_primary' => 'Store',
