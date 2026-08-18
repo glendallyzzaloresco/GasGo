@@ -648,7 +648,8 @@
                      id="task-{{ $delivery->id }}"
                      data-lat="{{ $delivery->order->latitude ?? 0 }}"
                      data-lng="{{ $delivery->order->longitude ?? 0 }}"
-                     data-delivery-id="{{ $delivery->id }}">
+                     data-delivery-id="{{ $delivery->id }}"
+                     data-status="{{ $delivery->status }}">
                     <div class="task-header">
                         <div class="task-order">
                             <span class="order-dot"></span>
@@ -821,7 +822,7 @@
                     const lng = parseFloat(task.dataset.lng);
                     const status = task.dataset.status;
 
-                    if (status === 'assigned' || status === 'picked_up') {
+                    if (!status || status === 'assigned' || status === 'picked_up') {
                         startDeliveryBtn.disabled = true;
                         startDeliveryBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> STARTING...';
 
