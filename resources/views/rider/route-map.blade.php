@@ -772,7 +772,29 @@
         setTimeout(function() {
             initRouteMap();
             publishCurrentLocationOnce();
-        }, 50);
+
+            // Auto-focus on delivery if redirected with delivery_id param
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetDeliveryId = urlParams.get('delivery_id');
+            if (targetDeliveryId) {
+                const targetTask = document.querySelector(`.task-card[data-delivery-id="${targetDeliveryId}"]`);
+                if (targetTask) {
+                    const lat = parseFloat(targetTask.dataset.lat);
+                    const lng = parseFloat(targetTask.dataset.lng);
+                    focusOnTask(targetDeliveryId, lat, lng);
+                    locateOnMap(lat, lng);
+                    if (!isTracking) {
+                        const started = startTracking();
+                        const btn = document.getElementById('trackingBtn');
+                        if (started && btn) {
+                            btn.classList.remove('start');
+                            btn.classList.add('stop');
+                            btn.innerHTML = '<i class="fas fa-stop"></i><span>STOP TRACKING</span>';
+                        }
+                    }
+                }
+            }
+        }, 150);
     }
 
     if (document.readyState === 'loading') {
@@ -833,6 +855,17 @@
                             startDeliveryBtn.innerHTML = '<i class="fas fa-satellite-dish me-1"></i> OPEN LIVE MAP';
                             startDeliveryBtn.disabled = false;
 
+                            // Automatically start GPS tracking if not already active
+                            if (!isTracking) {
+                                const started = startTracking();
+                                const trackingBtn = document.getElementById('trackingBtn');
+                                if (started && trackingBtn) {
+                                    trackingBtn.classList.remove('start');
+                                    trackingBtn.classList.add('stop');
+                                    trackingBtn.innerHTML = '<i class="fas fa-stop"></i><span>STOP TRACKING</span>';
+                                }
+                            }
+
                             focusOnTask(deliveryId, lat, lng);
                             locateOnMap(lat, lng);
                         } catch (err) {
@@ -842,6 +875,16 @@
                             startDeliveryBtn.innerHTML = '<i class="fas fa-route me-1"></i> START DELIVERY & OPEN LIVE MAP';
                         }
                     } else {
+                        // If already out_for_delivery, make sure GPS tracking is also active and locate route
+                        if (!isTracking) {
+                            const started = startTracking();
+                            const trackingBtn = document.getElementById('trackingBtn');
+                            if (started && trackingBtn) {
+                                trackingBtn.classList.remove('start');
+                                trackingBtn.classList.add('stop');
+                                trackingBtn.innerHTML = '<i class="fas fa-stop"></i><span>STOP TRACKING</span>';
+                            }
+                        }
                         focusOnTask(deliveryId, lat, lng);
                         locateOnMap(lat, lng);
                     }

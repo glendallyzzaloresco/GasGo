@@ -486,7 +486,7 @@
                 </div>
 
                 @if($order->status === 'pending')
-                <form method="POST" action="{{ route('customer.order.cancel', $order) }}" class="mt-2">
+                <form method="POST" action="{{ route('customer.order.cancel', $order) }}" class="mt-2" id="cancelOrderForm">
                     @csrf
                     @method('PATCH')
                     <button type="submit" class="btn btn-outline-danger w-100" style="padding:12px;" onclick="return confirm('Cancel this order?');">
@@ -823,6 +823,12 @@
         // Update timeline status and time labels dynamically via AJAX
         currentStatus = data.status;
         updateTimeline(data.status, data.timestamps);
+
+        // Hide/remove cancel order button once order is approved or moved past pending
+        const cancelForm = document.getElementById('cancelOrderForm');
+        if (cancelForm && data.status !== 'pending') {
+            cancelForm.remove();
+        }
 
         // Update estimated delivery
         if (data.estimated_delivery) {

@@ -774,7 +774,7 @@
 
             // Redirect to Live Route Map
             setTimeout(() => {
-                window.location.href = "{{ url('/rider/route/live-map') }}";
+                window.location.href = "{{ url('/rider/route/live-map') }}?delivery_id={{ $delivery->id }}";
             }, 1000);
         })
         .catch(error => {
