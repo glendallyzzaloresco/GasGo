@@ -160,6 +160,9 @@ class DeliveryController extends Controller
         }
 
         if ($validated['status'] === 'out_for_delivery') {
+            if (! $delivery->picked_up_at) {
+                $updateData['picked_up_at'] = now();
+            }
             $delivery->order->update(['status' => 'out_for_delivery']);
         }
 
