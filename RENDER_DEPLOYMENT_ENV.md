@@ -10,7 +10,13 @@ APP_ENV=production
 APP_KEY=base64:8IARXbbOx76MzsVvNaTKHrcqYcWidu5WdKyGodpcUkw=
 APP_DEBUG=false
 
-# Cloudflare R2 Settings (REPLACE THESE PLACEHOLDERS)
+# Resend Email Configuration (Uses HTTPS Port 443 - Works on Render Free Tier)
+MAIL_MAILER=resend
+RESEND_API_KEY=re_Y26vwGNR_PjHSCVSfaGAZtZjpqEcK1Bw3
+MAIL_FROM_ADDRESS=onboarding@resend.dev
+MAIL_FROM_NAME="GasGo"
+
+# Cloudflare R2 Settings
 FILESYSTEM_DISK=s3
 AWS_ACCESS_KEY_ID=760ecac8a8a907b8aec370b2adb9c398
 AWS_SECRET_ACCESS_KEY=2f5ad4b10fd073ecab185251c71c31d363ae1e9dd555434dac2f298f977dee29
