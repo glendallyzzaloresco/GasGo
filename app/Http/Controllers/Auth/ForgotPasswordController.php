@@ -58,9 +58,12 @@ class ForgotPasswordController extends Controller
             $user->notify(new PasswordResetCodeNotification($code));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Password reset email failed to send: ' . $e->getMessage());
+            $errorMessage = config('app.debug')
+                ? 'Mail Error: ' . $e->getMessage()
+                : 'Unable to send verification code email right now. Please verify mail server settings or try again later.';
             return back()
                 ->withInput($request->only('email'))
-                ->withErrors(['email' => 'Unable to send verification code email right now. Please verify mail server settings or try again later.']);
+                ->withErrors(['email' => $errorMessage]);
         }
 
         \App\Services\ActivityLogger::log('auth', 'password_reset', "Password reset 6-digit code requested for email: {$user->email}", ['email' => $user->email], $user);
