@@ -292,14 +292,14 @@
         margin-top: 12px;
     }
 
-    .btn-locate {
+    .btn-start-delivery {
         flex: 1;
-        padding: 8px 12px;
+        padding: 9px 12px;
         border-radius: 8px;
-        background: var(--gasgo-orange);
+        background: linear-gradient(135deg, #27ae60, #2ecc71);
         color: white;
         border: none;
-        font-weight: 600;
+        font-weight: 700;
         font-size: 0.78rem;
         cursor: pointer;
         display: flex;
@@ -307,11 +307,23 @@
         justify-content: center;
         gap: 6px;
         transition: all 0.2s;
+        box-shadow: 0 2px 8px rgba(39, 174, 96, 0.25);
     }
 
-    .btn-locate:hover {
-        background: #e68a1a;
-        transform: scale(1.02);
+    .btn-start-delivery:hover {
+        background: linear-gradient(135deg, #219653, #27ae60);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(39, 174, 96, 0.35);
+    }
+
+    .btn-start-delivery.is-delivering {
+        background: linear-gradient(135deg, #2196f3, #42a5f5);
+        box-shadow: 0 2px 8px rgba(33, 150, 243, 0.25);
+    }
+
+    .btn-start-delivery.is-delivering:hover {
+        background: linear-gradient(135deg, #1976d2, #2196f3);
+        box-shadow: 0 4px 12px rgba(33, 150, 243, 0.35);
     }
 
     .btn-navigate {
@@ -670,11 +682,17 @@
                         <div class="task-amount">₱{{ number_format($delivery->order->total_amount, 2) }}</div>
                     </div>
                     <div class="task-actions">
-                        <button type="button" class="btn-locate" data-action="locate">
-                            <i class="fas fa-crosshairs"></i> LOCATE
-                        </button>
+                        @if($delivery->status === 'assigned' || $delivery->status === 'picked_up')
+                            <button type="button" class="btn-start-delivery" data-action="start-delivery" data-delivery-id="{{ $delivery->id }}">
+                                <i class="fas fa-route me-1"></i> START DELIVERY & OPEN LIVE MAP
+                            </button>
+                        @else
+                            <button type="button" class="btn-start-delivery is-delivering" data-action="start-delivery" data-delivery-id="{{ $delivery->id }}">
+                                <i class="fas fa-satellite-dish me-1"></i> OPEN LIVE MAP
+                            </button>
+                        @endif
                        
-                        <a href="tel:{{ $delivery->order->contact_number }}" class="btn-call" data-action="call">
+                        <a href="tel:{{ $delivery->order->contact_number }}" class="btn-call" data-action="call" title="Call Customer">
                             <i class="fas fa-phone"></i>
                         </a>
                     </div>
@@ -772,13 +790,61 @@
                 focusOnTask(deliveryId, lat, lng);
             });
 
-            const locateBtn = task.querySelector('[data-action="locate"]');
-            if (locateBtn) {
-                locateBtn.addEventListener('click', function (event) {
+            const startDeliveryBtn = task.querySelector('[data-action="start-delivery"]');
+            if (startDeliveryBtn) {
+                startDeliveryBtn.addEventListener('click', async function (event) {
                     event.stopPropagation();
+                    const deliveryId = task.dataset.deliveryId;
                     const lat = parseFloat(task.dataset.lat);
                     const lng = parseFloat(task.dataset.lng);
-                    locateOnMap(lat, lng);
+                    const status = task.dataset.status;
+
+                    if (status === 'assigned' || status === 'picked_up') {
+                        startDeliveryBtn.disabled = true;
+                        startDeliveryBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> STARTING...';
+
+                        try {
+                            const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                            const response = await fetch(`/rider/delivery/${deliveryId}/status`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': csrfToken,
+                                    'Accept': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                                body: JSON.stringify({ status: 'out_for_delivery' })
+                            });
+
+                            if (!response.ok) {
+                                throw new Error('Failed to start delivery');
+                            }
+
+                            task.dataset.status = 'out_for_delivery';
+                            showAlert('success', 'Delivery started! Tracking live route.');
+
+                            const statusEl = task.querySelector('.task-status');
+                            if (statusEl) {
+                                statusEl.className = 'task-status delivering';
+                                statusEl.innerHTML = '<i class="fas fa-truck me-1"></i> DELIVERING';
+                            }
+
+                            startDeliveryBtn.classList.add('is-delivering');
+                            startDeliveryBtn.innerHTML = '<i class="fas fa-satellite-dish me-1"></i> OPEN LIVE MAP';
+                            startDeliveryBtn.disabled = false;
+
+                            focusOnTask(deliveryId, lat, lng);
+                            locateOnMap(lat, lng);
+                        } catch (err) {
+                            console.error(err);
+                            showAlert('error', 'Unable to start delivery. Please try again.');
+                            startDeliveryBtn.disabled = false;
+                            startDeliveryBtn.innerHTML = '<i class="fas fa-route me-1"></i> START DELIVERY & OPEN LIVE MAP';
+                        }
+                    } else {
+                        focusOnTask(deliveryId, lat, lng);
+                        locateOnMap(lat, lng);
+                    }
                 });
             }
 
@@ -1185,41 +1251,49 @@
         }, 500);
     }
 
-    function focusOnTask(deliveryId, lat, lng) {
+    function focusOnTask(deliveryId, lat, lng, zoomOnRider = true) {
         // Update active state in sidebar
         document.querySelectorAll('.task-card').forEach(card => {
             card.classList.remove('active');
         });
-        document.getElementById(`task-${deliveryId}`).classList.add('active');
+        const taskCard = document.getElementById(`task-${deliveryId}`);
+        if (taskCard) taskCard.classList.add('active');
 
-        // Zoom closely to the selected delivery on the map (Level 17 like Foodpanda)
-        if (routeMap && lat && lng) {
-            routeMap.flyTo([lat, lng], 17, { animate: true, duration: 1.5 });
-        }
-        
-        // Draw route line from rider's current position to delivery
+        // Draw route line from rider's current position to delivery and zoom closely on rider
         if (riderPosition) {
-            drawRoute(riderPosition.lat, riderPosition.lng, lat, lng);
+            drawRoute(riderPosition.lat, riderPosition.lng, lat, lng, zoomOnRider);
+            if (zoomOnRider && routeMap) {
+                routeMap.flyTo([riderPosition.lat, riderPosition.lng], 17, { animate: true, duration: 1.5 });
+            }
+        } else if (routeMap && lat && lng && !zoomOnRider) {
+            routeMap.flyTo([lat, lng], 17, { animate: true, duration: 1.5 });
         }
     }
 
-    function locateOnMap(lat, lng) {
-        // First check if we have rider location from tracking
+    function locateOnMap(lat, lng, zoomOnRider = true) {
+        // Auto-start live GPS tracking if not already tracking
+        if (!isTracking) {
+            startTracking();
+        }
+
         if (!riderPosition) {
             // Try to get current location immediately
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     function(position) {
-                        riderPosition = {
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude
-                        };
-                        drawRoute(riderPosition.lat, riderPosition.lng, lat, lng);
+                        const rLat = position.coords.latitude;
+                        const rLng = position.coords.longitude;
+                        riderPosition = { lat: rLat, lng: rLng };
+                        updateRiderMarker(rLat, rLng);
+                        sendLocationToServer(rLat, rLng);
+                        drawRoute(rLat, rLng, lat, lng, zoomOnRider);
+                        if (zoomOnRider && routeMap) {
+                            routeMap.flyTo([rLat, rLng], 17, { animate: true, duration: 1.5 });
+                        }
                     },
                     function(error) {
                         console.error('Geolocation error:', error.code, error.message);
                         
-                        // Show which permission issue
                         let errorMsg = 'Enable location to view route';
                         if (error.code === 1) {
                             errorMsg = 'Location permission denied - check browser settings';
@@ -1231,14 +1305,14 @@
                         
                         showAlert('error', errorMsg);
                         
-                        // Fallback: zoom closely to destination (Level 17)
+                        // Fallback: zoom to destination (Level 17)
                         if (routeMap && lat && lng) {
                             routeMap.flyTo([lat, lng], 17, { animate: true, duration: 1.5 });
                         }
                     },
                     {
                         enableHighAccuracy: true,
-                        timeout: 8000,
+                        timeout: 10000,
                         maximumAge: 0
                     }
                 );
@@ -1246,8 +1320,11 @@
                 showAlert('error', 'Location services not available');
             }
         } else {
-            // We already have rider position from tracking - draw route immediately
-            drawRoute(riderPosition.lat, riderPosition.lng, lat, lng);
+            // We already have rider position - draw route and zoom closely to rider's position
+            drawRoute(riderPosition.lat, riderPosition.lng, lat, lng, zoomOnRider);
+            if (zoomOnRider && routeMap) {
+                routeMap.flyTo([riderPosition.lat, riderPosition.lng], 17, { animate: true, duration: 1.5 });
+            }
         }
     }
 
@@ -1267,7 +1344,7 @@
         return R * c;
     }
 
-    function drawRoute(fromLat, fromLng, toLat, toLng) {
+    function drawRoute(fromLat, fromLng, toLat, toLng, zoomOnRider = true) {
         console.log('drawRoute called:', fromLat, fromLng, 'to', toLat, toLng);
         
         // Clear previous route line if exists
@@ -1311,8 +1388,8 @@
                     // Draw route polyline with better styling - SOLID BLUE LINE
                     currentRouteLine = L.polyline(coordinates, {
                         color: '#2196f3',
-                        weight: 5,
-                        opacity: 0.8,
+                        weight: 6,
+                        opacity: 0.85,
                         lineCap: 'round',
                         lineJoin: 'round'
                     }).addTo(routeMap);
@@ -1327,7 +1404,7 @@
                         fillOpacity: 0.9
                     }).addTo(routeMap);
                     riderRouteMarker._isRouteMarker = true;
-                    riderRouteMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Your Location</b></div>');
+                    riderRouteMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Your Current Location</b></div>');
 
                     // Add destination marker (temporary for this route)
                     const destMarker = L.circleMarker([toLat, toLng], {
@@ -1341,9 +1418,14 @@
                     destMarker._isRouteMarker = true;
                     destMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Delivery Location</b></div>');
 
-                    // Fit bounds to show entire route
-                    const bounds = L.latLngBounds([[fromLat, fromLng], [toLat, toLng]]);
-                    routeMap.fitBounds(bounds, { padding: [100, 100], maxZoom: 16 });
+                    if (zoomOnRider) {
+                        // Zoom closely on rider's current location so rider can see the road ahead
+                        routeMap.flyTo([fromLat, fromLng], 17, { animate: true, duration: 1.5 });
+                    } else {
+                        // Fit bounds to show entire route
+                        const bounds = L.latLngBounds([[fromLat, fromLng], [toLat, toLng]]);
+                        routeMap.fitBounds(bounds, { padding: [100, 100], maxZoom: 16 });
+                    }
 
                     // Show success message with distance and duration
                     const distance = (route.distance / 1000).toFixed(1);
@@ -1351,17 +1433,17 @@
                     showAlert('success', `Route: ${distance}km, ~${duration} mins`);
                 } else {
                     console.error('No route found in OSRM response:', data);
-                    drawSimpleDirectLine(fromLat, fromLng, toLat, toLng);
+                    drawSimpleDirectLine(fromLat, fromLng, toLat, toLng, zoomOnRider);
                 }
             })
             .catch(error => {
                 console.error('OSRM fetch error:', error);
-                drawSimpleDirectLine(fromLat, fromLng, toLat, toLng);
+                drawSimpleDirectLine(fromLat, fromLng, toLat, toLng, zoomOnRider);
             });
     }
 
     // Fallback: draw simple direct line when OSRM fails
-    function drawSimpleDirectLine(fromLat, fromLng, toLat, toLng) {
+    function drawSimpleDirectLine(fromLat, fromLng, toLat, toLng, zoomOnRider = true) {
         console.log('Drawing direct line fallback');
         showAlert('info', 'Showing direct path to destination');
         
@@ -1385,7 +1467,7 @@
             fillOpacity: 0.9
         }).addTo(routeMap);
         riderRouteMarker._isRouteMarker = true;
-        riderRouteMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Your Location</b></div>');
+        riderRouteMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Your Current Location</b></div>');
 
         // Add destination marker
         const destMarker = L.circleMarker([toLat, toLng], {
@@ -1399,9 +1481,12 @@
         destMarker._isRouteMarker = true;
         destMarker.bindPopup('<div style="padding:8px; text-align:center;"><b>Delivery Location</b></div>');
         
-        // Fit bounds
-        const bounds = L.latLngBounds([[fromLat, fromLng], [toLat, toLng]]);
-        routeMap.fitBounds(bounds, { padding: [100, 100], maxZoom: 16 });
+        if (zoomOnRider) {
+            routeMap.flyTo([fromLat, fromLng], 17, { animate: true, duration: 1.5 });
+        } else {
+            const bounds = L.latLngBounds([[fromLat, fromLng], [toLat, toLng]]);
+            routeMap.fitBounds(bounds, { padding: [100, 100], maxZoom: 16 });
+        }
     }
 
     let navigationControl = null;

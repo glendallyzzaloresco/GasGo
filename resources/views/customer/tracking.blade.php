@@ -726,18 +726,34 @@
         }
     }
 
-    function updateTimeline(newStatus) {
+    function updateTimeline(newStatus, timestamps = null) {
         const newIndex = statusOrder.indexOf(newStatus);
         const steps = document.querySelectorAll('.timeline-step');
 
         steps.forEach((step, i) => {
+            const stepKey = step.dataset.step;
             step.classList.remove('done', 'active', 'cancelled');
+            const info = step.querySelector('.timeline-info');
+
             if (newStatus === 'cancelled') {
                 if (i === 0) step.classList.add('cancelled');
             } else if (i < newIndex) {
                 step.classList.add('done');
             } else if (i === newIndex) {
                 step.classList.add('active');
+            }
+
+            // Dynamically update order status time label via AJAX
+            if (timestamps && timestamps[stepKey] && (step.classList.contains('done') || step.classList.contains('active'))) {
+                let timeEl = info ? info.querySelector('.time-label') : null;
+                if (!timeEl && info) {
+                    timeEl = document.createElement('div');
+                    timeEl.className = 'time-label';
+                    info.appendChild(timeEl);
+                }
+                if (timeEl) {
+                    timeEl.textContent = timestamps[stepKey];
+                }
             }
         });
     }
@@ -750,7 +766,6 @@
             badge.innerHTML = statusBadgeLabels[data.status];
         }
 
-        // Upd
         if (data.rider_name) {
             document.getElementById('riderName').textContent = data.rider_name;
             const info = document.getElementById('riderInfo');
@@ -805,11 +820,9 @@
             overlay.classList.add('hidden');
         }
 
-        // Update timeline if status changed
-        if (data.status !== currentStatus) {
-            currentStatus = data.status;
-            updateTimeline(data.status);
-        }
+        // Update timeline status and time labels dynamically via AJAX
+        currentStatus = data.status;
+        updateTimeline(data.status, data.timestamps);
 
         // Update estimated delivery
         if (data.estimated_delivery) {
@@ -830,7 +843,7 @@
         return R * c;
     }
 
-    // Poll for updates (increased frequency to 2 seconds for live tracking)
+    // Poll for updates (every 2 seconds for real-time mobile tracking)
     function pollStatus() {
         if (currentStatus === 'delivered' || currentStatus === 'cancelled') return;
 
@@ -845,13 +858,25 @@
         })
         .catch(() => {});
 
-        // Poll every 2 seconds instead of 5 for better real-time tracking
         setTimeout(pollStatus, 2000);
     }
 
-    // Start polling immediately (not after delay) for live tracking
+    // Immediate poll when mobile device wakes up or tab becomes active
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible' && currentStatus !== 'delivered' && currentStatus !== 'cancelled') {
+            fetch(statusUrl, {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.error) updateUI(data);
+            })
+            .catch(() => {});
+        }
+    });
+
+    // Start polling immediately for live tracking
     if (currentStatus !== 'delivered' && currentStatus !== 'cancelled') {
-        // First poll immediately
         fetch(statusUrl, {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         })
@@ -859,12 +884,10 @@
         .then(data => {
             if (!data.error) {
                 updateUI(data);
-                // Then continue polling
                 setTimeout(pollStatus, 2000);
             }
         })
         .catch(() => {
-            // If first poll fails, still start polling
             setTimeout(pollStatus, 2000);
         });
     }

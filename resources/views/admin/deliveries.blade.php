@@ -94,15 +94,14 @@
 @endsection
 
 @php
-    /* Delivery Status Workflow - 3 Step Process */
-    $statusOrder = ['out_for_delivery', 'delivered', 'returning'];
+    /* Delivery Status Workflow - 2 Step Process */
+    $statusOrder = ['out_for_delivery', 'delivered'];
     $statusLabels = [
         'pending' => 'Pending Assignment',
         'assigned' => 'Rider Assigned',
         'picked_up' => 'Picked Up',
         'out_for_delivery' => 'Out for Delivery',
         'delivered' => 'Order Delivered',
-        'returning' => 'Returning to Store',
         'failed' => 'Delivery Failed',
         'cancelled' => 'Cancelled',
     ];
@@ -112,7 +111,6 @@
         'picked_up' => 'badge-picked_up',
         'out_for_delivery' => 'badge-out_for_delivery',
         'delivered' => 'badge-delivered',
-        'returning' => 'badge-returning',
         'failed' => 'badge-failed',
         'cancelled' => 'badge-failed',
     ];
@@ -149,10 +147,6 @@
     <div class="legend-item">
         <div class="legend-color" style="background:#27ae60;"></div>
         <span><strong>Order Delivered (Step 2):</strong> Order successfully delivered to customer</span>
-    </div>
-    <div class="legend-item">
-        <div class="legend-color" style="background:#9C27B0;"></div>
-        <span><strong>Returning to Store (Step 3):</strong> Rider returning to store after all deliveries</span>
     </div>
 </div>
 
@@ -194,7 +188,6 @@
                     <div class="timeline-labels">
                         <div class="label">Out for Delivery</div>
                         <div class="label">Delivered</div>
-                        <div class="label">Returned</div>
                     </div>
                 </div>
             </div>
@@ -242,7 +235,6 @@
                     <div class="timeline-labels">
                         <div class="label">Out for Delivery</div>
                         <div class="label">Delivered</div>
-                        <div class="label">Returned</div>
                     </div>
                 </div>
             </div>
@@ -293,7 +285,6 @@
                     <div class="timeline-labels">
                         <div class="label">Out for Delivery</div>
                         <div class="label">Delivered</div>
-                        <div class="label">Returned</div>
                     </div>
                 </div>
             </div>
@@ -311,14 +302,13 @@
 @section('scripts')
 <script>
     let currentDeliveryFilter = 'all';
-    const deliveryStatusOrder = ['out_for_delivery', 'delivered', 'returning'];
+    const deliveryStatusOrder = ['out_for_delivery', 'delivered'];
     const deliveryStatusLabels = {
         pending: 'Pending Assignment',
         assigned: 'Rider Assigned',
         picked_up: 'Picked Up',
         out_for_delivery: 'Out for Delivery',
         delivered: 'Order Delivered',
-        returning: 'Returning to Store',
         failed: 'Delivery Failed',
         cancelled: 'Cancelled',
     };
@@ -328,7 +318,6 @@
         picked_up: 'badge-picked_up',
         out_for_delivery: 'badge-out_for_delivery',
         delivered: 'badge-delivered',
-        returning: 'badge-returning',
         failed: 'badge-failed',
         cancelled: 'badge-failed',
     };
@@ -605,7 +594,7 @@
                         
                         // Update timeline
                         const steps = card.querySelectorAll('.step');
-                        const statusOrder = ['out_for_delivery', 'delivered', 'returning'];
+                        const statusOrder = ['out_for_delivery', 'delivered'];
                         const currentIndex = statusOrder.indexOf(delivery.status);
                         
                         steps.forEach((step, i) => {
