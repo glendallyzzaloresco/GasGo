@@ -22,6 +22,23 @@
         color: white;
         border: none;
     }
+
+    @media (max-width: 768px) {
+        .nav-tabs {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+        }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .nav-tabs .nav-link {
+            flex-shrink: 0;
+            padding: 8px 14px;
+            font-size: 0.8rem;
+        }
+    }
     .user-table {
         font-size: .88rem;
     }

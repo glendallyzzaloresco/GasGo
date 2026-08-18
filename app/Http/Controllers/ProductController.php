@@ -111,7 +111,7 @@ class ProductController extends Controller
             'requires_exchange'    => 'nullable|boolean',
             'description'    => 'nullable|string',
             'price'          => 'nullable|numeric|min:0',
-            'cost_price'     => 'required_unless:category,freebie|nullable|numeric|min:0',
+            'cost_price'     => 'nullable|numeric|min:0',
             'selling_price'  => 'required_unless:category,freebie|nullable|numeric|min:0',
             'stock'          => 'nullable|integer|min:0',
             'weight'         => 'nullable|string|max:255',
@@ -233,7 +233,7 @@ class ProductController extends Controller
             'requires_exchange'    => 'nullable|boolean',
             'description'    => 'nullable|string',
             'price'          => 'nullable|numeric|min:0',
-            'cost_price'     => 'required_unless:category,freebie|nullable|numeric|min:0',
+            'cost_price'     => 'nullable|numeric|min:0',
             'selling_price'  => 'required_unless:category,freebie|nullable|numeric|min:0',
             'stock'          => 'nullable|integer|min:0',
             'weight'         => 'nullable|string|max:255',
@@ -460,7 +460,7 @@ class ProductController extends Controller
             'stock'                 => 'required|integer|min:0',
             'category'              => 'nullable|string|max:255',
             'reward_points_required'=> 'nullable|integer|min:0',
-            'redemption_type'       => 'required|in:loyalty_points,auto_included,promotional',
+            'redemption_type'       => 'nullable|in:loyalty_points,auto_included,promotional',
             'image'                 => 'nullable|image|max:2048',
             'is_active'             => 'nullable|boolean',
         ]);
@@ -471,6 +471,7 @@ class ProductController extends Controller
         }
 
         $validated['reward_points_required'] = (int) ($validated['reward_points_required'] ?? 0);
+        $validated['redemption_type'] = $validated['redemption_type'] ?? 'promotional';
         $validated['is_active'] = $request->boolean('is_active');
 
         $freebie = Freebie::create($validated);
@@ -495,7 +496,7 @@ class ProductController extends Controller
             'stock'                 => 'required|integer|min:0',
             'category'              => 'nullable|string|max:255',
             'reward_points_required'=> 'nullable|integer|min:0',
-            'redemption_type'       => 'required|in:loyalty_points,auto_included,promotional',
+            'redemption_type'       => 'nullable|in:loyalty_points,auto_included,promotional',
             'image'                 => 'nullable|image|max:2048',
             'is_active'             => 'nullable|boolean',
         ]);
@@ -506,6 +507,7 @@ class ProductController extends Controller
         }
 
         $validated['reward_points_required'] = (int) ($validated['reward_points_required'] ?? 0);
+        $validated['redemption_type'] = $validated['redemption_type'] ?? ($freebie->redemption_type ?: 'promotional');
         $validated['is_active'] = $request->boolean('is_active');
 
         $freebie->update($validated);

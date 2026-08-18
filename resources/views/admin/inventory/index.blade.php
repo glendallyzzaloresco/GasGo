@@ -449,116 +449,116 @@
         </div>
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-xl-2 col-lg-4 col-md-6">
+    <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-2 g-md-3 mb-3">
+        <div class="col">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
+                <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <div class="text-uppercase small fw-semibold text-muted"><i class="bi bi-box2-heart me-2"></i>Full Cylinders</div>
-                            <div class="h3 fw-bold mt-2 mb-0">{{ number_format($totalFullCylinders) }}</div>
+                            <div class="text-uppercase small fw-semibold text-muted" style="font-size:0.7rem;"><i class="bi bi-box2-heart me-1"></i>Full Tanks</div>
+                            <div class="h4 fw-bold mt-1 mb-0">{{ number_format($totalFullCylinders) }}</div>
                         </div>
-                        <div class="rounded-circle bg-success-subtle p-3 text-success"><i class="bi bi-box2-heart fs-5"></i></div>
+                        <div class="rounded-circle bg-success-subtle p-2 text-success"><i class="bi bi-box2-heart fs-6"></i></div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="col">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
+                <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <div class="text-uppercase small fw-semibold text-muted"><i class="bi bi-bucket me-2"></i>Empty Cylinders</div>
-                            <div class="h3 fw-bold mt-2 mb-0">{{ number_format($totalEmptyCylinders) }}</div>
+                            <div class="text-uppercase small fw-semibold text-muted" style="font-size:0.7rem;"><i class="bi bi-bucket me-1"></i>Empty Tanks</div>
+                            <div class="h4 fw-bold mt-1 mb-0">{{ number_format($totalEmptyCylinders) }}</div>
                         </div>
-                        <div class="rounded-circle bg-warning-subtle p-3 text-warning"><i class="bi bi-bucket fs-5"></i></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-2 col-lg-4 col-md-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <div class="text-uppercase small fw-semibold text-muted"><i class="bi bi-stack me-2"></i>Total Products</div>
-                            <div class="h3 fw-bold mt-2 mb-0">{{ number_format($totalProducts) }}</div>
-                        </div>
-                        <div class="rounded-circle bg-primary-subtle p-3 text-primary"><i class="bi bi-stack fs-5"></i></div>
+                        <div class="rounded-circle bg-warning-subtle p-2 text-warning"><i class="bi bi-bucket fs-6"></i></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="col">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
+                <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <div class="text-uppercase small fw-semibold text-muted"><i class="bi bi-exclamation-triangle me-2"></i>Low Stock</div>
-                            <div class="h3 fw-bold mt-2 mb-0">{{ number_format($lowStockProducts) }}</div>
+                            <div class="text-uppercase small fw-semibold text-muted" style="font-size:0.7rem;"><i class="bi bi-stack me-1"></i>Total Items</div>
+                            <div class="h4 fw-bold mt-1 mb-0">{{ number_format($totalProducts) }}</div>
                         </div>
-                        <div class="rounded-circle bg-danger-subtle p-3 text-danger"><i class="bi bi-exclamation-triangle fs-5"></i></div>
+                        <div class="rounded-circle bg-primary-subtle p-2 text-primary"><i class="bi bi-stack fs-6"></i></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="col">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
+                <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <div class="text-uppercase small fw-semibold text-muted"><i class="bi bi-cash-stack me-2"></i>Today's Sales</div>
-                            <div class="h3 fw-bold mt-2 mb-0">₱{{ number_format($todaySales, 2) }}</div>
+                            <div class="text-uppercase small fw-semibold text-muted" style="font-size:0.7rem;"><i class="bi bi-exclamation-triangle me-1"></i>Low Stock</div>
+                            <div class="h4 fw-bold mt-1 mb-0 text-danger">{{ number_format($lowStockProducts) }}</div>
                         </div>
-                        <div class="rounded-circle bg-info-subtle p-3 text-info"><i class="bi bi-cash-stack fs-5"></i></div>
+                        <div class="rounded-circle bg-danger-subtle p-2 text-danger"><i class="bi bi-exclamation-triangle fs-6"></i></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="col">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
+                <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <div class="text-uppercase small fw-semibold text-muted"><i class="bi bi-truck me-2"></i>Today's Deliveries</div>
-                            <div class="h3 fw-bold mt-2 mb-0">{{ number_format($todayDeliveries) }}</div>
+                            <div class="text-uppercase small fw-semibold text-muted" style="font-size:0.7rem;"><i class="bi bi-cash-stack me-1"></i>Today's Sales</div>
+                            <div class="h4 fw-bold mt-1 mb-0 text-truncate">₱{{ number_format($todaySales, 2) }}</div>
                         </div>
-                        <div class="rounded-circle bg-secondary-subtle p-3 text-secondary"><i class="bi bi-truck fs-5"></i></div>
+                        <div class="rounded-circle bg-info-subtle p-2 text-info"><i class="bi bi-cash-stack fs-6"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-uppercase small fw-semibold text-muted" style="font-size:0.7rem;"><i class="bi bi-truck me-1"></i>Deliveries</div>
+                            <div class="h4 fw-bold mt-1 mb-0">{{ number_format($todayDeliveries) }}</div>
+                        </div>
+                        <div class="rounded-circle bg-secondary-subtle p-2 text-secondary"><i class="bi bi-truck fs-6"></i></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-md-4">
+    <div class="row g-2 g-md-3 mb-3">
+        <div class="col-12 col-md-4">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <div class="text-muted small fw-semibold mb-2">Full Cylinders Received Today</div>
-                    <div class="h3 fw-bold text-success">{{ (int) ($dailyMovementTotals->full_in ?? 0) }}</div>
-                    <div class="text-muted small">Incoming stock</div>
+                <div class="card-body p-3 text-center">
+                    <div class="text-muted small fw-semibold mb-1" style="font-size:0.75rem;">Full Cylinders Received Today</div>
+                    <div class="h4 fw-bold text-success mb-0">{{ (int) ($dailyMovementTotals->full_in ?? 0) }}</div>
+                    <div class="text-muted small" style="font-size:0.7rem;">Incoming stock</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-12 col-md-4">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <div class="text-muted small fw-semibold mb-2">Full Cylinders Released Today</div>
-                    <div class="h3 fw-bold text-primary">{{ (int) ($dailyMovementTotals->full_out ?? 0) }}</div>
-                    <div class="text-muted small">Distributed stock</div>
+                <div class="card-body p-3 text-center">
+                    <div class="text-muted small fw-semibold mb-1" style="font-size:0.75rem;">Full Cylinders Released Today</div>
+                    <div class="h4 fw-bold text-primary mb-0">{{ (int) ($dailyMovementTotals->full_out ?? 0) }}</div>
+                    <div class="text-muted small" style="font-size:0.7rem;">Distributed stock</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-12 col-md-4">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <div class="text-muted small fw-semibold mb-2">Empty Cylinders Received Today</div>
-                    <div class="h3 fw-bold text-warning">{{ (int) ($dailyMovementTotals->empty_in ?? 0) }}</div>
-                    <div class="text-muted small">Returned empties</div>
+                <div class="card-body p-3 text-center">
+                    <div class="text-muted small fw-semibold mb-1" style="font-size:0.75rem;">Empty Cylinders Received Today</div>
+                    <div class="h4 fw-bold text-warning mb-0">{{ (int) ($dailyMovementTotals->empty_in ?? 0) }}</div>
+                    <div class="text-muted small" style="font-size:0.7rem;">Returned empties</div>
                 </div>
             </div>
         </div>
@@ -785,7 +785,7 @@
                                         <td class="fw-semibold">{{ (int) $freebie->stock }}</td>
                                         <td class="fw-semibold"><span class="text-muted">N/A</span></td>
                                         <td><span class="badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
-                                        <td class="text-muted small">-</td>
+                                        <td class="text-muted small">{{ $freebie->updated_at ? $freebie->updated_at->format('M d, Y') : '—' }}</td>
                                         <td>
                                             <a href="{{ route('admin.products', ['tab' => 'freebies']) }}" class="btn btn-sm btn-success">
                                                 <i class="bi bi-plus-circle me-1"></i>Manage Freebie
@@ -974,12 +974,16 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Quantity</label>
+                        <label class="form-label fw-semibold">Reference No. <span class="text-danger">*</span></label>
+                        <input type="text" name="reference" id="adjustReference" class="form-control" placeholder="e.g. ADJ-2026-001 / PO-9812" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
                         <input type="number" name="quantity_change" id="adjustQuantity" class="form-control" min="1" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Notes</label>
-                        <textarea name="notes" class="form-control" rows="2" placeholder="Optional remarks"></textarea>
+                        <label class="form-label fw-semibold">Remarks / Notes <span class="text-danger">*</span></label>
+                        <textarea name="notes" id="adjustNotes" class="form-control" rows="2" placeholder="Enter reason or details for this adjustment..." required></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -1035,7 +1039,9 @@ function setAdjustInventory(inventoryId, productName, isCylinder = false) {
     }
 
     select.value = '';
+    document.getElementById('adjustReference').value = '';
     document.getElementById('adjustQuantity').value = '';
+    document.getElementById('adjustNotes').value = '';
     document.getElementById('adjustStockForm').setAttribute('action', `/admin/inventory/${inventoryId}/adjust`);
 }
 

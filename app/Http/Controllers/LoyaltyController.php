@@ -40,7 +40,7 @@ class LoyaltyController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            $deliveredOrders = \App\Models\Order::with('orderItems')
+            $deliveredOrders = \App\Models\Order::with('orderItems.product')
                 ->where('user_id', $userId)
                 ->where('status', 'delivered')
                 ->where('created_at', '>=', now()->subYear())
@@ -312,7 +312,7 @@ class LoyaltyController extends Controller
             ->delete();
 
         // Get user's completed orders
-        $deliveredOrders = \App\Models\Order::with('orderItems')
+        $deliveredOrders = \App\Models\Order::with('orderItems.product')
             ->where('user_id', $userId)
             ->where('status', 'delivered')
             ->where('created_at', '>=', now()->subYear())
@@ -474,15 +474,32 @@ class LoyaltyController extends Controller
 
     /**
      * Calculate the amount that should count toward loyalty points for an order.
-     * Includes all paid items, so non-tank products contribute to the total spend too.
+     * Only applies to tank/cylinder products (appliances & accessories are excluded).
+     * Points are 1 point per ₱100 spend on tank products without deducting voucher discounts or adding delivery fee.
      */
     private function calculateSpendFromOrder(Order $order): float
     {
-        $paidItemsTotal = $order->orderItems
-            ->where('is_reward', false)
+        $tankSpendTotal = $order->orderItems
+            ->filter(function ($item) {
+                if ($item->is_reward) {
+                    return false;
+                }
+                if ($item->product) {
+                    return $item->product->isCylinder();
+                }
+                $name = strtolower((string) ($item->product_name ?? ''));
+                return (str_contains($name, 'tank') || str_contains($name, 'cylinder') || str_contains($name, 'lpg'))
+                    && !str_contains($name, 'regulator')
+                    && !str_contains($name, 'hose')
+                    && !str_contains($name, 'clamp')
+                    && !str_contains($name, 'stove')
+                    && !str_contains($name, 'burner')
+                    && !str_contains($name, 'paste')
+                    && !str_contains($name, 'hanger');
+            })
             ->sum('subtotal');
 
-        return max(0, (float) $paidItemsTotal + (float) $order->delivery_fee - (float) $order->discount);
+        return max(0, (float) $tankSpendTotal);
     }
 
     // Calculate earned, redeemed, and balance for a given user

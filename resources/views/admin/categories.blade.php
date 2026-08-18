@@ -17,10 +17,21 @@
         align-items:center; justify-content:center; font-size:1.5rem; color:#fff; flex-shrink:0;
     }
     .modal-form label { font-weight:600; font-size:.88rem; color:#555; }
-    .modal-form .form-control {
-        border-radius:10px; border:2px solid #e0e0e0; padding:10px 16px;
-    }
     .modal-form .form-control:focus { border-color:var(--gasgo-blue); box-shadow:none; }
+
+    @media (max-width: 768px) {
+        .cat-card {
+            padding: 14px 12px;
+            gap: 12px;
+            border-radius: 14px;
+        }
+        .cat-icon {
+            width: 44px;
+            height: 44px;
+            font-size: 1.2rem;
+            border-radius: 10px;
+        }
+    }
 </style>
 @endsection
 

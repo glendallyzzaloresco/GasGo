@@ -47,7 +47,7 @@
     .btn-delivery-progress:hover { background:#145a8f; }
     .delivery-card.is-updating { opacity:.65; }
     
-    /* Timeline Progress Bar - 4 Steps with Labels */
+    /* Timeline Progress Bar - 3 Steps with Labels */
     .timeline-mini { display:flex; gap:4px; margin-top:8px; flex-direction:column; }
     .timeline-steps { display:flex; gap:4px; }
     .timeline-mini .step {
@@ -59,8 +59,6 @@
     .timeline-mini .step.step-2.current { background:#27ae60; animation:pulse 1.5s infinite; }
     .timeline-mini .step.step-3.done { background:#9C27B0; }
     .timeline-mini .step.step-3.current { background:#9C27B0; animation:pulse 1.5s infinite; }
-    .timeline-mini .step.step-4.done { background:#5DADE2; }
-    .timeline-mini .step.step-4.current { background:#5DADE2; animation:pulse 1.5s infinite; }
     .timeline-labels { display:flex; gap:4px; margin-top:6px; font-size:.7rem; font-weight:500; color:#666; }
     .timeline-labels .label { flex:1; text-align:center; }
     @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.6;} }
@@ -69,30 +67,59 @@
     .status-legend { margin-top:20px; padding:15px; background:#f5f5f5; border-radius:10px; font-size:.85rem; }
     .legend-item { display:inline-flex; align-items:center; gap:8px; margin-right:20px; }
     .legend-color { width:16px; height:16px; border-radius:3px; }
+
+    @media (max-width: 768px) {
+        .status-legend {
+            padding: 10px 12px;
+            font-size: 0.78rem;
+            margin-bottom: 16px !important;
+        }
+        .legend-item {
+            margin-right: 10px;
+            margin-bottom: 6px;
+            font-size: 0.74rem;
+        }
+        .delivery-item {
+            padding: 12px 14px;
+            border-radius: 14px;
+        }
+        .timeline-mini {
+            margin-top: 10px;
+        }
+        .timeline-labels {
+            font-size: 0.65rem;
+        }
+    }
 </style>
 @endsection
 
 @php
-    /* Delivery Status Workflow - 4 Step Process */
-    $statusOrder = ['out_for_delivery', 'delivered', 'returning', 'standby'];
+    /* Delivery Status Workflow - 3 Step Process */
+    $statusOrder = ['out_for_delivery', 'delivered', 'returning'];
     $statusLabels = [
+        'pending' => 'Pending Assignment',
+        'assigned' => 'Rider Assigned',
+        'picked_up' => 'Picked Up',
         'out_for_delivery' => 'Out for Delivery',
         'delivered' => 'Order Delivered',
         'returning' => 'Returning to Store',
-        'standby' => 'Rider Stand By',
-        'failed' => 'Failed'
+        'failed' => 'Delivery Failed',
+        'cancelled' => 'Cancelled',
     ];
     $statusBadgeClasses = [
+        'pending' => 'badge-assigned',
+        'assigned' => 'badge-assigned',
+        'picked_up' => 'badge-picked_up',
         'out_for_delivery' => 'badge-out_for_delivery',
         'delivered' => 'badge-delivered',
         'returning' => 'badge-returning',
-        'standby' => 'badge-standby',
-        'failed' => 'badge-failed'
+        'failed' => 'badge-failed',
+        'cancelled' => 'badge-failed',
     ];
     
     // Split deliveries into active and completed
-    $activeDeliveries = $deliveries->filter(fn($d) => !in_array($d->status, ['delivered', 'failed']));
-    $completedDeliveries = $deliveries->filter(fn($d) => in_array($d->status, ['delivered', 'failed']));
+    $activeDeliveries = $deliveries->filter(fn($d) => !in_array($d->status, ['delivered', 'failed', 'cancelled']));
+    $completedDeliveries = $deliveries->filter(fn($d) => in_array($d->status, ['delivered', 'failed', 'cancelled']));
 @endphp
 
 @section('content')
@@ -127,10 +154,6 @@
         <div class="legend-color" style="background:#9C27B0;"></div>
         <span><strong>Returning to Store (Step 3):</strong> Rider returning to store after all deliveries</span>
     </div>
-    <div class="legend-item">
-        <div class="legend-color" style="background:#5DADE2;"></div>
-        <span><strong>Rider Stand By (Step 4):</strong> Rider waiting for new orders to deliver</span>
-    </div>
 </div>
 
 <!-- Active Deliveries List -->
@@ -138,20 +161,22 @@
     <h5 class="mb-3" style="color:#333; font-weight:600;">Active Deliveries</h5>
     <div id="activeDeliveriesList">
         @forelse($activeDeliveries as $delivery)
-            <div class="delivery-item active-delivery delivery-card" id="delivery-{{ $delivery->id }}" data-id="{{ $delivery->id }}" data-status="{{ $delivery->status }}" data-group="active" data-search="order #{{ $delivery->order_id }} {{ strtolower($delivery->order->user->name ?? '') }} {{ strtolower($delivery->rider->name ?? '') }} {{ strtolower($delivery->order->address_full ?? '') }}">
+            <div class="delivery-item active-delivery delivery-card" id="delivery-{{ $delivery->id }}" data-id="{{ $delivery->id }}" data-status="{{ $delivery->status }}" data-group="active" data-search="order #{{ $delivery->order_id }} {{ strtolower($delivery->order->customer_name ?? $delivery->order->user->name ?? '') }} {{ strtolower($delivery->rider->name ?? '') }} {{ strtolower($delivery->order->delivery_address ?? '') }}">
                 <div style="display:flex; justify-content:space-between; align-items:start;">
                     <div style="flex:1;">
                         <div style="margin-bottom:4px;">
                             <strong style="color:#333;">Order #{{ $delivery->order_id }}</strong>
-                            <span class="badge {{ $statusBadgeClasses[$delivery->status] ?? 'badge-assigned' }}" style="margin-left:8px;">{{ $statusLabels[$delivery->status] ?? 'N/A' }}</span>
+                            <span class="badge {{ $statusBadgeClasses[$delivery->status] ?? 'badge-assigned' }}" style="margin-left:8px;">{{ $statusLabels[$delivery->status] ?? ucwords(str_replace('_', ' ', $delivery->status ?: ($delivery->order->status ?? 'Pending'))) }}</span>
                         </div>
                         <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
-                            <strong>Customer:</strong> {{ $delivery->order->user->name ?? 'N/A' }}
+                            <strong>Customer:</strong> {{ $delivery->order->customer_name ?? $delivery->order->user->name ?? 'N/A' }}
                         </div>
                         <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
                             <strong>Rider:</strong> {{ $delivery->rider->name ?? 'Unassigned' }}
                         </div>
-                        
+                        <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
+                            <strong>Address:</strong> {{ $delivery->order->delivery_address ?? 'No address provided' }}
+                        </div>
                     </div>
                 </div>
                 <div class="timeline-mini">
@@ -159,8 +184,8 @@
                         @foreach($statusOrder as $i => $status)
                             @php
                                 $currentIndex = array_search($delivery->status, $statusOrder);
-                                $isDone = $i <= $currentIndex;
-                                $isCurrent = $i === $currentIndex;
+                                $isDone = ($currentIndex !== false) && ($i <= $currentIndex);
+                                $isCurrent = ($currentIndex !== false) && ($i === $currentIndex);
                                 $stepNumber = $i + 1;
                             @endphp
                             <div class="step step-{{ $stepNumber }} {{ $isDone ? 'done' : '' }} {{ $isCurrent ? 'current' : '' }}"></div>
@@ -170,7 +195,6 @@
                         <div class="label">Out for Delivery</div>
                         <div class="label">Delivered</div>
                         <div class="label">Returned</div>
-                        <div class="label">Stand By</div>
                     </div>
                 </div>
             </div>
@@ -188,21 +212,21 @@
     <h5 class="mb-3" style="color:#333; font-weight:600;">Completed Deliveries</h5>
     <div id="completedDeliveriesList">
         @forelse($completedDeliveries as $delivery)
-            <div class="delivery-item completed-delivery delivery-card" id="delivery-{{ $delivery->id }}" data-id="{{ $delivery->id }}" data-status="{{ $delivery->status }}" data-group="completed" data-search="order #{{ $delivery->order_id }} {{ strtolower($delivery->order->user->name ?? '') }} {{ strtolower($delivery->rider->name ?? '') }} {{ strtolower($delivery->order->address_full ?? '') }}">
+            <div class="delivery-item completed-delivery delivery-card" id="delivery-{{ $delivery->id }}" data-id="{{ $delivery->id }}" data-status="{{ $delivery->status }}" data-group="completed" data-search="order #{{ $delivery->order_id }} {{ strtolower($delivery->order->customer_name ?? $delivery->order->user->name ?? '') }} {{ strtolower($delivery->rider->name ?? '') }} {{ strtolower($delivery->order->delivery_address ?? '') }}">
                 <div style="display:flex; justify-content:space-between; align-items:start;">
                     <div style="flex:1;">
                         <div style="margin-bottom:4px;">
                             <strong style="color:#333;">Order #{{ $delivery->order_id }}</strong>
-                            <span class="badge {{ $statusBadgeClasses[$delivery->status] ?? 'badge-delivered' }}" style="margin-left:8px;">{{ $statusLabels[$delivery->status] ?? 'N/A' }}</span>
+                            <span class="badge {{ $statusBadgeClasses[$delivery->status] ?? 'badge-delivered' }}" style="margin-left:8px;">{{ $statusLabels[$delivery->status] ?? ucwords(str_replace('_', ' ', $delivery->status ?: ($delivery->order->status ?? 'Completed'))) }}</span>
                         </div>
                         <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
-                            <strong>Customer:</strong> {{ $delivery->order->user->name ?? 'N/A' }}
+                            <strong>Customer:</strong> {{ $delivery->order->customer_name ?? $delivery->order->user->name ?? 'N/A' }}
                         </div>
                         <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
                             <strong>Rider:</strong> {{ $delivery->rider->name ?? 'System' }}
                         </div>
-                        <div style="font-size:.82rem; color:#666;">
-                            <strong>Address:</strong> {{ $delivery->order->address_full ?? 'N/A' }}
+                        <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
+                            <strong>Address:</strong> {{ $delivery->order->delivery_address ?? 'No address provided' }}
                         </div>
                     </div>
                 </div>
@@ -219,7 +243,6 @@
                         <div class="label">Out for Delivery</div>
                         <div class="label">Delivered</div>
                         <div class="label">Returned</div>
-                        <div class="label">Stand By</div>
                     </div>
                 </div>
             </div>
@@ -237,21 +260,21 @@
     <h5 class="mb-3" style="color:#333; font-weight:600;">All Deliveries</h5>
     <div id="allDeliveriesList">
         @forelse($deliveries as $delivery)
-            <div class="delivery-item delivery-card" id="delivery-{{ $delivery->id }}" data-id="{{ $delivery->id }}" data-status="{{ $delivery->status }}" data-group="all" data-search="order #{{ $delivery->order_id }} {{ strtolower($delivery->order->user->name ?? '') }} {{ strtolower($delivery->rider->name ?? '') }} {{ strtolower($delivery->order->address_full ?? '') }}">
+            <div class="delivery-item delivery-card" id="delivery-{{ $delivery->id }}" data-id="{{ $delivery->id }}" data-status="{{ $delivery->status }}" data-group="all" data-search="order #{{ $delivery->order_id }} {{ strtolower($delivery->order->customer_name ?? $delivery->order->user->name ?? '') }} {{ strtolower($delivery->rider->name ?? '') }} {{ strtolower($delivery->order->delivery_address ?? '') }}">
                 <div style="display:flex; justify-content:space-between; align-items:start;">
                     <div style="flex:1;">
                         <div style="margin-bottom:4px;">
                             <strong style="color:#333;">Order #{{ $delivery->order_id }}</strong>
-                            <span class="badge {{ $statusBadgeClasses[$delivery->status] ?? 'badge-assigned' }}" style="margin-left:8px;">{{ $statusLabels[$delivery->status] ?? 'N/A' }}</span>
+                            <span class="badge {{ $statusBadgeClasses[$delivery->status] ?? 'badge-assigned' }}" style="margin-left:8px;">{{ $statusLabels[$delivery->status] ?? ucwords(str_replace('_', ' ', $delivery->status ?: ($delivery->order->status ?? 'Pending'))) }}</span>
                         </div>
                         <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
-                            <strong>Customer:</strong> {{ $delivery->order->user->name ?? 'N/A' }}
+                            <strong>Customer:</strong> {{ $delivery->order->customer_name ?? $delivery->order->user->name ?? 'N/A' }}
                         </div>
                         <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
                             <strong>Rider:</strong> {{ $delivery->rider->name ?? 'Unassigned' }}
                         </div>
-                        <div style="font-size:.82rem; color:#666;">
-                            <strong>Address:</strong> {{ $delivery->order->address_full ?? 'N/A' }}
+                        <div style="font-size:.82rem; color:#666; margin-bottom:2px;">
+                            <strong>Address:</strong> {{ $delivery->order->delivery_address ?? 'No address provided' }}
                         </div>
                     </div>
                 </div>
@@ -260,8 +283,8 @@
                         @foreach($statusOrder as $i => $status)
                             @php
                                 $currentIndex = array_search($delivery->status, $statusOrder);
-                                $isDone = $i <= $currentIndex;
-                                $isCurrent = $i === $currentIndex;
+                                $isDone = ($currentIndex !== false) && ($i <= $currentIndex);
+                                $isCurrent = ($currentIndex !== false) && ($i === $currentIndex);
                                 $stepNumber = $i + 1;
                             @endphp
                             <div class="step step-{{ $stepNumber }} {{ $isDone ? 'done' : '' }} {{ $isCurrent ? 'current' : '' }}"></div>
@@ -271,7 +294,6 @@
                         <div class="label">Out for Delivery</div>
                         <div class="label">Delivered</div>
                         <div class="label">Returned</div>
-                        <div class="label">Stand By</div>
                     </div>
                 </div>
             </div>
@@ -289,20 +311,26 @@
 @section('scripts')
 <script>
     let currentDeliveryFilter = 'all';
-    const deliveryStatusOrder = ['out_for_delivery', 'delivered', 'returning', 'standby'];
+    const deliveryStatusOrder = ['out_for_delivery', 'delivered', 'returning'];
     const deliveryStatusLabels = {
+        pending: 'Pending Assignment',
+        assigned: 'Rider Assigned',
+        picked_up: 'Picked Up',
         out_for_delivery: 'Out for Delivery',
         delivered: 'Order Delivered',
         returning: 'Returning to Store',
-        standby: 'Rider Stand By',
-        failed: 'Failed',
+        failed: 'Delivery Failed',
+        cancelled: 'Cancelled',
     };
     const deliveryStatusBadgeClass = {
+        pending: 'badge-assigned',
+        assigned: 'badge-assigned',
+        picked_up: 'badge-picked_up',
         out_for_delivery: 'badge-out_for_delivery',
         delivered: 'badge-delivered',
         returning: 'badge-returning',
-        standby: 'badge-standby',
         failed: 'badge-failed',
+        cancelled: 'badge-failed',
     };
 
     function showDeliveryToast(message, isError = false) {
@@ -558,29 +586,34 @@
                         
                         // Update status badge
                         const statusMap = {
+                            'pending': 'Pending Assignment',
+                            'assigned': 'Rider Assigned',
+                            'picked_up': 'Picked Up',
                             'out_for_delivery': 'Out for Delivery',
                             'delivered': 'Order Delivered',
                             'returning': 'Returning to Store',
-                            'standby': 'Rider Stand By',
-                            'failed': 'Failed'
+                            'failed': 'Delivery Failed',
+                            'cancelled': 'Cancelled',
                         };
                         
                         const badge = card.querySelector('.badge');
                         if (badge) {
-                            badge.textContent = statusMap[delivery.status] || delivery.status;
+                            badge.textContent = statusMap[delivery.status] || (delivery.status ? delivery.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Pending');
                             // Update badge class
-                            badge.className = 'badge badge-' + delivery.status.replace('_', '-');
+                            badge.className = 'badge badge-' + (delivery.status ? delivery.status.replace(/_/g, '-') : 'assigned');
                         }
                         
                         // Update timeline
                         const steps = card.querySelectorAll('.step');
-                        const statusOrder = ['out_for_delivery', 'delivered', 'returning', 'standby'];
+                        const statusOrder = ['out_for_delivery', 'delivered', 'returning'];
                         const currentIndex = statusOrder.indexOf(delivery.status);
                         
                         steps.forEach((step, i) => {
                             step.classList.remove('done', 'current');
-                            if (i < currentIndex) step.classList.add('done');
-                            else if (i === currentIndex) step.classList.add('current');
+                            if (currentIndex !== -1) {
+                                if (i < currentIndex) step.classList.add('done');
+                                else if (i === currentIndex) step.classList.add('current');
+                            }
                         });
                         
                         // Move card to appropriate section if status is delivered/failed

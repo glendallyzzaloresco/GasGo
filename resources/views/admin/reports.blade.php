@@ -138,6 +138,19 @@
             font-weight: 700;
         }
 
+        @media (max-width: 768px) {
+            .report-card {
+                padding: 14px 12px;
+                border-radius: 14px;
+            }
+            .chart-shell {
+                height: 220px;
+            }
+            .chart-shell.short {
+                height: 180px;
+            }
+        }
+
         .table tbody td {
             font-size: .86rem;
             color: #334155;

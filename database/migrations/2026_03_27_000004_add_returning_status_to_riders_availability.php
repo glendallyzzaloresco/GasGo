@@ -9,13 +9,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Modify the availability enum to include 'returning' status
-        DB::statement("ALTER TABLE riders MODIFY availability ENUM('available', 'busy', 'returning', 'offline') NOT NULL DEFAULT 'offline'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE riders MODIFY availability ENUM('available', 'busy', 'returning', 'offline') NOT NULL DEFAULT 'offline'");
+        }
     }
 
     public function down(): void
     {
-        // Revert to the original enum without 'returning'
-        DB::statement("ALTER TABLE riders MODIFY availability ENUM('available', 'busy', 'offline') NOT NULL DEFAULT 'offline'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE riders MODIFY availability ENUM('available', 'busy', 'offline') NOT NULL DEFAULT 'offline'");
+        }
     }
 };

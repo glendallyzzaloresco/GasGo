@@ -445,20 +445,182 @@
             box-shadow: 0 6px 14px rgba(15,23,42,.1);
         }
 
-        /* ===== HAMBURGER (MOBILE) ===== */
+        /* ===== MOBILE RESPONSIVENESS & TOUCH ERGONOMICS ===== */
         .sidebar-toggle {
-            display: none; background: none; border: none; font-size: 1.5rem; color: var(--gasgo-blue); cursor: pointer;
+            display: none; background: none; border: none; font-size: 1.35rem; color: var(--gasgo-blue); cursor: pointer;
+            width: 40px; height: 40px; border-radius: 10px; align-items: center; justify-content: center;
+            transition: background .2s ease;
         }
+        .sidebar-toggle:hover { background: #eef5ff; }
         .sidebar-overlay {
-            display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 1035;
+            display: none; position: fixed; inset: 0; background: rgba(15,23,42,.45); backdrop-filter: blur(4px); z-index: 1035;
         }
 
+        /* Mobile Bottom Quick-Bar */
+        .admin-mobile-nav {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 62px;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(14px);
+            border-top: 1px solid var(--admin-border);
+            z-index: 1025;
+            justify-content: space-around;
+            align-items: center;
+            padding: 0 6px calc(env(safe-area-inset-bottom, 0px));
+            box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.08);
+        }
+        .mobile-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 0.68rem;
+            font-weight: 500;
+            padding: 6px 4px;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            flex: 1;
+            min-width: 0;
+            cursor: pointer;
+        }
+        .mobile-nav-item i {
+            font-size: 1.15rem;
+            margin-bottom: 2px;
+            transition: transform 0.2s ease, color 0.2s ease;
+        }
+        .mobile-nav-item:hover,
+        .mobile-nav-item.active {
+            color: var(--gasgo-blue);
+            font-weight: 700;
+        }
+        .mobile-nav-item.active i {
+            color: var(--gasgo-orange);
+            transform: translateY(-2px);
+        }
+
+        /* Responsive Breakpoints */
         @media (max-width: 991px) {
-            .admin-sidebar { transform: translateX(-100%); }
+            .admin-sidebar {
+                transform: translateX(-100%);
+                box-shadow: 10px 0 30px rgba(0,0,0,.25);
+            }
             .admin-sidebar.open { transform: translateX(0); }
             .sidebar-overlay.open { display: block; }
-            .admin-topbar, .admin-main { margin-left: 0; }
-            .sidebar-toggle { display: inline-block; }
+            .admin-topbar, .admin-main { margin-left: 0 !important; }
+            .sidebar-toggle { display: inline-flex; }
+            .admin-topbar { padding: 0 16px; height: 58px; }
+            .admin-topbar .page-title { font-size: 1rem; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .admin-main { padding: 16px 14px 76px !important; min-height: calc(100vh - 58px); }
+            .admin-mobile-nav { display: flex; }
+
+            /* Filter tabs smooth horizontal scroll on mobile */
+            .filter-tabs, .nav-pills, .nav-tabs-custom {
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 6px !important;
+                margin-bottom: 14px !important;
+                gap: 8px !important;
+                scrollbar-width: none;
+            }
+            .filter-tabs::-webkit-scrollbar,
+            .nav-pills::-webkit-scrollbar,
+            .nav-tabs-custom::-webkit-scrollbar {
+                display: none;
+            }
+            .filter-tab, .nav-pills .nav-link {
+                flex-shrink: 0 !important;
+                white-space: nowrap !important;
+                font-size: 0.82rem !important;
+                padding: 7px 14px !important;
+            }
+
+            /* Responsive Search box & Action bar */
+            .search-box, .delivery-search, .order-search {
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+
+            /* Responsive Stat Cards */
+            .stat-card {
+                padding: 14px 12px !important;
+                border-radius: 14px !important;
+            }
+            .stat-card h3 {
+                font-size: 1.3rem !important;
+            }
+            .stat-card p {
+                font-size: 0.76rem !important;
+            }
+            .stat-card .stat-icon {
+                width: 40px !important;
+                height: 40px !important;
+                font-size: 1.1rem !important;
+            }
+
+            /* Responsive Tables */
+            .table-responsive {
+                border-radius: 14px;
+                box-shadow: 0 4px 16px rgba(15,23,42,.05);
+                -webkit-overflow-scrolling: touch;
+            }
+            .gasgo-table {
+                border-radius: 14px !important;
+            }
+            .gasgo-table thead th {
+                font-size: 0.76rem !important;
+                padding: 10px 8px !important;
+                white-space: nowrap;
+            }
+            .gasgo-table tbody td {
+                font-size: 0.82rem !important;
+                padding: 10px 8px !important;
+            }
+
+            /* Responsive Modal */
+            .modal-dialog {
+                margin: 10px !important;
+                max-width: calc(100vw - 20px) !important;
+            }
+            .modal-content {
+                border-radius: 18px !important;
+            }
+            .modal-header {
+                padding: 14px 16px !important;
+            }
+            .modal-body {
+                padding: 16px !important;
+                max-height: calc(85vh - 120px);
+                overflow-y: auto;
+            }
+            .modal-footer {
+                padding: 12px 16px !important;
+                position: sticky;
+                bottom: 0;
+                background: #fff;
+                z-index: 2;
+                border-top: 1px solid #eef2f7;
+            }
+
+            /* Form inputs prevent iOS zoom */
+            .form-control, .form-select {
+                font-size: 16px !important;
+                border-radius: 10px !important;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .admin-topbar .page-title { max-width: 140px; }
+            .admin-main { padding: 12px 10px 76px !important; }
+            .stat-card h3 { font-size: 1.15rem !important; }
+            .btn-action { padding: 5px 10px; font-size: 0.75rem; }
         }
     </style>
     @yield('admin-styles')
@@ -560,18 +722,61 @@
         @yield('content')
     </main>
 
+    <!-- Mobile Bottom Quick Bar -->
+    <nav class="admin-mobile-nav" id="adminMobileNav">
+        <a href="{{ url('/admin/dashboard') }}" class="mobile-nav-item @yield('nav-dashboard')">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="{{ url('/admin/orders') }}" class="mobile-nav-item @yield('nav-orders')">
+            <i class="fas fa-shopping-bag"></i>
+            <span>Orders</span>
+        </a>
+        <a href="{{ url('/admin/products') }}" class="mobile-nav-item @yield('nav-products')">
+            <i class="fas fa-fire"></i>
+            <span>Products</span>
+        </a>
+        <a href="{{ url('/admin/deliveries') }}" class="mobile-nav-item @yield('nav-deliveries')">
+            <i class="fas fa-truck"></i>
+            <span>Deliveries</span>
+        </a>
+        <button type="button" class="mobile-nav-item" id="mobileNavMenuBtn">
+            <i class="fas fa-bars"></i>
+            <span>Menu</span>
+        </button>
+    </nav>
+
     <script src="{{ asset('bootstrap/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('js/theme-loader.js') }}"></script>
     <script>
         const sidebar = document.getElementById('adminSidebar');
         const overlay = document.getElementById('sidebarOverlay');
-        document.getElementById('sidebarToggle').addEventListener('click', () => {
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const mobileNavMenuBtn = document.getElementById('mobileNavMenuBtn');
+
+        function toggleSidebar() {
+            if (!sidebar || !overlay) return;
             sidebar.classList.toggle('open');
             overlay.classList.toggle('open');
-        });
-        overlay.addEventListener('click', () => {
-            sidebar.classList.remove('open');
-            overlay.classList.remove('open');
+        }
+
+        if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
+        if (mobileNavMenuBtn) mobileNavMenuBtn.addEventListener('click', toggleSidebar);
+        if (overlay) {
+            overlay.addEventListener('click', () => {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('open');
+            });
+        }
+
+        // Auto-close sidebar on mobile when navigating links
+        document.querySelectorAll('.sidebar-menu a:not(.submenu-toggle)').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 991 && sidebar) {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('open');
+                }
+            });
         });
 
         // Products submenu toggle

@@ -629,8 +629,8 @@
                     </div>
                 </div>
                 @if($heroProductImage)
-                    <div class="col-lg-6 text-center" data-aos="fade-left">
-                        <img src="{{ $heroProductImage }}" alt="Featured Product" style="max-height:380px;border-radius:20px;">
+                    <div class="col-lg-6 text-center mt-4 mt-lg-0" data-aos="fade-left">
+                        <img src="{{ $heroProductImage }}" alt="Featured Product" class="img-fluid mx-auto d-block" style="max-height:380px;border-radius:20px;">
                     </div>
                 @endif
             </div>
@@ -646,7 +646,7 @@
                 <div class="row align-items-center">
                     <div class="col-md-8">
                         <h3><i
-                                class="fas fa-gift me-2"></i>{{ $homepageSettings->promo_title ?? 'New User? Get FREE Delivery on Your First Order!' }}
+                                class="fas fa-gift me-2"></i>{{ $homepageSettings->promo_title ?? 'Get FREE items with every order!' }}
                         </h3>
                         <p class="mb-0" style="opacity:.9;">
                             {{ $homepageSettings->promo_subtitle ?? 'Register now and start earning loyalty points with every purchase.' }}

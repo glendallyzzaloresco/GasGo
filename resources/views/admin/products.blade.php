@@ -108,13 +108,32 @@
             font-weight: 700;
         }
 
-        .archived-card {
-            background: #fafbfc;
-            border: 1.5px dashed #cbd5e1;
-        }
-
         .archived-card:hover {
             border-color: var(--gasgo-blue);
+        }
+
+        @media (max-width: 768px) {
+            .section-tabs {
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
+                margin-bottom: 16px !important;
+                gap: 6px !important;
+                scrollbar-width: none;
+            }
+            .section-tabs::-webkit-scrollbar { display: none; }
+            .section-tab {
+                flex-shrink: 0;
+                padding: 8px 12px;
+                font-size: 0.82rem;
+            }
+            .product-card {
+                padding: 14px 12px;
+            }
+            .product-card img {
+                height: 120px;
+            }
         }
     </style>
 @endsection
@@ -910,12 +929,7 @@
                                 <input type="text" class="form-control" name="name" id="productName"
                                     placeholder="e.g. Solane 11kg" required>
                             </div>
-                            <div class="col-md-3" id="productCostPriceCol">
-                                <label class="mb-1">Cost Price (₱)</label>
-                                <input type="number" class="form-control" name="cost_price" id="productCostPrice"
-                                    placeholder="0.00" min="0" step="0.01" required>
-                            </div>
-                            <div class="col-md-3" id="productSellingPriceCol">
+                            <div class="col-md-6" id="productSellingPriceCol">
                                 <label class="mb-1">Selling Price (₱)</label>
                                 <input type="number" class="form-control" name="selling_price" id="productSellingPrice"
                                     placeholder="0.00" min="0" step="0.01" required>
@@ -1014,18 +1028,10 @@
                                 <label class="mb-1">Freebie Image</label>
                                 <input type="file" class="form-control" name="image" accept="image/*">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-12">
                                 <label class="mb-1">Stock</label>
                                 <input type="number" class="form-control" name="stock" id="freebieStock"
                                     placeholder="Quantity available" value="0" min="0" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="mb-1">Redemption Type</label>
-                                <select class="form-select" name="redemption_type" id="freebieRedemptionType" required>
-                                    <option value="loyalty_points">Loyalty Points</option>
-                                    <option value="auto_included">Auto-included with Order</option>
-                                    <option value="promotional">Promotional</option>
-                                </select>
                             </div>
                             <div class="col-12">
                                 <div class="form-check form-switch">
@@ -1137,20 +1143,14 @@
         // Product functions
         function handleProductCategoryChange() {
             const category = (document.getElementById('productCategory')?.value || '').toLowerCase();
-            const costCol = document.getElementById('productCostPriceCol');
             const sellCol = document.getElementById('productSellingPriceCol');
-            const costInput = document.getElementById('productCostPrice');
             const sellInput = document.getElementById('productSellingPrice');
 
             if (category === 'freebie') {
-                if (costCol) costCol.style.display = 'none';
                 if (sellCol) sellCol.style.display = 'none';
-                if (costInput) { costInput.removeAttribute('required'); costInput.value = '0'; }
                 if (sellInput) { sellInput.removeAttribute('required'); sellInput.value = '0'; }
             } else {
-                if (costCol) costCol.style.display = 'block';
                 if (sellCol) sellCol.style.display = 'block';
-                if (costInput) { costInput.setAttribute('required', 'required'); }
                 if (sellInput) { sellInput.setAttribute('required', 'required'); }
             }
         }
@@ -1164,7 +1164,6 @@
             document.getElementById('productCategory').value = defaultCategoryOption ? defaultCategoryOption.value : '';
             document.getElementById('productRequiresExchange').checked = false;
             document.getElementById('productDescription').value = '';
-            document.getElementById('productCostPrice').value = '';
             document.getElementById('productSellingPrice').value = '';
             document.getElementById('productWeight').value = '';
             document.getElementById('prodActive').checked = true;
@@ -1179,7 +1178,6 @@
             document.getElementById('productCategory').value = button.dataset.category || 'tank';
             document.getElementById('productRequiresExchange').checked = button.dataset.requiresExchange === '1';
             document.getElementById('productDescription').value = button.dataset.description || '';
-            document.getElementById('productCostPrice').value = button.dataset.costPrice || '';
             document.getElementById('productSellingPrice').value = button.dataset.sellingPrice || '';
             document.getElementById('productWeight').value = button.dataset.weight || '';
             document.getElementById('prodActive').checked = (button.dataset.isActive === '1');
@@ -1209,7 +1207,6 @@
             document.getElementById('freebieDescription').value = '';
             document.getElementById('freebieRewardPoints').value = '0';
             document.getElementById('freebieCategory').value = 'Promotional Gifts';
-            document.getElementById('freebieRedemptionType').value = 'promotional';
             document.getElementById('freebieStock').value = '0';
             document.getElementById('freebieActive').checked = true;
         }
@@ -1222,7 +1219,6 @@
             document.getElementById('freebieDescription').value = button.dataset.description || '';
             document.getElementById('freebieRewardPoints').value = button.dataset.rewardPoints || '0';
             document.getElementById('freebieCategory').value = button.dataset.category || 'Promotional Gifts';
-            document.getElementById('freebieRedemptionType').value = button.dataset.redemptionType || 'promotional';
             document.getElementById('freebieStock').value = button.dataset.stock || '0';
             document.getElementById('freebieActive').checked = (button.dataset.isActive === '1');
         }

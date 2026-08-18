@@ -266,23 +266,19 @@
 
                                 @php
                                     $customPaymentMethods = old('payment_methods', $homepageSettings->payment_methods ?? []);
-                                    if (empty($customPaymentMethods)) {
-                                        $customPaymentMethods = [[
-                                            'label' => '',
-                                            'account_name' => '',
-                                            'account_number' => '',
-                                        ]];
-                                    }
                                 @endphp
 
                                 <form action="{{ route('admin.settings.update-payment-methods') }}" method="POST" id="paymentMethodsForm" enctype="multipart/form-data">
                                     @csrf
                                     <div id="paymentMethodsContainer" class="d-grid gap-3">
+                                        <div id="noPaymentMethodsAlert" class="alert alert-light border text-muted small text-center mb-0 py-3" style="{{ empty($customPaymentMethods) ? '' : 'display:none;' }}">
+                                            <i class="fas fa-info-circle me-1"></i>No custom payment methods configured. Click <strong>+ Add Method</strong> to add one.
+                                        </div>
                                         @foreach ($customPaymentMethods as $index => $method)
                                             <div class="border rounded-3 p-3 payment-method-row" data-index="{{ $index }}">
                                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                                     <strong class="small text-uppercase text-muted">Method {{ $loop->iteration }}</strong>
-                                                    <button type="button" class="btn btn-link text-danger p-0 remove-payment-method-btn" {{ count($customPaymentMethods) === 1 ? 'disabled' : '' }}>
+                                                    <button type="button" class="btn btn-link text-danger p-0 remove-payment-method-btn" title="Delete payment method">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </div>
@@ -437,9 +433,11 @@ function togglePasswordVisibility(button, fieldId) {
             });
         });
 
-        paymentMethodsContainer.querySelectorAll('.remove-payment-method-btn').forEach(function (button) {
-            button.disabled = paymentMethodsContainer.querySelectorAll('.payment-method-row').length === 1;
-        });
+        var alertEl = document.getElementById('noPaymentMethodsAlert');
+        var rowCount = paymentMethodsContainer.querySelectorAll('.payment-method-row').length;
+        if (alertEl) {
+            alertEl.style.display = rowCount === 0 ? 'block' : 'none';
+        }
     }
 
     if (addPaymentMethodBtn && paymentMethodsContainer) {
@@ -460,13 +458,11 @@ function togglePasswordVisibility(button, fieldId) {
                 return;
             }
 
-            var rows = paymentMethodsContainer.querySelectorAll('.payment-method-row');
-            if (rows.length === 1) {
-                return;
+            var row = button.closest('.payment-method-row');
+            if (row) {
+                row.remove();
+                reindexPaymentMethodRows();
             }
-
-            button.closest('.payment-method-row').remove();
-            reindexPaymentMethodRows();
         });
 
         reindexPaymentMethodRows();
