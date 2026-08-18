@@ -452,6 +452,64 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function activityLogs(Request $request)
+    {
+        $query = \App\Models\ActivityLog::with('user')->orderBy('created_at', 'desc');
+
+        // Filter by module
+        if ($request->filled('module') && $request->module !== 'all') {
+            $query->where('module', $request->module);
+        }
+
+        // Filter by role
+        if ($request->filled('role') && $request->role !== 'all') {
+            $query->where('user_role', $request->role);
+        }
+
+        // Filter by date range
+        if ($request->filled('date_range')) {
+            if ($request->date_range === 'today') {
+                $query->whereDate('created_at', today());
+            } elseif ($request->date_range === 'week') {
+                $query->where('created_at', '>=', now()->subDays(7));
+            } elseif ($request->date_range === 'month') {
+                $query->where('created_at', '>=', now()->subDays(30));
+            }
+        }
+
+        // Keyword Search
+        if ($request->filled('search')) {
+            $search = '%' . trim($request->search) . '%';
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', $search)
+                  ->orWhere('user_name', 'like', $search)
+                  ->orWhere('action', 'like', $search)
+                  ->orWhere('ip_address', 'like', $search);
+            });
+        }
+
+        $logs = $query->paginate(30)->withQueryString();
+
+        // Statistics
+        $totalCount = \App\Models\ActivityLog::count();
+        $todayCount = \App\Models\ActivityLog::whereDate('created_at', today())->count();
+        $ordersCount = \App\Models\ActivityLog::where('module', 'orders')->count();
+        $authCount = \App\Models\ActivityLog::where('module', 'auth')->count();
+        $productCount = \App\Models\ActivityLog::where('module', 'products')->count();
+
+        $stats = compact('totalCount', 'todayCount', 'ordersCount', 'authCount', 'productCount');
+
+        return view('admin.activity-logs', compact('logs', 'stats'));
+    }
+
+    public function clearActivityLogs(Request $request)
+    {
+        \App\Models\ActivityLog::truncate();
+        \App\Services\ActivityLogger::log('settings', 'deleted', "Admin cleared all system activity logs");
+
+        return redirect()->route('admin.activity-logs')->with('success', 'All system activity logs cleared successfully.');
+    }
+
     public function settings()
     {
         $homepageSettings = HomepageSetting::singleton();
@@ -464,11 +522,13 @@ class DashboardController extends Controller
         $phpVersion = PHP_VERSION;
         $laravelVersion = app()->version();
 
+        $recentLogsCount = \App\Models\ActivityLog::count();
+
         return view('admin.settings', compact(
             'homepageSettings',
             'appName', 'appEnv', 'appDebug',
             'dbConnection', 'cacheDriver', 'queueDriver',
-            'phpVersion', 'laravelVersion'
+            'phpVersion', 'laravelVersion', 'recentLogsCount'
         ));
     }
 
@@ -489,12 +549,14 @@ class DashboardController extends Controller
             'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
         ]);
 
-        User::create([
+        $newAdmin = User::create([
             'name' => $validated['name'],
             'email' => strtolower($validated['email']),
             'password' => $validated['password'],
             'role' => 'admin',
         ]);
+
+        \App\Services\ActivityLogger::log('auth', 'register', "Admin created new admin user account: {$newAdmin->name} ({$newAdmin->email})", ['email' => $newAdmin->email]);
 
         return back()->with('success', 'New admin account created successfully.');
     }
@@ -518,6 +580,8 @@ class DashboardController extends Controller
 
         unset($validated['gcash_image']);
         $homepageSettings->update($validated);
+
+        \App\Services\ActivityLogger::log('settings', 'updated', "Admin updated GCash payment settings (Number: " . ($validated['gcash_account_number'] ?? 'N/A') . ")", ['account' => $validated['gcash_account_number'] ?? '']);
 
         return back()->with('success', 'GCash account details updated successfully.');
     }
@@ -572,6 +636,8 @@ class DashboardController extends Controller
         $homepageSettings = HomepageSetting::singleton();
         $homepageSettings->update(['payment_methods' => $methods]);
 
+        \App\Services\ActivityLogger::log('settings', 'updated', "Admin updated custom payment methods (" . count($methods) . " active)", ['count' => count($methods)]);
+
         return back()->with('success', 'Payment methods updated successfully.');
     }
 
@@ -583,6 +649,8 @@ class DashboardController extends Controller
 
         $homepageSettings = HomepageSetting::singleton();
         $homepageSettings->update(['delivery_fee' => $validated['delivery_fee']]);
+
+        \App\Services\ActivityLogger::log('settings', 'updated', "Admin updated default delivery fee to ₱" . number_format($validated['delivery_fee'], 2), ['delivery_fee' => $validated['delivery_fee']]);
 
         return back()->with('success', 'Delivery fee updated successfully.');
     }
@@ -613,10 +681,12 @@ class DashboardController extends Controller
 
         $user->save();
 
+        \App\Services\ActivityLogger::log('auth', 'updated', "Admin updated profile information: {$user->name}", ['user_id' => $user->id]);
+
         $message = 'Your profile has been updated successfully.';
         if ($request->expectsJson()) {
             return response()->json(['success' => true, 'message' => $message], 200);
         }
         return back()->with('success', $message);
     }
-    }
+}

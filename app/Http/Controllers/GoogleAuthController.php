@@ -31,6 +31,7 @@ class GoogleAuthController extends Controller
             if ($findUser) {
                 // User exists with Google ID, log them in
                 Auth::login($findUser);
+                \App\Services\ActivityLogger::log('auth', 'login', "User {$findUser->name} logged in via Google OAuth", ['provider' => 'google'], $findUser);
                 
                 // Redirect based on user role
                 if ($findUser->role === 'admin') {
@@ -60,6 +61,7 @@ class GoogleAuthController extends Controller
                 ]);
 
                 Auth::login($newUser);
+                \App\Services\ActivityLogger::log('auth', 'register', "New user registered via Google OAuth: {$newUser->name} ({$newUser->email})", ['provider' => 'google'], $newUser);
                 return redirect()->route('customer.dashboard')->with('success', 'Account created and logged in with Google!');
             }
 

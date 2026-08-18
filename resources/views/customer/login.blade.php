@@ -280,7 +280,7 @@
                                 <label style="font-size:.85rem;color:#888;cursor:pointer;">
                                     <input type="checkbox" name="remember" style="margin-right:6px;" {{ old('remember') ? 'checked' : '' }}>Remember me
                                 </label>
-                                <a href="#" style="font-size:.85rem;color:var(--gasgo-orange);font-weight:600;text-decoration:none;">Forgot Password?</a>
+                                <a href="{{ route('password.request') }}" style="font-size:.85rem;color:var(--gasgo-orange);font-weight:600;text-decoration:none;">Forgot Password?</a>
                             </div>
                             <button type="submit" class="btn-auth"><i class="fas fa-sign-in-alt me-2"></i>Login</button>
                         </form>

@@ -40,6 +40,11 @@ class HomepageSettingController extends Controller
             'contact_phone' => 'nullable|string|max:80',
             'contact_email' => 'nullable|email|max:120',
             'contact_hours' => 'nullable|string|max:120',
+            'facebook_url' => 'nullable|string|max:255',
+            'twitter_url' => 'nullable|string|max:255',
+            'instagram_url' => 'nullable|string|max:255',
+            'youtube_url' => 'nullable|string|max:255',
+            'tiktok_url' => 'nullable|string|max:255',
             'primary_color' => 'nullable|string|size:7',
             'accent_color' => 'nullable|string|size:7',
             'background_color' => 'nullable|string|size:7',
@@ -78,6 +83,11 @@ class HomepageSettingController extends Controller
             'contact_phone' => $validated['contact_phone'] ?? null,
             'contact_email' => $validated['contact_email'] ?? null,
             'contact_hours' => $validated['contact_hours'] ?? null,
+            'facebook_url' => $validated['facebook_url'] ?? null,
+            'twitter_url' => $validated['twitter_url'] ?? null,
+            'instagram_url' => $validated['instagram_url'] ?? null,
+            'youtube_url' => $validated['youtube_url'] ?? null,
+            'tiktok_url' => $validated['tiktok_url'] ?? null,
             'primary_color' => $validated['primary_color'] ?? '#1a6db0',
             'accent_color' => $validated['accent_color'] ?? '#f7941d',
             'background_color' => $validated['background_color'] ?? '#f4f7fb',
@@ -148,6 +158,8 @@ class HomepageSettingController extends Controller
         if (\Illuminate\Support\Facades\Schema::hasTable('site_theme')) {
             SiteTheme::query()->updateOrCreate(['id' => 1], $themePayload);
         }
+
+        \App\Services\ActivityLogger::log('settings', 'updated', "Admin updated store branding and homepage settings ({$payload['brand_name_primary']} {$payload['brand_name_accent']})", ['brand' => $payload['brand_name_primary'] . ' ' . $payload['brand_name_accent']]);
 
         return redirect()->route('admin.settings.homepage')->with('success', 'Homepage settings updated successfully.');
     }

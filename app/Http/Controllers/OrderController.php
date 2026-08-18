@@ -709,6 +709,8 @@ class OrderController extends Controller
                 }
             }
 
+            \App\Services\ActivityLogger::log('orders', 'created', "Customer {$order->customer_name} placed new order #{$order->order_number} (Total: ₱" . number_format($order->total_amount, 2) . ", Payment: " . ucfirst($order->payment_method) . ")", ['order_id' => $order->id, 'order_number' => $order->order_number, 'total' => $order->total_amount]);
+
             return $order;
         });
 
@@ -847,6 +849,8 @@ class OrderController extends Controller
 
             // Update payment status to failed when order is cancelled
             Payment::where('order_id', $order->id)->update(['status' => 'failed']);
+
+            \App\Services\ActivityLogger::log('orders', 'status_change', "Customer cancelled order #{$order->order_number}", ['order_id' => $order->id, 'status' => 'cancelled']);
         });
 
         return redirect()->route('customer.orders')
@@ -890,6 +894,8 @@ class OrderController extends Controller
         ]);
 
         DB::transaction(function () use ($order, $validated) {
+            $previousStatus = $order->status;
+            
             if (!empty($validated['transaction_type']) && $order->status !== 'delivered') {
                 $order->update(['transaction_type' => $validated['transaction_type']]);
             }
@@ -907,8 +913,6 @@ class OrderController extends Controller
                 // Update payment status to failed when order is cancelled
                 Payment::where('order_id', $order->id)->update(['status' => 'failed']);
             }
-
-            $previousStatus = $order->status;
 
             if ($validated['status'] === 'approved') {
                 $order->update([
@@ -930,6 +934,8 @@ class OrderController extends Controller
                     'paid_at' => now(),
                 ]);
             }
+
+            \App\Services\ActivityLogger::log('orders', 'status_change', "Admin updated order #{$order->order_number} status from {$previousStatus} to {$validated['status']}", ['order_id' => $order->id, 'previous' => $previousStatus, 'new' => $validated['status']]);
         });
 
         if ($request->expectsJson() || $request->ajax()) {
@@ -1012,6 +1018,8 @@ class OrderController extends Controller
                 $updatedCount++;
                 $updatedIds[] = $order->id;
             }
+            
+            \App\Services\ActivityLogger::log('orders', 'status_change', "Admin bulk updated {$updatedCount} order(s) to status: {$validated['status']}", ['count' => $updatedCount, 'order_ids' => $updatedIds, 'status' => $validated['status']]);
         });
 
         return response()->json([

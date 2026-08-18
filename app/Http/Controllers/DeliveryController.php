@@ -80,6 +80,9 @@ class DeliveryController extends Controller
             ->with('rider')
             ->first();
 
+        $riderName = $firstDelivery?->rider?->name ?? 'Rider';
+        \App\Services\ActivityLogger::log('deliveries', 'assigned', "Admin assigned " . count($assignedOrderIds) . " order(s) to Rider {$riderName}", ['rider_id' => $validated['rider_id'], 'order_ids' => $assignedOrderIds]);
+
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'message' => count($assignedOrderIds) > 1
@@ -88,7 +91,7 @@ class DeliveryController extends Controller
                 'order_id' => (int) $assignedOrderIds[0],
                 'order_ids' => $assignedOrderIds,
                 'status' => 'assigned',
-                'rider_name' => $firstDelivery?->rider?->name ?? 'Rider',
+                'rider_name' => $riderName,
             ]);
         }
 
@@ -164,6 +167,7 @@ class DeliveryController extends Controller
                 $updateData['picked_up_at'] = now();
             }
             $delivery->order->update(['status' => 'out_for_delivery']);
+            \App\Services\ActivityLogger::log('deliveries', 'out_for_delivery', "Rider " . Auth::user()->name . " started delivery for order #{$delivery->order->order_number}", ['delivery_id' => $delivery->id, 'order_id' => $delivery->order_id]);
         }
 
         if ($validated['status'] === 'delivered') {
@@ -186,6 +190,8 @@ class DeliveryController extends Controller
                     'paid_at' => now(),
                 ]);
             });
+
+            \App\Services\ActivityLogger::log('deliveries', 'delivered', "Rider " . Auth::user()->name . " completed delivery for order #{$delivery->order->order_number}", ['delivery_id' => $delivery->id, 'order_id' => $delivery->order_id]);
         }
 
         if ($validated['status'] === 'failed') {
@@ -194,6 +200,8 @@ class DeliveryController extends Controller
             
             // Update payment status to failed when delivery fails
             \App\Models\Payment::where('order_id', $delivery->order_id)->update(['status' => 'failed']);
+
+            \App\Services\ActivityLogger::log('deliveries', 'failed', "Rider " . Auth::user()->name . " marked delivery as failed for order #{$delivery->order->order_number}", ['delivery_id' => $delivery->id, 'order_id' => $delivery->order_id]);
         }
 
         $delivery->update($updateData);

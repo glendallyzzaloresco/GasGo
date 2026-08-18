@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Schema;
 use App\Models\HomepageSetting;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\GoogleAuthController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Admin\HomepageSettingController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -153,11 +154,20 @@ Route::post('/customer/register', [CustomerController::class, 'register'])->name
 Route::post('/customer/logout', [CustomerController::class, 'logout'])->name('customer.logout');
 Route::post('/logout', [CustomerController::class, 'logout'])->name('logout');
 
+// ===== PASSWORD RESET / 6-DIGIT CODE ROUTES =====
+Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
+Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetCode'])->name('password.email');
+Route::get('/verify-code', [ForgotPasswordController::class, 'showVerifyCodeForm'])->name('password.verify.code');
+Route::post('/verify-code', [ForgotPasswordController::class, 'verifyAndResetPassword'])->name('password.update');
+Route::post('/resend-code', [ForgotPasswordController::class, 'resendCode'])->name('password.resend');
+
 // ===== GOOGLE OAUTH ROUTES =====
 Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->name('auth.google');
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
 
 // ===== PUBLIC CUSTOMER ROUTES (Accessible to Guests) =====
+Route::get('/privacy-policy', [CustomerController::class, 'privacyPolicy'])->name('privacy.policy');
+Route::get('/terms-of-service', [CustomerController::class, 'termsOfService'])->name('terms.service');
 Route::get('/customer/product', [ProductController::class, 'index'])->name('customer.products');
 Route::get('/customer/product/{product}', [ProductController::class, 'show'])->name('customer.product.show');
 Route::get('/customer/loyaltyRewards', [LoyaltyController::class, 'index'])->name('customer.loyalty');
@@ -287,6 +297,10 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::put('/categories/{category}', [\App\Http\Controllers\Admin\CategoryController::class, 'update'])->name('admin.categories.update');
     Route::delete('/categories/{category}', [\App\Http\Controllers\Admin\CategoryController::class, 'destroy'])->name('admin.categories.destroy');
 
+    // Activity Logs
+    Route::get('/activity-logs', [DashboardController::class, 'activityLogs'])->name('admin.activity-logs');
+    Route::post('/activity-logs/clear', [DashboardController::class, 'clearActivityLogs'])->name('admin.activity-logs.clear');
+
     // Settings / Maintenance
     Route::get('/settings', [DashboardController::class, 'settings'])->name('admin.settings');
     Route::get('/settings/homepage', [HomepageSettingController::class, 'edit'])->name('admin.settings.homepage');
@@ -298,11 +312,18 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::post('/settings/clear-cache', function () {
         Artisan::call('cache:clear');
         Artisan::call('view:clear');
+        \App\Services\ActivityLogger::log('settings', 'deleted', "Admin cleared application cache and compiled views");
         return back()->with('success', 'Cache cleared successfully.');
     })->name('admin.settings.clear-cache');
+    Route::post('/settings/clear-activity-logs', function () {
+        \App\Models\ActivityLog::truncate();
+        \App\Services\ActivityLogger::log('settings', 'deleted', "Admin cleared all system activity logs");
+        return back()->with('success', 'System activity logs cleared successfully.');
+    })->name('admin.settings.clear-activity-logs');
     Route::post('/settings/clear-logs', function () {
         $logPath = storage_path('logs/laravel.log');
         if (file_exists($logPath)) { file_put_contents($logPath, ''); }
+        \App\Services\ActivityLogger::log('settings', 'deleted', "Admin cleared developer error log file (laravel.log)");
         return back()->with('success', 'Log file cleared successfully.');
     })->name('admin.settings.clear-logs');
     Route::get('/settings/log-tail', function () {

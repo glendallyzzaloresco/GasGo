@@ -145,6 +145,8 @@ class CustomerController extends Controller
         }
 
         $message = 'Your account has been updated successfully.';
+        \App\Services\ActivityLogger::log('auth', 'updated', "User {$user->name} updated profile information", ['user_id' => $user->id], $user);
+
         if ($request->expectsJson()) {
             return response()->json(['success' => true, 'message' => $message], 200);
         }
@@ -197,6 +199,8 @@ class CustomerController extends Controller
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
+        \App\Services\ActivityLogger::log('auth', 'login', "User {$user->name} logged in successfully (" . ucfirst($user->role ?? 'customer') . ")", ['role' => $user->role], $user);
+
         // Auto-upgrade bcrypt passwords to argon2id on successful login
         $isBcryptHash = strpos($user->password, '$2y$') === 0 || strpos($user->password, '$2a$') === 0;
         if ($isBcryptHash) {
@@ -245,6 +249,10 @@ class CustomerController extends Controller
     {
         $user = Auth::user();
         $role = $user?->role ?? 'customer';
+
+        if ($user) {
+            \App\Services\ActivityLogger::log('auth', 'logout', "User {$user->name} logged out", ['role' => $role], $user);
+        }
 
         Auth::logout();
         $request->session()->invalidate();
@@ -299,6 +307,8 @@ class CustomerController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
+
+        \App\Services\ActivityLogger::log('auth', 'register', "New customer registered: {$user->name} ({$user->email})", ['role' => 'customer'], $user);
 
         $this->mergeSessionCartToDatabase($request, $user->id);
 
@@ -356,5 +366,15 @@ class CustomerController extends Controller
         }
 
         $request->session()->forget(self::SESSION_CART_KEY);
+    }
+
+    public function privacyPolicy()
+    {
+        return view('pages.privacy-policy');
+    }
+
+    public function termsOfService()
+    {
+        return view('pages.terms-of-service');
     }
 }

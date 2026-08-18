@@ -657,6 +657,7 @@
         </ul>
         <div class="sidebar-section">Maintenance</div>
         <ul class="sidebar-menu">
+            <li><a href="{{ route('admin.activity-logs') }}" class="@yield('nav-activity-logs')"><i class="fas fa-history"></i>Activity Logs</a></li>
             <li><a href="{{ url('/admin/settings') }}" class="@yield('nav-settings')"><i class="fas fa-cog"></i>Settings</a></li>
         </ul>
         <div class="sidebar-section">Account</div>
