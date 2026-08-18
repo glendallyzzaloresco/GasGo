@@ -778,6 +778,12 @@ class OrderController extends Controller
             })->values()->all();
         }
 
+        $pendingTime = $order->created_at?->format('g:i A');
+        $approvedTime = $order->approved_at?->format('g:i A');
+        $assignedTime = $order->delivery?->assigned_at?->format('g:i A');
+        $outForDeliveryTime = $order->delivery?->picked_up_at?->format('g:i A') ?? ($order->status === 'out_for_delivery' ? $order->updated_at?->format('g:i A') : null);
+        $deliveredTime = $order->delivered_at?->format('g:i A');
+
         return response()->json([
             'status' => $order->status,
             'rider_name' => $riderName,
@@ -788,6 +794,13 @@ class OrderController extends Controller
             'delivered_at' => $order->delivered_at?->format('M j, Y — g:i A'),
             'waypoints' => $waypoints,
             'waypoints_count' => count($waypoints),
+            'timestamps' => [
+                'pending' => $pendingTime,
+                'approved' => $approvedTime,
+                'assigned' => $assignedTime,
+                'out_for_delivery' => $outForDeliveryTime,
+                'delivered' => $deliveredTime,
+            ],
         ]);
     }
 

@@ -168,32 +168,11 @@
     <button class="filter-tab" data-filter="cancelled" onclick="setFilter(this,'cancelled')">Cancelled<span class="count">{{ $statusCounts['cancelled'] ?? 0 }}</span></button>
 </div>
 
-<!-- Bulk Actions Toolbar -->
-<div id="bulkActionsToolbar" class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3" style="display:none;background:#fff8e8;border:1px solid #ffe0a6;border-radius:12px;padding:10px 14px;">
-    <div style="font-size:.88rem;">
-        <strong id="selectedCount">0</strong> order(s) selected
-    </div>
-    <div class="d-flex gap-2">
-        <button id="bulkApproveBtn" type="button" class="btn btn-sm" style="background:#28a745;color:#fff;font-weight:600;" onclick="openBulkApproveModal()">
-            <i class="fas fa-check me-1"></i>Approve Order
-        </button>
-        <button id="bulkAssignBtn" type="button" class="btn btn-sm" style="background:var(--gasgo-orange);color:#fff;font-weight:600;" onclick="openBulkAssignModal()">
-            <i class="fas fa-motorcycle me-1"></i>Assign Rider
-        </button>
-        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllSelections()">
-            Clear
-        </button>
-    </div>
-</div>
-
 <!-- Orders Table -->
 <div class="gasgo-table">
     <table class="table" id="ordersTable">
         <thead>
             <tr>
-                <th style="width:42px;">
-                    <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
-                </th>
                 <th>Order ID</th>
                 <th>Customer</th>
                 <th>Items</th>
@@ -208,11 +187,6 @@
         <tbody>
             @forelse($orders as $order)
                 <tr class="order-row" data-order-id="{{ $order->id }}" data-status="{{ $order->status }}">
-                    <td>
-                        @if(in_array($order->status, ['pending', 'approved', 'assigned']))
-                            <input type="checkbox" class="order-checkbox" value="{{ $order->id }}" onchange="updateBulkSelection()">
-                        @endif
-                    </td>
                     <td class="fw-bold">#{{ $order->order_number }}</td>
                     <td>
                         {{ $order->user->name ?? 'N/A' }}
@@ -267,37 +241,21 @@
                         <br><small class="text-muted">{{ $order->created_at->format('h:i A') }}</small>
                     </td>
                     <td>
-                        <div class="d-flex gap-1 flex-wrap">
+                        <div class="d-flex gap-1 flex-wrap align-items-center">
                             <a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-info" title="View Details">
                                 <i class="fas fa-eye me-1"></i>Details
                             </a>
                             @if($order->status === 'pending')
-                                <form action="{{ route('admin.orders.status', $order) }}" method="POST" style="display:inline;">
-                                    @csrf @method('PUT')
-                                    <input type="hidden" name="status" value="approved">
-                                    <button class="btn btn-sm btn-action" style="background:#28a745;color:#fff;" title="Approve Order"><i class="fas fa-check me-1"></i>Approve</button>
-                                </form>
-                               
                                 <form action="{{ route('admin.orders.status', $order) }}" method="POST" class="cancel-order-form" data-order-id="{{ $order->id }}" onsubmit="return confirm('Cancel this order?')">
                                     @csrf @method('PUT')
                                     <input type="hidden" name="status" value="cancelled">
-                                    <button class="btn btn-sm btn-action" style="background:#dc3545;color:#fff;" title="Cancel"><i class="fas fa-times"></i></button>
+                                    <button class="btn btn-sm btn-action" style="background:#dc3545;color:#fff;" title="Cancel"><i class="fas fa-times me-1"></i>Cancel</button>
                                 </form>
-                            @elseif($order->status === 'approved' && ! optional($order->delivery)->id)
-                                <span class="badge bg-success me-1"><i class="fas fa-check-circle me-1"></i>Approved</span>
-                                <button class="btn btn-sm btn-action assign-btn" style="background:var(--gasgo-orange);color:#fff;" title="Assign Rider"
-                                    data-order-id="{{ $order->id }}" data-order-number="{{ $order->order_number }}">
-                                    <i class="fas fa-motorcycle me-1"></i>Assign
-                                </button>
-                            @elseif($order->status === 'approved' && optional($order->delivery)->id)
-                                <span class="badge bg-secondary me-1"><i class="fas fa-motorcycle me-1"></i>Assignment Pending</span>
                             @elseif(in_array($order->status, ['assigned', 'out_for_delivery']))
-                                <span class="badge bg-info me-1"><i class="fas fa-check-circle me-1"></i>Assigned</span>
                                 <span class="text-muted" style="font-size:.82rem;">
                                     <i class="fas fa-motorcycle me-1"></i>
                                     {{ $order->delivery->rider->name ?? 'Rider' }}
                                 </span>
-                            @elseif($order->status === 'delivered')
                             @elseif($order->status === 'cancelled')
                                 <span class="text-muted" style="font-size:.82rem;">Cancelled</span>
                             @endif
@@ -306,166 +264,16 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="10" class="text-center text-muted py-4">No orders found.</td>
+                    <td colspan="9" class="text-center text-muted py-4">No orders found.</td>
                 </tr>
             @endforelse
             <tr id="ordersNoResults" style="display:none;">
-                <td colspan="10" class="text-center text-muted py-4">
+                <td colspan="9" class="text-center text-muted py-4">
                     <i class="fas fa-search me-2"></i>No orders match your filter.
                 </td>
             </tr>
         </tbody>
     </table>
-</div>
-
-<!-- Assign Rider Modal -->
-<div class="modal fade" id="assignRiderModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content" style="border-radius:16px;">
-            <form id="assignRiderForm" method="POST" action="{{ route('admin.deliveries.store') }}">
-                @csrf
-                <input type="hidden" name="order_id" id="assignOrderId">
-                <div class="modal-header" style="border-bottom:none;">
-                    <h5 class="modal-title fw-bold" style="color:var(--gasgo-blue);">
-                        <i class="fas fa-motorcycle me-2" style="color:var(--gasgo-orange);"></i>Assign Rider
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="text-muted" style="font-size:.88rem;">
-                        Assign a rider to order <strong id="assignOrderNumber"></strong>:
-                    </p>
-                    @if($riders->count() > 0)
-                        <div class="list-group">
-                            @foreach($riders as $rider)
-                                <label class="list-group-item d-flex align-items-center gap-3 mb-2" style="border-radius:12px;cursor:pointer;">
-                                    <input type="radio" name="rider_id" value="{{ $rider->user_id }}" class="form-check-input" required>
-                                    <div>
-                                        <div class="fw-bold">{{ $rider->user->name ?? 'Unknown' }}</div>
-                                        <small class="text-muted">
-                                            {{ $rider->vehicle_type ?? 'No vehicle info' }}
-                                            @if($rider->plate_number) &bull; {{ $rider->plate_number }} @endif
-                                        </small>
-                                    </div>
-                                    @if($rider->availability === 'available')
-                                        <span class="badge bg-success ms-auto">Available</span>
-                                    @elseif($rider->availability === 'busy')
-                                        <span class="badge bg-warning text-dark ms-auto">Busy</span>
-                                    @elseif($rider->availability === 'returning')
-                                        <span class="badge bg-info ms-auto">Returning to Store</span>
-                                    @else
-                                        <span class="badge bg-secondary ms-auto">Offline</span>
-                                    @endif
-                                </label>
-                            @endforeach
-                        </div>
-                    @else
-                        <div class="alert alert-warning" style="border-radius:12px;">
-                            <i class="fas fa-exclamation-triangle me-2"></i>No riders are currently online. Please wait for a rider to come online.
-                        </div>
-                    @endif
-                </div>
-                <div class="modal-footer" style="border-top:none;">
-                    <button type="button" class="btn" data-bs-dismiss="modal" style="border-radius:10px;">Cancel</button>
-                    @if($riders->count() > 0)
-                        <button type="submit" class="btn" style="background:var(--gasgo-orange);color:#fff;border-radius:10px;font-weight:600;">
-                            <i class="fas fa-check me-1"></i>Assign Rider
-                        </button>
-                    @endif
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Bulk Assign Rider Modal -->
-<div class="modal fade" id="bulkAssignRiderModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content" style="border-radius:16px;">
-            <form id="bulkAssignRiderForm" method="POST" action="{{ route('admin.deliveries.store') }}">
-                @csrf
-                <div class="modal-header" style="border-bottom:none;">
-                    <h5 class="modal-title fw-bold" style="color:var(--gasgo-blue);">
-                        <i class="fas fa-layer-group me-2" style="color:var(--gasgo-orange);"></i>Bulk Assign Rider
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="text-muted" style="font-size:.88rem;">
-                        Assign one rider to <strong><span id="bulkOrderCount">0</span></strong> selected order(s):
-                    </p>
-                    @if($riders->count() > 0)
-                        <div class="list-group">
-                            @foreach($riders as $rider)
-                                <label class="list-group-item d-flex align-items-center gap-3 mb-2" style="border-radius:12px;cursor:pointer;">
-                                    <input type="radio" name="rider_id" value="{{ $rider->user_id }}" class="form-check-input" required>
-                                    <div>
-                                        <div class="fw-bold">{{ $rider->user->name ?? 'Unknown' }}</div>
-                                        <small class="text-muted">
-                                            {{ $rider->vehicle_type ?? 'No vehicle info' }}
-                                            @if($rider->plate_number) &bull; {{ $rider->plate_number }} @endif
-                                        </small>
-                                    </div>
-                                    @if($rider->availability === 'available')
-                                        <span class="badge bg-success ms-auto">Available</span>
-                                    @elseif($rider->availability === 'busy')
-                                        <span class="badge bg-warning text-dark ms-auto">Busy</span>
-                                    @elseif($rider->availability === 'returning')
-                                        <span class="badge bg-info ms-auto">Returning to Store</span>
-                                    @else
-                                        <span class="badge bg-secondary ms-auto">Offline</span>
-                                    @endif
-                                </label>
-                            @endforeach
-                        </div>
-                    @else
-                        <div class="alert alert-warning" style="border-radius:12px;">
-                            <i class="fas fa-exclamation-triangle me-2"></i>No riders are currently online. Please wait for a rider to come online.
-                        </div>
-                    @endif
-                </div>
-                <div class="modal-footer" style="border-top:none;">
-                    <button type="button" class="btn" data-bs-dismiss="modal" style="border-radius:10px;">Cancel</button>
-                    @if($riders->count() > 0)
-                        <button type="submit" class="btn" style="background:var(--gasgo-orange);color:#fff;border-radius:10px;font-weight:600;">
-                            <i class="fas fa-check me-1"></i>Assign Rider
-                        </button>
-                    @endif
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Bulk Approve Modal -->
-<div class="modal fade" id="bulkApproveModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content" style="border-radius:16px;">
-            <form id="bulkApproveForm" method="POST">
-                @csrf @method('PUT')
-                <div class="modal-header" style="border-bottom:none;">
-                    <h5 class="modal-title fw-bold" style="color:var(--gasgo-blue);">
-                        <i class="fas fa-check me-2" style="color:#28a745;"></i>Approve Orders
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="text-muted" style="font-size:.88rem;">
-                        Approve <strong><span id="bulkApproveCount">0</span></strong> selected order(s)?
-                    </p>
-                    <div class="alert alert-info" style="border-radius:12px;font-size:.88rem;">
-                        <i class="fas fa-info-circle me-2"></i>This will change the order status to "Approved" and make them available for rider assignment.
-                    </div>
-                </div>
-                <div class="modal-footer" style="border-top:none;">
-                    <button type="button" class="btn" data-bs-dismiss="modal" style="border-radius:10px;">Cancel</button>
-                    <button type="submit" class="btn" style="background:#28a745;color:#fff;border-radius:10px;font-weight:600;">
-                        <i class="fas fa-check me-1"></i>Approve All
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
 </div>
 
 @endsection
@@ -558,11 +366,11 @@
         if (actionCell) {
             if (newStatus === 'assigned' || newStatus === 'out_for_delivery') {
                 const name = riderName || 'Rider';
-                actionCell.innerHTML = `<span class="text-muted" style="font-size:.82rem;"><i class="fas fa-motorcycle text-info me-1"></i>${name}</span>`;
+                actionCell.innerHTML = `<a href="/admin/orders/${orderId}" class="btn btn-sm btn-info me-1" title="View Details"><i class="fas fa-eye me-1"></i>Details</a><span class="text-muted" style="font-size:.82rem;"><i class="fas fa-motorcycle text-info me-1"></i>${name}</span>`;
             } else if (newStatus === 'delivered') {
-                actionCell.innerHTML = '<span class="text-muted" style="font-size:.82rem;"><i class="fas fa-check-circle text-success me-1"></i>Done</span>';
+                actionCell.innerHTML = `<a href="/admin/orders/${orderId}" class="btn btn-sm btn-info me-1" title="View Details"><i class="fas fa-eye me-1"></i>Details</a><span class="text-muted" style="font-size:.82rem;"><i class="fas fa-check-circle text-success me-1"></i>Done</span>`;
             } else if (newStatus === 'cancelled') {
-                actionCell.innerHTML = '<span class="text-muted" style="font-size:.82rem;">Cancelled</span>';
+                actionCell.innerHTML = `<a href="/admin/orders/${orderId}" class="btn btn-sm btn-info me-1" title="View Details"><i class="fas fa-eye me-1"></i>Details</a><span class="text-muted" style="font-size:.82rem;">Cancelled</span>`;
             }
         }
 
@@ -575,7 +383,6 @@
         btn.classList.add('active');
         currentFilter = status;
         filterOrders();
-        updateBulkActionButtons();
     }
 
     function filterOrders() {
@@ -599,73 +406,6 @@
 
         document.getElementById('ordersVisibleCount').textContent = visibleCount;
         document.getElementById('ordersNoResults').style.display = visibleCount === 0 ? '' : 'none';
-    }
-
-    function openAssignModal(orderId, orderNumber) {
-        document.getElementById('assignOrderId').value = orderId;
-        document.getElementById('assignOrderNumber').textContent = '#' + orderNumber;
-        // Uncheck any previously selected rider
-        document.querySelectorAll('#assignRiderForm input[name="rider_id"]').forEach(r => r.checked = false);
-        new bootstrap.Modal(document.getElementById('assignRiderModal')).show();
-    }
-
-    async function submitAssignRider(event) {
-        event.preventDefault();
-        const form = event.target;
-        const formData = new FormData(form);
-        const orderId = formData.get('order_id');
-        const row = document.querySelector(`.order-row[data-order-id="${orderId}"]`);
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const riderInput = form.querySelector('input[name="rider_id"]:checked');
-        if (!riderInput) {
-            showOrderToast('Please choose a rider first.', true);
-            return;
-        }
-
-        const riderLabel = riderInput.closest('label');
-        const riderName = riderLabel ? riderLabel.querySelector('.fw-bold')?.textContent?.trim() : 'Rider';
-
-        setButtonLoading(submitBtn, true, 'Assigning...');
-        if (row) row.classList.add('is-updating');
-
-        try {
-            const response = await fetch(form.action, {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json',
-                },
-                body: formData,
-            });
-
-            if (!response.ok) {
-                const errorPayload = await response.json().catch(() => null);
-                showOrderToast(errorPayload?.message || 'Unable to assign rider. Try again.', true);
-                return;
-            }
-
-            const payload = await response.json();
-            
-            // Hide the row with animation
-            if (row) {
-                row.style.transition = 'opacity 0.3s ease-out';
-                row.style.opacity = '0';
-                setTimeout(() => {
-                    row.style.display = 'none';
-                    updateTabCounts();
-                    filterOrders();
-                }, 300);
-            }
-            
-            const modalEl = document.getElementById('assignRiderModal');
-            bootstrap.Modal.getInstance(modalEl)?.hide();
-            showOrderToast(payload.message || 'Rider assigned successfully.');
-        } catch (error) {
-            showOrderToast('Unable to assign rider. Try again.', true);
-        } finally {
-            setButtonLoading(submitBtn, false);
-            if (row) row.classList.remove('is-updating');
-        }
     }
 
     async function submitCancelOrder(event) {
@@ -696,16 +436,17 @@
 
             const payload = await response.json();
             
-            // Hide the row with animation
             if (row) {
                 row.dataset.status = 'cancelled';
                 row.querySelector('.badge-status')?.classList.remove('badge-pending', 'badge-approved', 'badge-assigned', 'badge-out_for_delivery', 'badge-delivered');
                 row.querySelector('.badge-status')?.classList.add('badge-cancelled');
-                row.querySelector('.badge-status').textContent = 'Cancelled';
+                if (row.querySelector('.badge-status')) {
+                    row.querySelector('.badge-status').textContent = 'Cancelled';
+                }
                 row.querySelector('.order-total')?.classList.add('text-decoration-line-through', 'text-muted');
                 const actionCell = row.querySelector('td:last-child');
                 if (actionCell) {
-                    actionCell.innerHTML = '<span class="text-muted" style="font-size:.82rem;">Cancelled</span>';
+                    actionCell.innerHTML = `<a href="/admin/orders/${orderId}" class="btn btn-sm btn-info me-1" title="View Details"><i class="fas fa-eye me-1"></i>Details</a><span class="text-muted" style="font-size:.82rem;">Cancelled</span>`;
                 }
                 updateTabCounts();
                 filterOrders();
@@ -720,285 +461,12 @@
         }
     }
 
-    // Bulk Selection Functions
-    function getSelectedOrderIds() {
-        const checkboxes = document.querySelectorAll('#ordersTable .order-checkbox:checked');
-        return Array.from(checkboxes).map(cb => cb.value);
-    }
-
-    function updateBulkSelection() {
-        const selectedCount = getSelectedOrderIds().length;
-        const toolbar = document.getElementById('bulkActionsToolbar');
-        const selectedCountEl = document.getElementById('selectedCount');
-        
-        selectedCountEl.textContent = selectedCount;
-        toolbar.style.display = selectedCount > 0 ? 'flex' : 'none';
-        updateBulkActionButtons();
-    }
-
-    function updateBulkActionButtons() {
-        const approveBtn = document.getElementById('bulkApproveBtn');
-        const assignBtn = document.getElementById('bulkAssignBtn');
-        if (!approveBtn || !assignBtn) return;
-
-        if (currentFilter === 'pending') {
-            approveBtn.style.display = '';
-            assignBtn.style.display = 'none';
-        } else if (currentFilter === 'approved') {
-            approveBtn.style.display = 'none';
-            assignBtn.style.display = '';
-        } else if (['assigned', 'out_for_delivery', 'delivered', 'cancelled'].includes(currentFilter)) {
-            approveBtn.style.display = 'none';
-            assignBtn.style.display = 'none';
-        } else {
-            approveBtn.style.display = '';
-            assignBtn.style.display = '';
-        }
-    }
-
-    function toggleSelectAll(checkbox) {
-        const isChecked = checkbox.checked;
-        document.querySelectorAll('#ordersTable .order-checkbox').forEach(cb => {
-            if (cb.offsetParent !== null) { // Only check visible rows
-                cb.checked = isChecked;
-            }
-        });
-        updateBulkSelection();
-    }
-
-    function clearAllSelections() {
-        document.getElementById('selectAllCheckbox').checked = false;
-        document.querySelectorAll('#ordersTable .order-checkbox').forEach(cb => cb.checked = false);
-        updateBulkSelection();
-    }
-
-    function openBulkAssignModal() {
-        const selectedIds = getSelectedOrderIds();
-        if (selectedIds.length === 0) {
-            showOrderToast('Please select at least one order.', true);
-            return;
-        }
-        
-        document.getElementById('bulkOrderCount').textContent = selectedIds.length;
-        
-        // Clear previously selected rider
-        document.querySelectorAll('#bulkAssignRiderForm input[name="rider_id"]').forEach(r => r.checked = false);
-        
-        // Store selected order IDs in hidden inputs
-        let hiddenInputsContainer = document.getElementById('bulkOrderIdsContainer');
-        if (!hiddenInputsContainer) {
-            hiddenInputsContainer = document.createElement('div');
-            hiddenInputsContainer.id = 'bulkOrderIdsContainer';
-            hiddenInputsContainer.style.display = 'none';
-            document.getElementById('bulkAssignRiderForm').appendChild(hiddenInputsContainer);
-        }
-        hiddenInputsContainer.innerHTML = '';
-        
-        selectedIds.forEach(orderId => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'order_ids[]';
-            input.value = orderId;
-            hiddenInputsContainer.appendChild(input);
-        });
-        
-        new bootstrap.Modal(document.getElementById('bulkAssignRiderModal')).show();
-    }
-
-    async function submitBulkAssignRider(event) {
-        event.preventDefault();
-        const form = event.target;
-        const formData = new FormData(form);
-        const orderIds = Array.from(formData.getAll('order_ids[]'));
-        const riderId = formData.get('rider_id');
-        
-        if (!riderId) {
-            showOrderToast('Please choose a rider first.', true);
-            return;
-        }
-
-        const riderInput = form.querySelector(`input[name="rider_id"][value="${riderId}"]`);
-        const riderLabel = riderInput?.closest('label');
-        const riderName = riderLabel ? riderLabel.querySelector('.fw-bold')?.textContent?.trim() : 'Rider';
-
-        const submitBtn = form.querySelector('button[type="submit"]');
-        setButtonLoading(submitBtn, true, 'Assigning...');
-
-        try {
-            const response = await fetch(form.action, {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json',
-                },
-                body: formData,
-            });
-
-            if (!response.ok) {
-                showOrderToast('Unable to assign riders. Try again.', true);
-                return;
-            }
-
-            const payload = await response.json();
-            
-            const assignedIds = Array.isArray(payload.order_ids) && payload.order_ids.length
-                ? payload.order_ids.map(id => String(id))
-                : orderIds;
-
-            // Remove assigned rows from the table with animation
-            assignedIds.forEach(orderId => {
-                const row = document.querySelector(`.order-row[data-order-id="${orderId}"]`);
-                if (row) {
-                    row.style.transition = 'opacity 0.3s ease-out';
-                    row.style.opacity = '0';
-                    setTimeout(() => {
-                        row.style.display = 'none';
-                    }, 300);
-                }
-            });
-            
-            // Close modal and clear selection
-            const modalEl = document.getElementById('bulkAssignRiderModal');
-            bootstrap.Modal.getInstance(modalEl)?.hide();
-            clearAllSelections();
-            
-            // Update counts and filters
-            setTimeout(() => {
-                updateTabCounts();
-                filterOrders();
-            }, 350);
-            
-            showOrderToast(payload.message || `Successfully assigned ${assignedIds.length} order(s) to this rider.`);
-        } catch (error) {
-            showOrderToast('Unable to assign riders. Try again.', true);
-        } finally {
-            setButtonLoading(submitBtn, false);
-        }
-    }
-
-    function openBulkApproveModal() {
-        const selectedIds = getSelectedOrderIds();
-        if (selectedIds.length === 0) {
-            showOrderToast('Please select at least one order.', true);
-            return;
-        }
-        
-        document.getElementById('bulkApproveCount').textContent = selectedIds.length;
-        
-        // Store selected order IDs in hidden inputs
-        let hiddenInputsContainer = document.getElementById('bulkApproveOrderIdsContainer');
-        if (!hiddenInputsContainer) {
-            hiddenInputsContainer = document.createElement('div');
-            hiddenInputsContainer.id = 'bulkApproveOrderIdsContainer';
-            hiddenInputsContainer.style.display = 'none';
-            document.getElementById('bulkApproveForm').appendChild(hiddenInputsContainer);
-        }
-        hiddenInputsContainer.innerHTML = '';
-        
-        selectedIds.forEach(orderId => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'order_ids[]';
-            input.value = orderId;
-            hiddenInputsContainer.appendChild(input);
-        });
-        
-        new bootstrap.Modal(document.getElementById('bulkApproveModal')).show();
-    }
-
-    async function submitBulkApprove(event) {
-        event.preventDefault();
-        const form = event.target;
-        const formData = new FormData(form);
-        const orderIds = Array.from(formData.getAll('order_ids[]'));
-        
-        if (!orderIds.length) {
-            showOrderToast('No orders selected.', true);
-            return;
-        }
-
-        const submitBtn = form.querySelector('button[type="submit"]');
-        setButtonLoading(submitBtn, true, 'Approving...');
-        
-        try {
-            const response = await fetch('{{ route("admin.orders.bulk-update-status") }}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    order_ids: orderIds,
-                    status: 'approved'
-                })
-            });
-
-            if (!response.ok) {
-                showOrderToast('Unable to approve orders. Try again.', true);
-                return;
-            }
-
-            const payload = await response.json();
-            
-            // Remove rows from the table with animation
-            orderIds.forEach(orderId => {
-                const row = document.querySelector(`.order-row[data-order-id="${orderId}"]`);
-                if (row) {
-                    row.style.transition = 'opacity 0.3s ease-out';
-                    row.style.opacity = '0';
-                    setTimeout(() => {
-                        row.style.display = 'none';
-                    }, 300);
-                }
-            });
-            
-            // Close modal and clear selection
-            const modalEl = document.getElementById('bulkApproveModal');
-            bootstrap.Modal.getInstance(modalEl)?.hide();
-            clearAllSelections();
-            
-            // Update counts and filters
-            setTimeout(() => {
-                updateTabCounts();
-                filterOrders();
-            }, 350);
-            
-            showOrderToast(`Successfully approved ${orderIds.length} order(s).`);
-        } catch (error) {
-            showOrderToast('Unable to approve orders. Try again.', true);
-        } finally {
-            setButtonLoading(submitBtn, false);
-        }
-    }
-
-
-    // Event listener for assign buttons
     document.addEventListener('DOMContentLoaded', function() {
-        // Attach form submit handlers
-        const bulkApproveForm = document.getElementById('bulkApproveForm');
-        if (bulkApproveForm) {
-            bulkApproveForm.addEventListener('submit', submitBulkApprove);
-        }
-        
-
-        document.querySelectorAll('.assign-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const orderId = this.dataset.orderId;
-                const orderNumber = this.dataset.orderNumber;
-                openAssignModal(orderId, orderNumber);
-            });
-        });
-
-        document.getElementById('assignRiderForm')?.addEventListener('submit', submitAssignRider);
-
-        document.getElementById('bulkAssignRiderForm')?.addEventListener('submit', submitBulkAssignRider);
-
         document.querySelectorAll('.cancel-order-form').forEach((form) => {
             form.addEventListener('submit', submitCancelOrder);
         });
 
         updateTabCounts();
-
         filterOrders();
     });
 </script>
