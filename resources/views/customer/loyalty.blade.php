@@ -784,35 +784,57 @@
             </div>
         @else
             <!-- LOYALTY PROGRESS - TOP FOR LOGGED-IN USERS -->
-            <div class="row justify-content-center mb-5" data-aos="fade-up">
+            <div class="row justify-content-center mb-4" data-aos="fade-up">
                 <div class="col-lg-8">
+                    @if(isset($pendingClaimablePoints) && $pendingClaimablePoints > 0)
+                        <div class="alert border-0 rounded-4 shadow-sm p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3" style="background: linear-gradient(135deg, #fff8ec 0%, #fff2dc 100%); border-left: 5px solid var(--gasgo-orange) !important;">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="rounded-circle bg-warning text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px; font-size: 1.2rem;">
+                                    <i class="fas fa-gift"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1" style="color: #92400e;">Claim +{{ $pendingClaimablePoints }} Pending Loyalty Points!</h6>
+                                    <p class="mb-0 text-muted small">You have <strong>{{ $pendingReviewOrdersCount }} delivered order(s)</strong> waiting for review. Rate them to claim your points now!</p>
+                                </div>
+                            </div>
+                            <a href="{{ route('customer.orders') }}" class="btn btn-warning text-white fw-bold btn-sm rounded-pill px-4">
+                                <i class="fas fa-star me-1"></i>Rate & Claim Points
+                            </a>
+                        </div>
+                    @endif
+
                     <div class="progress-card">
-                        <h5>
-                            <i class="fas fa-chart-line me-2" style="color: var(--gasgo-orange);"></i>
-                            Your Loyalty Progress
-                        </h5>
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                            <h5 class="mb-0">
+                                <i class="fas fa-chart-line me-2" style="color: var(--gasgo-orange);"></i>
+                                Your Loyalty Progress
+                            </h5>
+                            <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fw-semibold" data-bs-toggle="modal" data-bs-target="#pointsHistoryModal">
+                                <i class="fas fa-history me-1"></i>View Points History
+                            </button>
+                        </div>
 
                         <div class="progress-info">
                             <div class="progress-info-item">
                                 <strong>{{ $completedOrders }}</strong>
-                                <small>Total Delivered Orders</small>
-                            </div>
-                            <div class="progress-info-item">
-                                <strong>{{ $balance }}</strong>
-                                <small>Points Earned</small>
+                                <small>Delivered Orders</small>
                             </div>
                             <div class="progress-info-item">
                                 <strong>{{ $balance }}</strong>
                                 <small>Available Points</small>
                             </div>
+                            <div class="progress-info-item">
+                                <strong>{{ $availableVouchers->count() }}</strong>
+                                <small>Claimed Vouchers</small>
+                            </div>
                         </div>
 
                         <p class="text-muted mb-3" style="font-size: 0.9rem;">
-                            Points are based on your total delivered spend on tank products only.
+                            Points are calculated at <strong>1 pt per ₱100 spend</strong> on delivered LPG orders and are <strong>claimed once you submit a review</strong>.
                         </p>
 
                         @if ($balance < $nextMilestone)
-                            <p style="font-weight: 600; color: var(--gasgo-blue);">Progress to Unlock Voucher</p>
+                            <p style="font-weight: 600; color: var(--gasgo-blue);">Progress to Unlock Next Voucher</p>
                             <div class="progress-bar-gasgo" style="--fill-width: {{ ($balance / $nextMilestone) * 100 }}%;">
                                 <div class="fill"></div>
                             </div>
@@ -828,6 +850,54 @@
                                 <p class="mb-0 mt-2" style="font-size: 0.95rem;">You've unlocked all loyalty rewards!</p>
                             </div>
                         @endif
+                    </div>
+                </div>
+            </div>
+
+            <!-- HOW POINTS WORK & QUICK GUIDE -->
+            <div class="my-4" data-aos="fade-up">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <h5 class="fw-bold mb-0" style="color: var(--gasgo-blue);">
+                        <i class="fas fa-info-circle me-2" style="color: var(--gasgo-orange);"></i>How You Earn & Claim Points
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-link text-decoration-none fw-semibold p-0" data-bs-toggle="modal" data-bs-target="#pointsHistoryModal">
+                        <i class="fas fa-receipt me-1"></i>See all {{ $points->count() }} transaction(s) &rarr;
+                    </button>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="p-3 rounded-4 border bg-white shadow-sm h-100 d-flex flex-column justify-content-between">
+                            <div class="d-flex align-items-center gap-3 mb-2">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px; height:42px;">
+                                    <i class="fas fa-shopping-cart"></i>
+                                </div>
+                                <h6 class="mb-0 fw-bold text-dark">1. Spend on LPG</h6>
+                            </div>
+                            <p class="text-muted small mb-0">Earn <strong>1 Point for every ₱100 spent</strong> on cylinder purchases (e.g. ₱1,000 = 10 pts, ₱1,600 = 16 pts).</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 rounded-4 border bg-white shadow-sm h-100 d-flex flex-column justify-content-between">
+                            <div class="d-flex align-items-center gap-3 mb-2">
+                                <div class="rounded-circle bg-warning text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px; height:42px;">
+                                    <i class="fas fa-star"></i>
+                                </div>
+                                <h6 class="mb-0 fw-bold text-dark">2. Review & Claim</h6>
+                            </div>
+                            <p class="text-muted small mb-0">Rate your completed delivery in <strong>My Orders</strong> to instantly unlock and claim your points.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 rounded-4 border bg-white shadow-sm h-100 d-flex flex-column justify-content-between">
+                            <div class="d-flex align-items-center gap-3 mb-2">
+                                <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px; height:42px;">
+                                    <i class="fas fa-tag"></i>
+                                </div>
+                                <h6 class="mb-0 fw-bold text-dark">3. Redeem Vouchers</h6>
+                            </div>
+                            <p class="text-muted small mb-0">Use your claimed points below to unlock <strong>₱30, ₱50, ₱75, and ₱100 discount vouchers</strong>.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1149,5 +1219,90 @@
         @endif
 
     </div>
+
+    <!-- Points History Modal -->
+    @if(!$isGuest)
+        <div class="modal fade" id="pointsHistoryModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content" style="border-radius: 20px; overflow: hidden; border: none; box-shadow: 0 15px 40px rgba(0,0,0,0.15);">
+                    <div class="modal-header py-3 px-4" style="background: linear-gradient(135deg, var(--gasgo-blue), #2196f3); color: white;">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-history fs-5 text-warning"></i>
+                            <h6 class="modal-title fw-bold text-white mb-0">Points Activity & History</h6>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-0">
+                        <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold">
+                                    <i class="fas fa-coins me-1"></i> Current Balance: {{ $balance }} Points
+                                </span>
+                            </div>
+                            <small class="text-muted">{{ $points->count() }} transaction(s) recorded</small>
+                        </div>
+                        <div class="table-responsive" style="max-height: 420px;">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light text-muted small text-uppercase sticky-top" style="z-index: 1;">
+                                    <tr>
+                                        <th class="ps-4">Date & Time</th>
+                                        <th>Activity</th>
+                                        <th>Description</th>
+                                        <th class="text-end pe-4">Points</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($points as $p)
+                                        <tr>
+                                            <td class="ps-4 text-nowrap">
+                                                <div class="fw-semibold text-dark">{{ $p->created_at->format('M d, Y') }}</div>
+                                                <small class="text-muted">{{ $p->created_at->format('h:i A') }}</small>
+                                            </td>
+                                            <td>
+                                                @if(str_contains($p->description, 'reviewing') || str_contains($p->description, 'Review'))
+                                                    <span class="badge bg-warning text-dark border border-warning rounded-pill px-3 py-1 fw-bold" style="font-size:0.75rem;">
+                                                        <i class="fas fa-star me-1"></i> Review Claim
+                                                    </span>
+                                                @elseif($p->type === 'earned')
+                                                    <span class="badge bg-primary text-white rounded-pill px-3 py-1 fw-semibold" style="font-size:0.75rem;">
+                                                        <i class="fas fa-shopping-bag me-1"></i> Order Purchase
+                                                    </span>
+                                                @else
+                                                    <span class="badge bg-danger text-white rounded-pill px-3 py-1 fw-semibold" style="font-size:0.75rem;">
+                                                        <i class="fas fa-tag me-1"></i> Voucher Redeemed
+                                                    </span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <div class="text-dark fw-medium" style="font-size: 0.88rem;">{{ $p->description }}</div>
+                                            </td>
+                                            <td class="text-end pe-4 text-nowrap">
+                                                @if($p->type === 'earned')
+                                                    <span class="fw-bold text-success fs-6">+{{ $p->points }} pts</span>
+                                                @else
+                                                    <span class="fw-bold text-danger fs-6">-{{ $p->points }} pts</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" class="text-center py-5 text-muted">
+                                                <i class="fas fa-coins text-warning fs-1 mb-2 d-block opacity-50"></i>
+                                                <h6 class="fw-bold mb-1">No Points History Yet</h6>
+                                                <p class="small mb-0">Rate your delivered orders in My Orders to claim your loyalty points!</p>
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light py-2 px-4 border-0">
+                        <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 
 @endsection

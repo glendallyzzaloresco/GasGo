@@ -248,6 +248,119 @@
     .why-card:hover { border-top-color: var(--gasgo-orange); transform: translateY(-4px); }
     .why-card i { font-size: 2rem; margin-bottom: 14px; }
 
+    /* ===== SERVICE REVIEWS ===== */
+    .review-card {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 28px 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, .06);
+        height: 100%;
+        border: 1px solid rgba(0, 0, 0, .04);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform .3s, box-shadow .3s;
+    }
+
+    .review-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 14px 35px rgba(0, 0, 0, .1);
+    }
+
+    .review-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+
+    .review-stars {
+        color: #f7941d;
+        font-size: 0.95rem;
+        letter-spacing: 2px;
+    }
+
+    .review-text {
+        font-size: 0.92rem;
+        color: #4a5568;
+        line-height: 1.6;
+        margin-bottom: 16px;
+    }
+
+    .review-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 16px;
+    }
+
+    .review-tag-pill {
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: #f1f5f9;
+        color: #334155;
+        padding: 4px 10px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .review-author {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding-top: 14px;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .review-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--gasgo-blue), #2196f3);
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 4px 10px rgba(26, 109, 176, .2);
+    }
+
+    .review-trust-pill {
+        background: #ffffff;
+        border-radius: 30px;
+        padding: 10px 24px;
+        display: inline-flex;
+        align-items: center;
+        gap: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, .06);
+        margin-bottom: 35px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .review-trust-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    @media (max-width: 767.98px) {
+        .review-card {
+            padding: 22px 18px;
+            border-radius: 16px;
+        }
+        .review-trust-pill {
+            gap: 12px;
+            padding: 8px 16px;
+            font-size: 0.8rem;
+        }
+    }
+
     [data-reveal="slide-up"] {
         animation: revealUp .65s ease both;
     }
@@ -498,6 +611,89 @@
                     <p class="text-muted small">Certified {{ $homepageSettings->industry_noun ?? 'quality' }} products with guaranteed safety</p>
                 </div>
             </div>
+        </div>
+    </div>
+</section>
+
+<!-- Customer Reviews & Ratings -->
+<section class="section-padding" style="background:#ffffff;">
+    <div class="container">
+        <div class="text-center mb-4" data-aos="fade-up">
+            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold mb-2">⭐ Real Customer Feedback</span>
+            <h2 class="section-title">Customer Reviews & Ratings</h2>
+            <p class="section-subtitle">See why households and businesses choose our trusted delivery service</p>
+            
+            <!-- Trust Stats Pill -->
+            <div class="review-trust-pill mt-3">
+                <div class="review-trust-item">
+                    <i class="fas fa-star text-warning"></i>
+                    <span><strong>{{ number_format($averageRating ?? 5.0, 1) }} / 5.0</strong> Average Rating</span>
+                </div>
+                <div class="review-trust-item">
+                    <i class="fas fa-comments text-primary"></i>
+                    <span><strong>{{ $totalReviewCount ?? $serviceReviews->count() }}</strong> Verified Reviews</span>
+                </div>
+                <div class="review-trust-item">
+                    <i class="fas fa-shield-alt text-success"></i>
+                    <span><strong>100%</strong> Certified Safe LPG</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            @forelse($serviceReviews as $review)
+                <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="{{ 100 * (($loop->iteration % 3) + 1) }}">
+                    <div class="review-card">
+                        <div>
+                            <div class="review-header">
+                                <div class="review-stars">
+                                    @for($s = 1; $s <= 5; $s++)
+                                        @if($s <= $review->rating)
+                                            <i class="fas fa-star"></i>
+                                        @else
+                                            <i class="far fa-star text-muted"></i>
+                                        @endif
+                                    @endfor
+                                </div>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small" style="font-size:0.75rem;">
+                                    <i class="fas fa-check-circle me-1"></i>Verified Order
+                                </span>
+                            </div>
+
+                            <p class="review-text">"{{ $review->comment ?: 'Excellent and swift delivery service! The LPG arrived promptly in pristine condition.' }}"</p>
+
+                            @if(!empty($review->service_tags) && is_array($review->service_tags))
+                                <div class="review-tags">
+                                    @foreach($review->service_tags as $tag)
+                                        <span class="review-tag-pill"><i class="fas fa-tag me-1 text-warning"></i>{{ $tag }}</span>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+
+                        <div class="review-author">
+                            <div class="review-avatar">
+                                {{ strtoupper(substr($review->user->name ?? 'Customer', 0, 2)) }}
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold text-dark" style="font-size:0.95rem;">{{ $review->user->name ?? 'Verified Customer' }}</h6>
+                                <small class="text-muted" style="font-size:0.78rem;">{{ $review->created_at->diffForHumans() }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="col-12 text-center py-4">
+                    <div class="p-4 bg-light rounded-4 border d-inline-block" style="max-width: 520px;">
+                        <i class="fas fa-star text-warning fs-2 mb-2 d-block"></i>
+                        <h6 class="fw-bold mb-1">No reviews yet</h6>
+                        <p class="text-muted small mb-3">Have you received your LPG delivery? Rate your completed order and earn <strong>+10 Loyalty Points</strong>!</p>
+                        <a href="{{ route('customer.orders') }}" class="btn btn-warning text-white btn-sm fw-bold rounded-pill px-4">
+                            <i class="fas fa-star me-1"></i>Rate Completed Order
+                        </a>
+                    </div>
+                </div>
+            @endforelse
         </div>
     </div>
 </section>

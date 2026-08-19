@@ -649,6 +649,7 @@
         <div class="sidebar-section">Marketing</div>
         <ul class="sidebar-menu">
             <li><a href="{{ url('/admin/rewards') }}" class="@yield('nav-rewards')"><i class="fas fa-gift"></i>Rewards</a></li>
+            <li><a href="{{ route('admin.reviews.index') }}" class="@yield('nav-reviews')"><i class="fas fa-star"></i>Customer Reviews</a></li>
         </ul>
         <div class="sidebar-section">Reports</div>
         <ul class="sidebar-menu">

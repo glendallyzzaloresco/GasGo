@@ -18,6 +18,7 @@ use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\RiderController;
 use App\Http\Controllers\LoyaltyController;
 use App\Http\Controllers\Customer\LocationController;
+use App\Http\Controllers\Customer\ReviewController;
 use App\Http\Controllers\GeocodingController;
 use App\Http\Controllers\InventoryMovementController;
 use App\Http\Controllers\RestockController;
@@ -138,11 +139,27 @@ Route::get('/', function () {
         // Fallback handled by view composer
     }
 
+    $serviceReviews = collect();
+    $averageRating = 5.0;
+    $totalReviewCount = 0;
+    try {
+        if (Schema::hasTable('service_reviews')) {
+            $serviceReviews = \App\Models\ServiceReview::with(['user', 'order'])
+                ->where('is_approved', true)
+                ->latest()
+                ->get();
+            $averageRating = \App\Models\ServiceReview::where('is_approved', true)->avg('rating') ?: 5.0;
+            $totalReviewCount = $serviceReviews->count();
+        }
+    } catch (\Throwable $e) {
+        // Ignore fallback
+    }
+
     return view('welcome', compact(
         'totalOrders', 'revenue', 'pendingOrders', 'totalCustomers', 
         'activeRiders', 'products', 'user', 'role', 
         'ordersAwaitingAssignment', 'availableRiders', 'riderAssignedOrders',
-        'homepageSettings'
+        'homepageSettings', 'serviceReviews', 'averageRating', 'totalReviewCount'
     ));
 });
 
@@ -203,6 +220,9 @@ Route::middleware(['auth', 'verified'])->prefix('customer')->group(function () {
     // Loyalty
     Route::post('/loyalty/redeem', [LoyaltyController::class, 'redeem'])->name('customer.loyalty.redeem');
     Route::post('/loyalty/claim-voucher', [LoyaltyController::class, 'claimVoucher'])->name('customer.loyalty.claimVoucher');
+
+    // Reviews
+    Route::post('/reviews', [ReviewController::class, 'store'])->name('customer.reviews.store');
 });
 
 // ===== ADMIN ROUTES =====
@@ -211,6 +231,12 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::get('/notifications', [DashboardController::class, 'notifications'])->name('admin.notifications');
     Route::get('/profile', [DashboardController::class, 'profile'])->name('admin.profile');
     Route::put('/profile', [DashboardController::class, 'updateProfile'])->name('admin.profile.update');
+
+    // Reviews Management
+    Route::get('/reviews', [ReviewController::class, 'adminIndex'])->name('admin.reviews.index');
+    Route::patch('/reviews/{review}/toggle-featured', [ReviewController::class, 'toggleFeatured'])->name('admin.reviews.toggleFeatured');
+    Route::patch('/reviews/{review}/toggle-approval', [ReviewController::class, 'toggleApproval'])->name('admin.reviews.toggleApproval');
+    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('admin.reviews.destroy');
 
     // Orders
     Route::get('/orders', [OrderController::class, 'adminIndex'])->name('admin.orders');

@@ -204,9 +204,78 @@
             transition-duration: .01ms !important;
         }
     }
-    @media (max-width: 768px) {
-        .auth-sidebar { padding: 30px 24px; }
-        .auth-form { padding: 30px 24px; }
+    @media (max-width: 991.98px) {
+        .auth-sidebar {
+            padding: 32px 20px 24px;
+        }
+        .auth-sidebar img {
+            height: 52px;
+            margin-bottom: 10px;
+        }
+        .auth-sidebar h3 {
+            font-size: 1.35rem;
+            margin-top: 0 !important;
+            margin-bottom: 4px;
+        }
+        .auth-sidebar p {
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+            max-width: 440px;
+        }
+        .auth-features {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px 12px;
+            margin-top: 8px;
+            text-align: center;
+        }
+        .auth-features li {
+            padding: 5px 12px;
+            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(4px);
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+        .auth-features li i {
+            color: #ffd166;
+        }
+        .auth-form {
+            padding: 36px 28px;
+        }
+    }
+    @media (max-width: 575.98px) {
+        .auth-section {
+            padding: 20px 12px;
+        }
+        .auth-card {
+            border-radius: 20px;
+        }
+        .auth-sidebar {
+            padding: 26px 16px 20px;
+        }
+        .auth-sidebar img {
+            height: 46px;
+        }
+        .auth-sidebar h3 {
+            font-size: 1.25rem;
+        }
+        .auth-sidebar p {
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+        }
+        .auth-features {
+            gap: 6px 8px;
+        }
+        .auth-features li {
+            padding: 4px 10px;
+            font-size: 0.75rem;
+        }
+        .auth-form {
+            padding: 26px 18px;
+        }
     }
 </style>
 @endsection
@@ -216,8 +285,8 @@
 <section class="auth-section">
     <div class="auth-card">
         <div class="row g-0">
-            <!-- Left Side -->
-            <div class="col-lg-5 d-none d-lg-flex">
+            <!-- Left Side (Top Banner on Mobile) -->
+            <div class="col-12 col-lg-5 d-flex">
                 <div class="auth-sidebar w-100">
                     <img src="{{ $settings->navbar_logo_url ?? asset('images/logo-gasgo.png') }}" alt="{{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }}">
                     <h3 class="mt-3 text-white fw-bold">{{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }}</h3>
@@ -230,7 +299,7 @@
                 </div>
             </div>
             <!-- Right Side (Form) -->
-            <div class="col-lg-7">
+            <div class="col-12 col-lg-7">
                 <div class="auth-form">
                     @if (session('success'))
                         <div class="auth-alert auth-alert-success">{{ session('success') }}</div>

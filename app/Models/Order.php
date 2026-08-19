@@ -53,6 +53,36 @@ class Order extends Model
         return max(0, $this->subtotal - $this->discount);
     }
 
+    public function getClaimablePointsAttribute(): int
+    {
+        $tankSpend = 0;
+        if ($this->relationLoaded('orderItems')) {
+            $tankSpend = $this->orderItems
+                ->filter(function ($item) {
+                    if ($item->is_reward) {
+                        return false;
+                    }
+                    if ($item->product) {
+                        return $item->product->isCylinder();
+                    }
+                    $name = strtolower((string) ($item->product_name ?? ''));
+                    return (str_contains($name, 'tank') || str_contains($name, 'cylinder') || str_contains($name, 'lpg'))
+                        && !str_contains($name, 'regulator')
+                        && !str_contains($name, 'hose')
+                        && !str_contains($name, 'clamp')
+                        && !str_contains($name, 'stove')
+                        && !str_contains($name, 'burner');
+                })
+                ->sum('subtotal');
+        }
+
+        if ($tankSpend <= 0) {
+            $tankSpend = max(0, (float) ($this->subtotal - $this->discount));
+        }
+
+        return max(0, (int) floor($tankSpend / 100));
+    }
+
     // ── Relationships ──
 
     public function user()
@@ -78,5 +108,10 @@ class Order extends Model
     public function loyaltyPoints()
     {
         return $this->hasMany(LoyaltyPoint::class);
+    }
+
+    public function serviceReview()
+    {
+        return $this->hasOne(ServiceReview::class);
     }
 }

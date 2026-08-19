@@ -28,7 +28,7 @@ class OrderController extends Controller
             return redirect()->route('customer.login')->with('error', 'Please log in to view your orders.');
         }
 
-        $orders = Order::with('orderItems.product')
+        $orders = Order::with(['orderItems.product', 'serviceReview'])
             ->where('user_id', Auth::id())
             ->orderBy('created_at', 'desc')
             ->get();
