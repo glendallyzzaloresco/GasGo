@@ -40,20 +40,23 @@ class LoyaltyController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            $deliveredOrders = \App\Models\Order::with('orderItems.product')
+            $deliveredOrders = \App\Models\Order::with(['orderItems.product', 'serviceReview'])
                 ->where('user_id', $userId)
                 ->where('status', 'delivered')
                 ->where('created_at', '>=', now()->subYear())
                 ->get();
 
             $completedOrders = $deliveredOrders->count();
-            $totalSpend = $deliveredOrders->sum(function (Order $order) {
-                return $this->calculateSpendFromOrder($order);
-            });
-
-            // SYNC POINTS: Ensure points reflect spend amount for each delivered order
-            // 1 point = ₱100 spent on a delivered order
+            
+            // SYNC REVIEW-GATED POINTS: Points are unlocked and claimed when orders are reviewed
             $this->syncPointsToDeliveredOrders($userId, $deliveredOrders);
+
+            // Calculate pending points that can be claimed by reviewing delivered orders
+            $unreviewedOrders = $deliveredOrders->filter(function ($order) {
+                return !$order->serviceReview;
+            });
+            $pendingClaimablePoints = $unreviewedOrders->sum('claimable_points');
+            $pendingReviewOrdersCount = $unreviewedOrders->count();
 
             // Refresh point transactions after sync
             $points = LoyaltyPoint::where('user_id', $userId)
@@ -197,12 +200,17 @@ class LoyaltyController extends Controller
             ],
         ];
 
+        $pendingClaimablePoints = $pendingClaimablePoints ?? 0;
+        $pendingReviewOrdersCount = $pendingReviewOrdersCount ?? 0;
+
         return view('customer.loyalty', compact(
             'points',
             'totalEarned',
             'totalRedeemed',
             'balance',
             'completedOrders',
+            'pendingClaimablePoints',
+            'pendingReviewOrdersCount',
             'availableVouchers',
             'unlockedVouchers',
             'pointsToNextReward',
@@ -449,17 +457,17 @@ class LoyaltyController extends Controller
     }
 
     /**
-     * Sync loyalty points with delivered orders based on spend
-     * Idempotent: keeps one earned points entry per order and updates its point value
+     * Sync loyalty points with delivered orders based on spend ($order->claimable_points).
+     * Points are only awarded once the customer submits an approved review for that delivered order.
      */
     private function syncPointsToDeliveredOrders(int $userId, $deliveredOrders): void
     {
         foreach ($deliveredOrders as $order) {
-            $orderSpend = $this->calculateSpendFromOrder($order);
-            $pointsEarned = (int) floor($orderSpend / 100);
+            $pointsEarned = $order->claimable_points;
+            $hasApprovedReview = $order->serviceReview && $order->serviceReview->is_approved;
 
-            if ($pointsEarned <= 0) {
-                // Remove zero-point entries for orders that no longer qualify
+            if (!$hasApprovedReview || $pointsEarned <= 0) {
+                // If not reviewed yet or 0 spend, points are NOT yet claimed
                 LoyaltyPoint::where('user_id', $userId)
                     ->where('order_id', $order->id)
                     ->where('type', 'earned')
@@ -467,6 +475,8 @@ class LoyaltyController extends Controller
                 continue;
             }
 
+            // Order is delivered and reviewed: award spend-based points
+            $orderNumber = $order->order_number ?? $order->id;
             LoyaltyPoint::updateOrCreate(
                 [
                     'user_id' => $userId,
@@ -475,7 +485,7 @@ class LoyaltyController extends Controller
                 ],
                 [
                     'points' => $pointsEarned,
-                    'description' => 'Points earned from Order #' . $order->id,
+                    'description' => 'Points claimed by reviewing Order #' . $orderNumber,
                 ]
             );
         }

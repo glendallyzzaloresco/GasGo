@@ -45,8 +45,9 @@ class ReviewController extends Controller
         }
 
         $riderId = $order->delivery?->rider_id;
+        $pointsEarned = $order->claimable_points;
 
-        DB::transaction(function () use ($validated, $userId, $order, $riderId) {
+        DB::transaction(function () use ($validated, $userId, $order, $riderId, $pointsEarned) {
             ServiceReview::create([
                 'user_id'      => $userId,
                 'order_id'     => $order->id,
@@ -58,17 +59,25 @@ class ReviewController extends Controller
                 'is_approved'  => true,
             ]);
 
-            // Award 10 loyalty points for reviewing
-            LoyaltyPoint::create([
-                'user_id'     => $userId,
-                'order_id'    => $order->id,
-                'points'      => 10,
-                'type'        => 'earned',
-                'description' => 'Bonus points for reviewing Order #' . $order->order_number,
-            ]);
+            // Award spend-based loyalty points for reviewing this order
+            if ($pointsEarned > 0) {
+                LoyaltyPoint::updateOrCreate(
+                    [
+                        'user_id'     => $userId,
+                        'order_id'    => $order->id,
+                        'type'        => 'earned',
+                    ],
+                    [
+                        'points'      => $pointsEarned,
+                        'description' => 'Points claimed by reviewing Order #' . $order->order_number,
+                    ]
+                );
+            }
         });
 
-        $message = 'Thank you for your feedback! You earned +10 loyalty points.';
+        $message = $pointsEarned > 0 
+            ? "Thank you for your feedback! You claimed +{$pointsEarned} loyalty points for this order."
+            : "Thank you for your feedback!";
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['success' => true, 'message' => $message]);

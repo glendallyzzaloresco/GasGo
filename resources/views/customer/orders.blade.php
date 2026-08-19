@@ -239,6 +239,9 @@
                             <i class="fas fa-tag me-1"></i>Reward Discount Applied: ₱{{ number_format($order->discount, 2) }}
                         </div>
                     @endif
+                    <div class="mt-1" style="font-size:.8rem; color:#1a6db0; font-weight:600;">
+                        <i class="fas fa-coins text-warning me-1"></i>Loyalty Points: +{{ $order->claimable_points }} pts {{ $order->serviceReview ? '(Claimed)' : '(Claim upon review)' }}
+                    </div>
                 </div>
                 <div class="d-flex gap-2 flex-wrap align-items-center">
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#orderModal{{ $order->id }}">
@@ -250,11 +253,11 @@
                     @if($order->status === 'delivered')
                         @if($order->serviceReview)
                             <span class="badge bg-warning text-dark d-inline-flex align-items-center gap-1 py-2 px-3 rounded-pill fw-bold" style="font-size:0.78rem;">
-                                <i class="fas fa-star text-dark"></i> {{ $order->serviceReview->rating }}/5 Rated
+                                <i class="fas fa-star text-dark"></i> {{ $order->serviceReview->rating }}/5 Rated (+{{ $order->claimable_points }} pts Claimed)
                             </span>
                         @else
                             <button type="button" class="btn btn-warning btn-sm text-white fw-bold" data-bs-toggle="modal" data-bs-target="#reviewModal{{ $order->id }}">
-                                <i class="fas fa-star me-1"></i>Rate Service <span class="badge bg-white text-warning ms-1" style="font-size:0.7rem;">+10 pts</span>
+                                <i class="fas fa-star me-1"></i>Rate to Claim <span class="badge bg-white text-warning ms-1" style="font-size:0.7rem;">+{{ $order->claimable_points }} pts</span>
                             </button>
                         @endif
                     @endif
@@ -426,7 +429,7 @@
                 <div class="modal-body p-4 text-center">
                     <div class="alert alert-warning py-2 px-3 small rounded-3 mb-3 d-inline-flex align-items-center gap-2 text-start" style="background:#fff8ec; border:1px solid #ffe4b5; color:#854d0e;">
                         <i class="fas fa-gift text-warning fs-5"></i>
-                        <span>Submit your review and earn <strong>+10 Loyalty Points</strong> automatically!</span>
+                        <span>Submit your review to claim <strong>+{{ $order->claimable_points }} Loyalty Points</strong> for this order (₱{{ number_format($order->total_amount, 2) }})!</span>
                     </div>
 
                     <p class="text-muted small mb-2 fw-semibold">How would you rate your overall experience?</p>
@@ -471,7 +474,7 @@
                 <div class="modal-footer bg-light p-3 border-0">
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-warning text-white fw-bold btn-sm px-4">
-                        <i class="fas fa-paper-plane me-1"></i>Submit Review
+                        <i class="fas fa-paper-plane me-1"></i>Submit Review & Claim +{{ $order->claimable_points }} pts
                     </button>
                 </div>
             </form>
