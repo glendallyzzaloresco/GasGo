@@ -64,13 +64,23 @@ class CustomerController extends Controller
             $products = collect($featuredByCategory)->take(4);
         }
 
-        $serviceReviews = \App\Models\ServiceReview::with(['user', 'order'])
-            ->where('is_approved', true)
-            ->latest()
-            ->get();
+        $serviceReviews = collect();
+        $averageRating = 5.0;
+        $totalReviewCount = 0;
 
-        $averageRating = \App\Models\ServiceReview::where('is_approved', true)->avg('rating') ?: 5.0;
-        $totalReviewCount = $serviceReviews->count();
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('service_reviews')) {
+                $serviceReviews = \App\Models\ServiceReview::with(['user', 'order'])
+                    ->where('is_approved', true)
+                    ->latest()
+                    ->get();
+
+                $averageRating = \App\Models\ServiceReview::where('is_approved', true)->avg('rating') ?: 5.0;
+                $totalReviewCount = $serviceReviews->count();
+            }
+        } catch (\Throwable $e) {
+            // Graceful fallback if table doesn't exist yet on production
+        }
 
         return view('customer.dashboard', compact('products', 'serviceReviews', 'averageRating', 'totalReviewCount'));
     }
