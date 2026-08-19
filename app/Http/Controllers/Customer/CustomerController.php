@@ -64,7 +64,15 @@ class CustomerController extends Controller
             $products = collect($featuredByCategory)->take(4);
         }
 
-        return view('customer.dashboard', compact('products'));
+        $serviceReviews = \App\Models\ServiceReview::with(['user', 'order'])
+            ->where('is_approved', true)
+            ->latest()
+            ->get();
+
+        $averageRating = \App\Models\ServiceReview::where('is_approved', true)->avg('rating') ?: 5.0;
+        $totalReviewCount = $serviceReviews->count();
+
+        return view('customer.dashboard', compact('products', 'serviceReviews', 'averageRating', 'totalReviewCount'));
     }
 
     public function products()

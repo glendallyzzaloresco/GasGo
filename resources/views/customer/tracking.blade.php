@@ -495,6 +495,27 @@
                 </form>
                 @endif
 
+                @if($order->status === 'delivered')
+                    @if($order->serviceReview)
+                        <div class="alert alert-success mt-3 py-2 px-3 small rounded-3 text-center">
+                            <i class="fas fa-check-circle me-1"></i> You rated this delivery <strong>{{ $order->serviceReview->rating }}/5 stars</strong>. Thank you!
+                        </div>
+                    @else
+                        <div class="card border-0 shadow-sm mt-3 p-3 rounded-3" style="background:#fff8ec; border:1px solid #ffe4b5 !important;">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="fas fa-star text-warning fs-4"></i>
+                                <div class="text-start">
+                                    <h6 class="mb-0 fw-bold" style="color:#854d0e;">Rate Your Delivery</h6>
+                                    <small class="text-muted">Earn +10 Loyalty Points</small>
+                                </div>
+                            </div>
+                            <a href="{{ route('customer.orders') }}" class="btn btn-warning text-white fw-bold btn-sm w-100 py-2">
+                                <i class="fas fa-star me-1"></i>Rate Order (+10 Points)
+                            </a>
+                        </div>
+                    @endif
+                @endif
+
                 <a href="{{ route('customer.orders') }}" class="btn btn-gasgo-outline w-100 mt-2" style="padding:12px;">
                     <i class="fas fa-receipt me-2"></i>Back to Orders
                 </a>

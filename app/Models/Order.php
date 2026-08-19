@@ -79,4 +79,9 @@ class Order extends Model
     {
         return $this->hasMany(LoyaltyPoint::class);
     }
+
+    public function serviceReview()
+    {
+        return $this->hasOne(ServiceReview::class);
+    }
 }

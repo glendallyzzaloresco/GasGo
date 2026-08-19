@@ -74,6 +74,49 @@
             margin-top: 4px;
         }
     }
+
+    /* Star Rating Widget */
+    .star-rating-widget {
+        display: inline-flex;
+        gap: 8px;
+        font-size: 1.8rem;
+        color: #cbd5e1;
+        cursor: pointer;
+    }
+    .star-rating-widget .star-btn {
+        transition: transform 0.2s, color 0.2s;
+    }
+    .star-rating-widget .star-btn:hover {
+        transform: scale(1.2);
+    }
+    .star-rating-widget .star-btn.active {
+        color: #f7941d;
+    }
+    .review-tag-toggle {
+        cursor: pointer;
+        user-select: none;
+        margin-bottom: 0;
+    }
+    .review-tag-toggle input {
+        display: none;
+    }
+    .review-tag-toggle span {
+        display: inline-block;
+        font-size: 0.8rem;
+        padding: 5px 12px;
+        border-radius: 20px;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .review-tag-toggle input:checked + span {
+        background: #e0f2fe;
+        border-color: #38bdf8;
+        color: #0369a1;
+        box-shadow: 0 2px 6px rgba(3, 105, 161, 0.15);
+    }
 </style>
 @endsection
 
@@ -197,12 +240,23 @@
                         </div>
                     @endif
                 </div>
-                <div class="d-flex gap-2 flex-wrap">
+                <div class="d-flex gap-2 flex-wrap align-items-center">
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#orderModal{{ $order->id }}">
                         <i class="fas fa-info-circle me-1"></i>Details
                     </button>
                     @if(in_array($order->status, ['pending', 'approved', 'assigned', 'out_for_delivery']))
                         <a href="{{ route('customer.tracking', $order) }}" class="btn btn-gasgo btn-sm"><i class="fas fa-map-marker-alt me-1"></i>Track</a>
+                    @endif
+                    @if($order->status === 'delivered')
+                        @if($order->serviceReview)
+                            <span class="badge bg-warning text-dark d-inline-flex align-items-center gap-1 py-2 px-3 rounded-pill fw-bold" style="font-size:0.78rem;">
+                                <i class="fas fa-star text-dark"></i> {{ $order->serviceReview->rating }}/5 Rated
+                            </span>
+                        @else
+                            <button type="button" class="btn btn-warning btn-sm text-white fw-bold" data-bs-toggle="modal" data-bs-target="#reviewModal{{ $order->id }}">
+                                <i class="fas fa-star me-1"></i>Rate Service <span class="badge bg-white text-warning ms-1" style="font-size:0.7rem;">+10 pts</span>
+                            </button>
+                        @endif
                     @endif
                     @if($order->status === 'delivered' || $order->status === 'cancelled')
                         @php
@@ -353,6 +407,78 @@
         </div>
     </div>
 </div>
+
+<!-- Customer Review Modal -->
+@if($order->status === 'delivered' && !$order->serviceReview)
+<div class="modal fade" id="reviewModal{{ $order->id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:20px; overflow:hidden; border:none; box-shadow:0 20px 60px rgba(0,0,0,.15);">
+            <div class="modal-header text-white" style="background:linear-gradient(135deg, var(--gasgo-blue) 0%, #2196f3 60%, var(--gasgo-orange) 100%); padding:20px 24px;">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0"><i class="fas fa-star me-2"></i>Rate Delivery Service</h5>
+                    <small class="opacity-75">Order #{{ $order->order_number }}</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('customer.reviews.store') }}" method="POST">
+                @csrf
+                <input type="hidden" name="order_id" value="{{ $order->id }}">
+                <div class="modal-body p-4 text-center">
+                    <div class="alert alert-warning py-2 px-3 small rounded-3 mb-3 d-inline-flex align-items-center gap-2 text-start" style="background:#fff8ec; border:1px solid #ffe4b5; color:#854d0e;">
+                        <i class="fas fa-gift text-warning fs-5"></i>
+                        <span>Submit your review and earn <strong>+10 Loyalty Points</strong> automatically!</span>
+                    </div>
+
+                    <p class="text-muted small mb-2 fw-semibold">How would you rate your overall experience?</p>
+                    <div class="star-rating-widget mb-3" data-order="{{ $order->id }}">
+                        <i class="fas fa-star star-btn active" data-rating="1"></i>
+                        <i class="fas fa-star star-btn active" data-rating="2"></i>
+                        <i class="fas fa-star star-btn active" data-rating="3"></i>
+                        <i class="fas fa-star star-btn active" data-rating="4"></i>
+                        <i class="fas fa-star star-btn active" data-rating="5"></i>
+                    </div>
+                    <input type="hidden" name="rating" id="ratingInput{{ $order->id }}" value="5">
+
+                    <p class="text-muted small mb-2 fw-semibold">Quick Feedback Tags (Select all that apply):</p>
+                    <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
+                        <label class="review-tag-toggle">
+                            <input type="checkbox" name="service_tags[]" value="Fast Delivery" checked>
+                            <span><i class="fas fa-bolt me-1 text-warning"></i>Fast Delivery</span>
+                        </label>
+                        <label class="review-tag-toggle">
+                            <input type="checkbox" name="service_tags[]" value="Courteous Rider" checked>
+                            <span><i class="fas fa-user-check me-1 text-success"></i>Courteous Rider</span>
+                        </label>
+                        <label class="review-tag-toggle">
+                            <input type="checkbox" name="service_tags[]" value="Sealed & Safe Tank">
+                            <span><i class="fas fa-shield-alt me-1 text-primary"></i>Sealed Tank</span>
+                        </label>
+                        <label class="review-tag-toggle">
+                            <input type="checkbox" name="service_tags[]" value="Accurate Tracking">
+                            <span><i class="fas fa-map-marker-alt me-1 text-danger"></i>Accurate Tracking</span>
+                        </label>
+                        <label class="review-tag-toggle">
+                            <input type="checkbox" name="service_tags[]" value="Free Tank Setup">
+                            <span><i class="fas fa-wrench me-1 text-secondary"></i>Free Setup</span>
+                        </label>
+                    </div>
+
+                    <div class="text-start mt-3">
+                        <label class="form-label small fw-bold text-secondary mb-1">Detailed Review / Comments (Optional):</label>
+                        <textarea name="comment" class="form-control" rows="3" placeholder="Tell us what you loved or how we can improve..." style="border-radius:12px; font-size:0.9rem;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-3 border-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning text-white fw-bold btn-sm px-4">
+                        <i class="fas fa-paper-plane me-1"></i>Submit Review
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
 @endforeach
 @endsection
 
@@ -366,6 +492,42 @@ document.querySelectorAll('.filter-tab').forEach(tab => {
         const filter = this.dataset.filter;
         document.querySelectorAll('.order-card').forEach(card => {
             card.style.display = (filter === 'all' || card.dataset.status === filter) ? '' : 'none';
+        });
+    });
+});
+
+// Interactive Star Rating Widget
+document.querySelectorAll('.star-rating-widget').forEach(widget => {
+    const orderId = widget.dataset.order;
+    const input = document.getElementById('ratingInput' + orderId);
+    const stars = widget.querySelectorAll('.star-btn');
+
+    stars.forEach(star => {
+        star.addEventListener('click', function() {
+            const selectedVal = parseInt(this.dataset.rating, 10);
+            if (input) input.value = selectedVal;
+
+            stars.forEach(s => {
+                const val = parseInt(s.dataset.rating, 10);
+                s.classList.toggle('active', val <= selectedVal);
+            });
+        });
+
+        star.addEventListener('mouseenter', function() {
+            const hoverVal = parseInt(this.dataset.rating, 10);
+            stars.forEach(s => {
+                const val = parseInt(s.dataset.rating, 10);
+                s.style.color = (val <= hoverVal) ? '#f7941d' : '#cbd5e1';
+            });
+        });
+
+        widget.addEventListener('mouseleave', function() {
+            const currentVal = parseInt(input ? input.value : 5, 10);
+            stars.forEach(s => {
+                const val = parseInt(s.dataset.rating, 10);
+                s.style.color = '';
+                s.classList.toggle('active', val <= currentVal);
+            });
         });
     });
 });
@@ -401,3 +563,4 @@ document.querySelectorAll('.reorder-btn').forEach(function(btn) {
 });
 </script>
 @endsection
+
