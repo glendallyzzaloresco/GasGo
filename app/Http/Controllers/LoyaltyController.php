@@ -40,20 +40,26 @@ class LoyaltyController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            $deliveredOrders = \App\Models\Order::with(['orderItems.product', 'serviceReview'])
+            $hasReviewTable = \Illuminate\Support\Facades\Schema::hasTable('service_reviews');
+
+            $deliveredOrdersQuery = \App\Models\Order::with('orderItems.product')
                 ->where('user_id', $userId)
                 ->where('status', 'delivered')
-                ->where('created_at', '>=', now()->subYear())
-                ->get();
+                ->where('created_at', '>=', now()->subYear());
 
+            if ($hasReviewTable) {
+                $deliveredOrdersQuery->with('serviceReview');
+            }
+
+            $deliveredOrders = $deliveredOrdersQuery->get();
             $completedOrders = $deliveredOrders->count();
             
             // SYNC REVIEW-GATED POINTS: Points are unlocked and claimed when orders are reviewed
             $this->syncPointsToDeliveredOrders($userId, $deliveredOrders);
 
             // Calculate pending points that can be claimed by reviewing delivered orders
-            $unreviewedOrders = $deliveredOrders->filter(function ($order) {
-                return !$order->serviceReview;
+            $unreviewedOrders = $deliveredOrders->filter(function ($order) use ($hasReviewTable) {
+                return !$hasReviewTable || !$order->serviceReview;
             });
             $pendingClaimablePoints = $unreviewedOrders->sum('claimable_points');
             $pendingReviewOrdersCount = $unreviewedOrders->count();

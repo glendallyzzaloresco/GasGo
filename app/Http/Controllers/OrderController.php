@@ -28,10 +28,16 @@ class OrderController extends Controller
             return redirect()->route('customer.login')->with('error', 'Please log in to view your orders.');
         }
 
-        $orders = Order::with(['orderItems.product', 'serviceReview'])
+        $hasReviewTable = \Illuminate\Support\Facades\Schema::hasTable('service_reviews');
+        $query = Order::with('orderItems.product')
             ->where('user_id', Auth::id())
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->orderBy('created_at', 'desc');
+
+        if ($hasReviewTable) {
+            $query->with('serviceReview');
+        }
+
+        $orders = $query->get();
 
         return view('customer.orders', compact('orders'));
     }
