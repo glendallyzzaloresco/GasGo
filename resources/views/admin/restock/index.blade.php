@@ -75,11 +75,10 @@
                                         <a href="{{ route('admin.restock.edit', $restock) }}" class="btn btn-outline-secondary" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <form action="{{ route('admin.restock.destroy', $restock) }}" method="POST" style="display: inline;">
+                                        <form action="{{ route('admin.restock.destroy', $restock) }}" method="POST" style="display: inline;" data-confirm="Are you sure you want to delete this restock order?">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-outline-danger" title="Delete" 
-                                                onclick="return confirm('Delete this restock?')">
+                                            <button type="submit" class="btn btn-outline-danger" title="Delete">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </form>

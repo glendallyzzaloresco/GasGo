@@ -295,13 +295,13 @@
                                 <i class="fas fa-eye me-1"></i>Details
                             </a>
                             @if($order->status === 'pending')
-                                <button type="button" class="btn btn-sm btn-action" style="background:#28a745;color:#fff;" title="Approve Order" onclick="singleApproveOrder({{ $order->id }})">
+                                <button type="button" class="btn btn-sm btn-action" style="background:#28a745;color:#fff;" title="Approve Order" onclick="singleApproveOrder({{ $order->id }}, '{{ $order->order_number }}')">
                                     <i class="fas fa-check me-1"></i>Approve
                                 </button>
-                                <form action="{{ route('admin.orders.status', $order) }}" method="POST" class="cancel-order-form d-inline" data-order-id="{{ $order->id }}" onsubmit="return confirm('Cancel this order?')">
+                                <form action="{{ route('admin.orders.status', $order) }}" method="POST" class="cancel-order-form d-inline" data-order-id="{{ $order->id }}" data-confirm="Are you sure you want to cancel order #{{ $order->order_number }}?">
                                     @csrf @method('PUT')
                                     <input type="hidden" name="status" value="cancelled">
-                                    <button class="btn btn-sm btn-action" style="background:#dc3545;color:#fff;" title="Cancel"><i class="fas fa-times me-1"></i>Cancel</button>
+                                    <button type="submit" class="btn btn-sm btn-action" style="background:#dc3545;color:#fff;" title="Cancel"><i class="fas fa-times me-1"></i>Cancel</button>
                                 </form>
                             @elseif($order->status === 'approved')
                                 <button type="button" class="btn btn-sm btn-action assign-btn" style="background:var(--gasgo-orange);color:#fff;" title="Assign Rider" onclick="openAssignModal({{ $order->id }}, '{{ $order->order_number }}')">
@@ -702,8 +702,16 @@
     }
 
     // Single Approve Order
-    async function singleApproveOrder(orderId) {
-        if (!confirm('Approve this order?')) return;
+    async function singleApproveOrder(orderId, orderNumber = '') {
+        const confirmed = await window.gasgoConfirm({
+            title: 'Approve Order',
+            text: orderNumber ? `Are you sure you want to approve order #${orderNumber}?` : 'Are you sure you want to approve this order?',
+            icon: 'question',
+            confirmButtonText: '<i class="fas fa-check me-1"></i>Yes, Approve Order',
+            confirmButtonColor: '#28a745',
+            isDanger: false
+        });
+        if (!confirmed) return;
 
         try {
             const response = await fetch('{{ route("admin.orders.bulk-update-status") }}', {

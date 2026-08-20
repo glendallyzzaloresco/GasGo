@@ -63,7 +63,7 @@
                     <small class="text-muted"><strong>{{ $category->products_count ?? 0 }}</strong> products assigned</small>
                 </div>
                 <div class="d-flex gap-2">
-                    <form action="{{ route('admin.categories.destroy', $category->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this category?');">
+                    <form action="{{ route('admin.categories.destroy', $category->id) }}" method="POST" data-confirm="Are you sure you want to delete this category?">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-sm" style="background:#f8d7da;color:#dc3545;border-radius:8px;" title="Delete Category">

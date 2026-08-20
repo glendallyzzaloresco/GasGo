@@ -141,8 +141,16 @@
 
 @if($restock->status === 'DRAFT')
 <script>
-document.getElementById('markReceivedBtn').addEventListener('click', function() {
-    if (confirm('Mark this restock as received? This will update inventory.')) {
+document.getElementById('markReceivedBtn').addEventListener('click', async function() {
+    const confirmed = await window.gasgoConfirm({
+        title: 'Mark Restock as Received',
+        text: 'Mark this restock as received? This will update your live product inventory.',
+        icon: 'question',
+        confirmButtonText: '<i class="fas fa-check me-1"></i>Yes, Mark Received',
+        confirmButtonColor: '#28a745'
+    });
+
+    if (confirmed) {
         fetch('{{ route("admin.restock.mark-received", $restock) }}', {
             method: 'POST',
             headers: {
@@ -153,15 +161,29 @@ document.getElementById('markReceivedBtn').addEventListener('click', function() 
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                alert(data.message);
-                location.reload();
+                Swal.fire({
+                    title: 'Success!',
+                    text: data.message,
+                    icon: 'success',
+                    confirmButtonColor: '#28a745'
+                }).then(() => location.reload());
             } else {
-                alert('Error: ' + data.message);
+                Swal.fire({
+                    title: 'Error',
+                    text: data.message,
+                    icon: 'error',
+                    confirmButtonColor: '#dc3545'
+                });
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('An error occurred');
+            Swal.fire({
+                title: 'Error',
+                text: 'An error occurred while updating restock status.',
+                icon: 'error',
+                confirmButtonColor: '#dc3545'
+            });
         });
     }
 });

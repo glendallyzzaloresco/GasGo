@@ -212,7 +212,7 @@
                 <span class="badge bg-secondary rounded-pill">{{ $logs->total() }} total</span>
             </div>
             
-            <form action="{{ route('admin.activity-logs.clear') }}" method="POST" onsubmit="return confirm('WARNING: Are you sure you want to delete ALL activity logs? This action is permanent and cannot be undone.');">
+            <form action="{{ route('admin.activity-logs.clear') }}" method="POST" data-confirm="WARNING: Are you sure you want to delete ALL activity logs? This action is permanent and cannot be undone.">
                 @csrf
                 <button type="submit" class="btn btn-outline-danger btn-sm">
                     <i class="fas fa-trash-alt me-1"></i>Clear All Logs

@@ -146,10 +146,12 @@ Route::get('/', function () {
         if (Schema::hasTable('service_reviews')) {
             $serviceReviews = \App\Models\ServiceReview::with(['user', 'order'])
                 ->where('is_approved', true)
+                ->where('rating', 5)
                 ->latest()
+                ->take(6)
                 ->get();
             $averageRating = \App\Models\ServiceReview::where('is_approved', true)->avg('rating') ?: 5.0;
-            $totalReviewCount = $serviceReviews->count();
+            $totalReviewCount = \App\Models\ServiceReview::where('is_approved', true)->count();
         }
     } catch (\Throwable $e) {
         // Ignore fallback
@@ -185,6 +187,7 @@ Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->
 // ===== PUBLIC CUSTOMER ROUTES (Accessible to Guests) =====
 Route::get('/privacy-policy', [CustomerController::class, 'privacyPolicy'])->name('privacy.policy');
 Route::get('/terms-of-service', [CustomerController::class, 'termsOfService'])->name('terms.service');
+Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 Route::get('/customer/product', [ProductController::class, 'index'])->name('customer.products');
 Route::get('/customer/product/{product}', [ProductController::class, 'show'])->name('customer.product.show');
 Route::get('/customer/loyaltyRewards', [LoyaltyController::class, 'index'])->name('customer.loyalty');

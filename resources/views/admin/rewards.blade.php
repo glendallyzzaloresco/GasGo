@@ -147,7 +147,7 @@
                         data-is-active="{{ $voucher->is_active ? '1' : '0' }}"
                         data-expires-at="{{ optional($voucher->expires_at)->format('Y-m-d') }}"
                     >Edit</button>
-                    <form action="{{ route('admin.vouchers.destroy', $voucher) }}" method="POST" onsubmit="return confirm('Delete this voucher?');">
+                    <form action="{{ route('admin.vouchers.destroy', $voucher) }}" method="POST" data-confirm="Are you sure you want to delete this voucher?">
                         @csrf
                         @method('DELETE')
                         <button class="btn btn-sm" type="submit" style="background:#f8d7da;color:#dc3545;border-radius:8px;"><i class="fas fa-trash"></i></button>

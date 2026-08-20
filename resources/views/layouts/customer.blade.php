@@ -891,7 +891,7 @@
                                     <i class="fas fa-user-circle"></i>Profile Settings
                                 </a>
                                 <div class="dropdown-divider"></div>
-                                <form action="{{ route('customer.logout') }}" method="POST" style="margin: 0;">
+                                <form action="{{ route('customer.logout') }}" method="POST" style="margin: 0;" data-confirm="Are you sure you want to log out of your account?">
                                     @csrf
                                     <button type="submit" class="dropdown-item account-logout-btn" style="border:none;background:none;cursor:pointer;width:100%;text-align:left;">
                                         <i class="fas fa-sign-out-alt"></i>Logout
@@ -1048,6 +1048,74 @@
     <!-- AJAX Utilities -->
     <script src="{{ asset('js/ajax-utils.js') }}"></script>
     <script src="{{ asset('js/theme-loader.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.mjs" type="module"></script>
+    <script>
+        window.gasgoConfirm = function(options = {}) {
+            if (typeof options === 'string') {
+                options = { text: options };
+            }
+            const isDelete = Boolean(
+                options.isDelete ||
+                options.isDanger ||
+                (typeof options.text === 'string' && (options.text.toLowerCase().includes('delete') || options.text.toLowerCase().includes('remove') || options.text.toLowerCase().includes('cancel'))) ||
+                (typeof options.title === 'string' && (options.title.toLowerCase().includes('delete') || options.title.toLowerCase().includes('remove') || options.title.toLowerCase().includes('cancel')))
+            );
+
+            const lottieFile = options.lottie || (
+                isDelete 
+                    ? '{{ asset("lottie/Delete Icon.lottie") }}' 
+                    : (options.icon === 'success' ? '{{ asset("lottie/success.lottie") }}' : '{{ asset("lottie/Warning animation.lottie") }}')
+            );
+
+            const htmlContent = `
+                <div style="display:flex; justify-content:center; align-items:center; margin-bottom: 10px;">
+                    <dotlottie-player src="${lottieFile}" background="transparent" speed="1" style="width: 120px; height: 120px;" loop autoplay></dotlottie-player>
+                </div>
+                ${options.text ? `<p style="font-size: 0.95rem; color: #64748b; margin-top: 4px; margin-bottom: 0;">${options.text}</p>` : ''}
+                ${options.html || ''}
+            `;
+
+            return Swal.fire({
+                title: options.title || (isDelete ? 'Confirm Action' : 'Are you sure?'),
+                html: htmlContent,
+                showCancelButton: true,
+                confirmButtonColor: options.confirmButtonColor || (isDelete ? '#dc3545' : '#f7941d'),
+                cancelButtonColor: options.cancelButtonColor || '#64748b',
+                confirmButtonText: options.confirmButtonText || (isDelete ? '<i class="fas fa-trash-alt me-1"></i>Yes, Proceed' : '<i class="fas fa-check me-1"></i>Yes, Confirm'),
+                cancelButtonText: options.cancelButtonText || 'Cancel',
+                reverseButtons: true,
+                focusCancel: isDelete,
+                customClass: {
+                    popup: 'rounded-4 shadow-lg border-0 p-4',
+                    title: 'fw-bold fs-4 text-dark mb-0',
+                    confirmButton: 'rounded-pill px-4 py-2 fw-semibold',
+                    cancelButton: 'rounded-pill px-4 py-2 fw-semibold me-2'
+                }
+            }).then(result => result.isConfirmed);
+        };
+
+        // Form submission modal confirmation listener
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            const confirmMsg = form.getAttribute('data-confirm') || form.dataset.confirm;
+            if (confirmMsg && !form.dataset.confirmed) {
+                e.preventDefault();
+                const isDelete = form.querySelector('[name="_method"][value="DELETE"]') || form.action.includes('delete') || form.action.includes('cancel') || confirmMsg.toLowerCase().includes('cancel');
+                window.gasgoConfirm({
+                    title: isDelete ? 'Confirm Cancellation' : 'Are you sure?',
+                    text: confirmMsg,
+                    isDelete: Boolean(isDelete),
+                    confirmButtonText: isDelete ? '<i class="fas fa-ban me-1"></i>Yes, Cancel Order' : 'Yes, Proceed'
+                }).then(confirmed => {
+                    if (confirmed) {
+                        form.dataset.confirmed = 'true';
+                        form.submit();
+                    }
+                });
+            }
+        });
+    </script>
     
     @stack('scripts')
     @yield('scripts')

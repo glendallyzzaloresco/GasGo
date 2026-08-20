@@ -13,6 +13,37 @@ use Illuminate\Support\Facades\DB;
 class ReviewController extends Controller
 {
     /**
+     * Public view: All customer reviews & ratings.
+     */
+    public function index(Request $request)
+    {
+        $query = ServiceReview::with(['user', 'order', 'rider'])
+            ->where('is_approved', true)
+            ->latest();
+
+        if ($request->filled('rating') && in_array((int) $request->rating, [1, 2, 3, 4, 5])) {
+            $query->where('rating', (int) $request->rating);
+        }
+
+        $reviews = $query->paginate(12)->withQueryString();
+
+        $allApproved = ServiceReview::where('is_approved', true)->get();
+        $totalReviews = $allApproved->count();
+        $averageRating = $totalReviews > 0 ? round($allApproved->avg('rating'), 1) : 5.0;
+
+        // Star breakdown distribution
+        $starCounts = [
+            5 => $allApproved->where('rating', 5)->count(),
+            4 => $allApproved->where('rating', 4)->count(),
+            3 => $allApproved->where('rating', 3)->count(),
+            2 => $allApproved->where('rating', 2)->count(),
+            1 => $allApproved->where('rating', 1)->count(),
+        ];
+
+        return view('reviews.index', compact('reviews', 'totalReviews', 'averageRating', 'starCounts'));
+    }
+
+    /**
      * Store a customer review for a delivered order.
      */
     public function store(Request $request)
@@ -21,6 +52,7 @@ class ReviewController extends Controller
             'order_id'     => 'required|exists:orders,id',
             'rating'       => 'required|integer|min:1|max:5',
             'comment'      => 'nullable|string|max:1000',
+            'is_anonymous' => 'nullable|boolean',
             'service_tags' => 'nullable|array',
             'service_tags.*' => 'string|max:50',
         ]);
@@ -46,14 +78,16 @@ class ReviewController extends Controller
 
         $riderId = $order->delivery?->rider_id;
         $pointsEarned = $order->claimable_points;
+        $isAnonymous = $request->boolean('is_anonymous');
 
-        DB::transaction(function () use ($validated, $userId, $order, $riderId, $pointsEarned) {
+        DB::transaction(function () use ($validated, $userId, $order, $riderId, $pointsEarned, $isAnonymous) {
             ServiceReview::create([
                 'user_id'      => $userId,
                 'order_id'     => $order->id,
                 'rider_id'     => $riderId,
                 'rating'       => $validated['rating'],
                 'comment'      => $validated['comment'] ?? null,
+                'is_anonymous' => $isAnonymous,
                 'service_tags' => $validated['service_tags'] ?? [],
                 'is_featured'  => ($validated['rating'] >= 4), // Auto-feature 4 & 5-star reviews initially
                 'is_approved'  => true,

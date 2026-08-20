@@ -1609,8 +1609,16 @@
         });
     }
 
-    function markAsDelivered(deliveryId) {
-        if (!confirm('Mark this delivery as completed?')) {
+    async function markAsDelivered(deliveryId) {
+        const confirmed = await (window.gasgoConfirm ? window.gasgoConfirm({
+            title: 'Complete Delivery',
+            text: 'Mark this delivery as completed?',
+            icon: 'question',
+            confirmButtonText: '<i class="fas fa-check-circle me-1"></i>Yes, Completed',
+            confirmButtonColor: '#28a745'
+        }) : Promise.resolve(confirm('Mark this delivery as completed?')));
+
+        if (!confirmed) {
             return;
         }
 

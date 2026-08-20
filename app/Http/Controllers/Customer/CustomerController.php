@@ -72,11 +72,13 @@ class CustomerController extends Controller
             if (\Illuminate\Support\Facades\Schema::hasTable('service_reviews')) {
                 $serviceReviews = \App\Models\ServiceReview::with(['user', 'order'])
                     ->where('is_approved', true)
+                    ->where('rating', 5)
                     ->latest()
+                    ->take(6)
                     ->get();
 
                 $averageRating = \App\Models\ServiceReview::where('is_approved', true)->avg('rating') ?: 5.0;
-                $totalReviewCount = $serviceReviews->count();
+                $totalReviewCount = \App\Models\ServiceReview::where('is_approved', true)->count();
             }
         } catch (\Throwable $e) {
             // Graceful fallback if table doesn't exist yet on production

@@ -785,8 +785,17 @@
         });
     }
 
-    function updateDeliveryStatus(status) {
-        if (confirm('Update delivery status to: ' + status.replace('_', ' ').toUpperCase() + '?')) {
+    async function updateDeliveryStatus(status) {
+        const statusLabel = status.replace('_', ' ').toUpperCase();
+        const confirmed = await (window.gasgoConfirm ? window.gasgoConfirm({
+            title: 'Update Delivery Status',
+            text: `Update delivery status to: ${statusLabel}?`,
+            icon: 'question',
+            confirmButtonText: 'Yes, Update Status',
+            confirmButtonColor: 'var(--gasgo-orange, #f7941d)'
+        }) : Promise.resolve(confirm(`Update delivery status to: ${statusLabel}?`)));
+
+        if (confirmed) {
             const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
             const statusUrl = "{{ route('rider.delivery.status', $delivery->id) }}";
 
