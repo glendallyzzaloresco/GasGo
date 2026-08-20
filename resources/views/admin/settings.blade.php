@@ -105,9 +105,9 @@
                                     <div class="flex-grow-1">
                                         <h6 class="fw-bold mb-1">Clear Cache</h6>
                                         <p class="text-muted small mb-3">Clears application cache and compiled views. Use this after making configuration changes.</p>
-                                        <form action="{{ route('admin.settings.clear-cache') }}" method="POST">
+                                        <form action="{{ route('admin.settings.clear-cache') }}" method="POST" data-confirm="Are you sure you want to clear the application cache and views?">
                                             @csrf
-                                            <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Clear application cache and views?')">
+                                            <button type="submit" class="btn btn-warning btn-sm">
                                                 <i class="fas fa-broom me-1"></i>Clear Cache & Views
                                             </button>
                                         </form>
@@ -126,9 +126,9 @@
                                     <div class="flex-grow-1">
                                         <h6 class="fw-bold mb-1">Clear Log File</h6>
                                         <p class="text-muted small mb-3">Empties the Laravel log file. Use this to free up disk space when the log file is too large.</p>
-                                        <form action="{{ route('admin.settings.clear-logs') }}" method="POST">
+                                        <form action="{{ route('admin.settings.clear-logs') }}" method="POST" data-confirm="Are you sure you want to clear the Laravel log file? This cannot be undone.">
                                             @csrf
-                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Clear the Laravel log file? This cannot be undone.')">
+                                            <button type="submit" class="btn btn-danger btn-sm">
                                                 <i class="fas fa-trash me-1"></i>Clear Logs
                                             </button>
                                         </form>

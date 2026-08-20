@@ -830,7 +830,7 @@
                         </div>
 
                         <p class="text-muted mb-3" style="font-size: 0.9rem;">
-                            Points are calculated at <strong>1 pt per ₱100 spend</strong> on delivered LPG orders and are <strong>claimed once you submit a review</strong>.
+                            Points are calculated at <strong>1 pt per ₱100 spend</strong> on all delivered orders and are <strong>claimed once you submit a review</strong>.
                         </p>
 
                         @if ($balance < $nextMilestone)
@@ -872,9 +872,9 @@
                                 <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px; height:42px;">
                                     <i class="fas fa-shopping-cart"></i>
                                 </div>
-                                <h6 class="mb-0 fw-bold text-dark">1. Spend on LPG</h6>
+                                <h6 class="mb-0 fw-bold text-dark">1. Spend on Products</h6>
                             </div>
-                            <p class="text-muted small mb-0">Earn <strong>1 Point for every ₱100 spent</strong> on cylinder purchases (e.g. ₱1,000 = 10 pts, ₱1,600 = 16 pts).</p>
+                            <p class="text-muted small mb-0">Earn <strong>1 Point for every ₱100 spent</strong> on all products (e.g. ₱1,000 = 10 pts, ₱1,600 = 16 pts).</p>
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -896,7 +896,13 @@
                                 </div>
                                 <h6 class="mb-0 fw-bold text-dark">3. Redeem Vouchers</h6>
                             </div>
-                            <p class="text-muted small mb-0">Use your claimed points below to unlock <strong>₱30, ₱50, ₱75, and ₱100 discount vouchers</strong>.</p>
+                            <p class="text-muted small mb-0">
+                                @if(isset($unlockedVouchers) && $unlockedVouchers->count() > 0)
+                                    Use your claimed points below to unlock <strong>{{ $unlockedVouchers->map(fn($v) => '₱' . number_format($v->discount_amount, 0))->implode(', ') }} discount vouchers</strong>.
+                                @else
+                                    Use your claimed points below to unlock available <strong>discount vouchers</strong>.
+                                @endif
+                            </p>
                         </div>
                     </div>
                 </div>

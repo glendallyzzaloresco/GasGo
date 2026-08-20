@@ -833,12 +833,19 @@
         };
 
         document.querySelectorAll('.btn-preset').forEach(btn => {
-            btn.addEventListener('click', function () {
+            btn.addEventListener('click', async function () {
                 const key = this.getAttribute('data-preset');
                 const p = presets[key];
                 if (!p) return;
 
-                if (confirm(`Apply "${this.textContent.trim()}" preset values to the form?`)) {
+                const confirmed = await window.gasgoConfirm({
+                    title: 'Apply Theme Preset',
+                    text: `Apply "${this.textContent.trim()}" preset values to the form?`,
+                    icon: 'question',
+                    confirmButtonText: 'Yes, Apply Preset'
+                });
+
+                if (confirmed) {
                     const setVal = (name, val) => {
                         const el = document.querySelector(`[name="${name}"]`);
                         if (el) el.value = val;

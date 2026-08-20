@@ -528,8 +528,15 @@ function updateQuantity(productId, quantity) {
     });
 }
 
-function removeItem(productId) {
-    if (confirm('Are you sure you want to remove this item?')) {
+async function removeItem(productId) {
+    const confirmed = await (window.gasgoConfirm ? window.gasgoConfirm({
+        title: 'Remove Item',
+        text: 'Are you sure you want to remove this item from your cart?',
+        isDanger: true,
+        confirmButtonText: '<i class="fas fa-trash-alt me-1"></i>Yes, Remove'
+    }) : Promise.resolve(confirm('Are you sure you want to remove this item?')));
+
+    if (confirmed) {
         removeCartItemAjax(productId)
             .then(() => {
                 quantityState.delete(String(productId));
@@ -546,14 +553,21 @@ function getSelectedItems() {
     return Array.from(checkboxes).map(cb => parseInt(cb.value));
 }
 
-function clearSelectedAjax() {
+async function clearSelectedAjax() {
     const selectedIds = getSelectedItems();
     if (selectedIds.length === 0) {
         showNotification('No Items Selected', 'Please select at least one item to remove', 'warning');
         return;
     }
     
-    if (!confirm(`Remove ${selectedIds.length} selected item(s)?`)) {
+    const confirmed = await (window.gasgoConfirm ? window.gasgoConfirm({
+        title: 'Remove Selected Items',
+        text: `Are you sure you want to remove ${selectedIds.length} selected item(s) from your cart?`,
+        isDanger: true,
+        confirmButtonText: '<i class="fas fa-trash-alt me-1"></i>Yes, Remove All'
+    }) : Promise.resolve(confirm(`Remove ${selectedIds.length} selected item(s)?`)));
+
+    if (!confirmed) {
         return;
     }
     

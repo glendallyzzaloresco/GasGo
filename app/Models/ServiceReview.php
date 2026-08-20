@@ -15,6 +15,7 @@ class ServiceReview extends Model
         'rider_id',
         'rating',
         'comment',
+        'is_anonymous',
         'service_tags',
         'is_featured',
         'is_approved',
@@ -24,6 +25,7 @@ class ServiceReview extends Model
     {
         return [
             'rating' => 'integer',
+            'is_anonymous' => 'boolean',
             'service_tags' => 'array',
             'is_featured' => 'boolean',
             'is_approved' => 'boolean',
@@ -47,15 +49,32 @@ class ServiceReview extends Model
         return $this->belongsTo(User::class, 'rider_id');
     }
 
-    // ── Scopes ──
+    // ── Accessors ──
 
-    public function scopeApproved($query)
+    public function getMaskedAuthorNameAttribute(): string
     {
-        return $query->where('is_approved', true);
-    }
+        if ($this->is_anonymous) {
+            return 'Anonymous Customer';
+        }
 
-    public function scopeFeatured($query)
-    {
-        return $query->where('is_approved', true)->where('is_featured', true);
+        $name = $this->user?->name ?? 'Verified Customer';
+        $parts = preg_split('/\s+/', trim($name));
+        $maskedParts = [];
+
+        foreach ($parts as $part) {
+            $len = mb_strlen($part);
+            if ($len <= 1) {
+                $maskedParts[] = $part . '*';
+            } elseif ($len === 2) {
+                $maskedParts[] = mb_substr($part, 0, 1) . '*';
+            } else {
+                $first = mb_substr($part, 0, 1);
+                $last = mb_substr($part, -1);
+                $starsCount = min(max($len - 2, 2), 4);
+                $maskedParts[] = $first . str_repeat('*', $starsCount) . $last;
+            }
+        }
+
+        return implode(' ', $maskedParts);
     }
 }

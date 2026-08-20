@@ -169,7 +169,7 @@
         ['key' => 'pending',             'icon' => 'fas fa-clipboard-check', 'title' => 'Order Placed',       'desc' => 'Your order has been received'],
         ['key' => 'approved',            'icon' => 'fas fa-thumbs-up',       'title' => 'Order Approved',     'desc' => 'Your order has been confirmed'],
         ['key' => 'assigned',            'icon' => 'fas fa-user-check',      'title' => 'Rider Assigned',     'desc' => 'A rider has been assigned'],
-        ['key' => 'out_for_delivery',    'icon' => 'fas fa-truck',           'title' => 'Out for Delivery',   'desc' => 'Your order is on its way'],
+        ['key' => 'out_for_delivery',    'icon' => 'fas fa-motorcycle',      'title' => 'Out for Delivery',   'desc' => 'Your order is on its way'],
         ['key' => 'delivered',           'icon' => 'fas fa-check-circle',    'title' => 'Delivered',          'desc' => 'Order delivered successfully'],
     ];
 @endphp
@@ -257,8 +257,17 @@
             </div>
 
             <!-- Rider Info -->
+            @php
+                $vType = strtolower($order->delivery?->rider?->rider?->vehicle_type ?? 'motorcycle');
+                $vehicleIcon = 'fas fa-motorcycle';
+                if (str_contains($vType, 'truck') || str_contains($vType, 'multicab') || str_contains($vType, 'van')) {
+                    $vehicleIcon = 'fas fa-truck-pickup';
+                } elseif (str_contains($vType, 'bike') || str_contains($vType, 'bicycle')) {
+                    $vehicleIcon = 'fas fa-bicycle';
+                }
+            @endphp
             <div class="rider-card mb-4" data-aos="fade-up" id="riderCard">
-                <div class="rider-avatar"><i class="fas fa-truck"></i></div>
+                <div class="rider-avatar" style="background: linear-gradient(135deg, var(--gasgo-orange), #ff6b35);"><i class="{{ $vehicleIcon }}"></i></div>
                 <div class="flex-grow-1">
                     <h6 class="fw-bold mb-0" id="riderName">
                         @if($order->delivery && $order->delivery->rider)
@@ -270,6 +279,9 @@
                     <p class="text-muted mb-0" style="font-size:.88rem;" id="riderInfo">
                         @if($order->delivery && $order->delivery->rider)
                             <i class="fas fa-phone me-1"></i>{{ $order->delivery->rider->phone ?? 'No phone' }}
+                            @if($order->delivery->rider->rider && $order->delivery->rider->rider->vehicle_type)
+                                <span class="badge bg-light text-dark border ms-2"><i class="{{ $vehicleIcon }} me-1 text-primary"></i>{{ $order->delivery->rider->rider->vehicle_type }}</span>
+                            @endif
                         @else
                             Will be assigned once order is approved
                         @endif
@@ -278,7 +290,7 @@
                 <div class="text-end">
                     <span class="status-badge-lg status-{{ $order->status }}" id="riderStatusBadge">
                         @if($order->status === 'out_for_delivery')
-                            <i class="fas fa-truck"></i> On the way
+                            <i class="{{ $vehicleIcon }}"></i> On the way
                         @elseif($order->status === 'delivered')
                             <i class="fas fa-check-circle"></i> Delivered
                         @elseif($order->status === 'assigned')
@@ -486,10 +498,10 @@
                 </div>
 
                 @if($order->status === 'pending')
-                <form method="POST" action="{{ route('customer.order.cancel', $order) }}" class="mt-2" id="cancelOrderForm">
+                <form method="POST" action="{{ route('customer.order.cancel', $order) }}" class="mt-2" id="cancelOrderForm" data-confirm="Are you sure you want to cancel this order?">
                     @csrf
                     @method('PATCH')
-                    <button type="submit" class="btn btn-outline-danger w-100" style="padding:12px;" onclick="return confirm('Cancel this order?');">
+                    <button type="submit" class="btn btn-outline-danger w-100" style="padding:12px;">
                         <i class="fas fa-ban me-2"></i>Cancel Order
                     </button>
                 </form>

@@ -108,7 +108,14 @@
                                     {{ strtoupper(substr($review->user->name ?? 'C', 0, 2)) }}
                                 </div>
                                 <div>
-                                    <div class="fw-bold text-dark">{{ $review->user->name ?? 'Deleted User' }}</div>
+                                    <div class="fw-bold text-dark d-flex align-items-center gap-1">
+                                        <span>{{ $review->user->name ?? 'Deleted User' }}</span>
+                                        @if(!empty($review->is_anonymous))
+                                            <span class="badge bg-secondary text-white rounded-pill px-2" style="font-size:0.65rem;" title="Customer posted this review anonymously to the public">
+                                                <i class="fas fa-user-shield me-1"></i>Anonymous
+                                            </span>
+                                        @endif
+                                    </div>
                                     <small class="text-muted">{{ $review->user->email ?? '' }}</small>
                                 </div>
                             </div>
@@ -175,7 +182,7 @@
                             </form>
                         </td>
                         <td class="text-end pe-4">
-                            <form action="{{ route('admin.reviews.destroy', $review) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this review?');">
+                            <form action="{{ route('admin.reviews.destroy', $review) }}" method="POST" class="d-inline" data-confirm="Are you sure you want to permanently delete this customer review?">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Review">

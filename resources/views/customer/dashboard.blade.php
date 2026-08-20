@@ -660,7 +660,13 @@
                                 </span>
                             </div>
 
-                            <p class="review-text">"{{ $review->comment ?: 'Excellent and swift delivery service! The LPG arrived promptly in pristine condition.' }}"</p>
+                            @if(!empty($review->comment))
+                                <p class="review-text">"{{ $review->comment }}"</p>
+                            @else
+                                <p class="review-text text-muted fst-italic" style="font-size: 0.9rem;">
+                                    <i class="fas fa-thumbs-up me-1 text-primary"></i>Rated {{ $review->rating }} out of 5 stars
+                                </p>
+                            @endif
 
                             @if(!empty($review->service_tags) && is_array($review->service_tags))
                                 <div class="review-tags">
@@ -672,12 +678,18 @@
                         </div>
 
                         <div class="review-author">
-                            <div class="review-avatar">
-                                {{ strtoupper(substr($review->user->name ?? 'Customer', 0, 2)) }}
-                            </div>
+                            @if(!empty($review->is_anonymous))
+                                <div class="review-avatar" style="background: linear-gradient(135deg, #64748b, #94a3b8);">
+                                    <i class="fas fa-user-shield"></i>
+                                </div>
+                            @else
+                                <div class="review-avatar">
+                                    {{ strtoupper(substr($review->user->name ?? 'Customer', 0, 2)) }}
+                                </div>
+                            @endif
                             <div>
-                                <h6 class="mb-0 fw-bold text-dark" style="font-size:0.95rem;">{{ $review->user->name ?? 'Verified Customer' }}</h6>
-                                <small class="text-muted" style="font-size:0.78rem;">{{ $review->created_at->diffForHumans() }}</small>
+                                <h6 class="mb-0 fw-bold text-dark" style="font-size:0.95rem;">{{ $review->masked_author_name }}</h6>
+                                <small class="text-muted" style="font-size:0.78rem;">{{ $review->created_at->format('M d, Y') }}</small>
                             </div>
                         </div>
                     </div>
@@ -687,7 +699,7 @@
                     <div class="p-4 bg-light rounded-4 border d-inline-block" style="max-width: 520px;">
                         <i class="fas fa-star text-warning fs-2 mb-2 d-block"></i>
                         <h6 class="fw-bold mb-1">No reviews yet</h6>
-                        <p class="text-muted small mb-3">Have you received your LPG delivery? Rate your completed order and earn <strong>+10 Loyalty Points</strong>!</p>
+                        <p class="text-muted small mb-3">Have you received your LPG delivery? Rate your completed order and earn <strong>loyalty points</strong>!</p>
                         <a href="{{ route('customer.orders') }}" class="btn btn-warning text-white btn-sm fw-bold rounded-pill px-4">
                             <i class="fas fa-star me-1"></i>Rate Completed Order
                         </a>
@@ -695,6 +707,14 @@
                 </div>
             @endforelse
         </div>
+
+        @if(isset($totalReviewCount) && $totalReviewCount > 0 || (isset($serviceReviews) && $serviceReviews->count() > 0))
+            <div class="text-center mt-5" data-aos="fade-up">
+                <a href="{{ route('reviews.index') }}" class="btn btn-gasgo-outline btn-lg rounded-pill px-4">
+                    View All Customer Reviews <i class="fas fa-arrow-right ms-2"></i>
+                </a>
+            </div>
+        @endif
     </div>
 </section>
 @endsection

@@ -410,7 +410,7 @@
                                         data-update-url="{{ route('admin.products.update', $product) }}"><i
                                             class="fas fa-edit me-1"></i>Edit</button>
                                     <form action="{{ route('admin.products.destroy', $product) }}" method="POST"
-                                        onsubmit="return confirm('Delete this product? If it is linked to past orders, it will be moved to Archived Products safely.');">
+                                        data-confirm="Delete this product? If it is linked to past orders, it will be moved to Archived Products safely.">
                                         @csrf
                                         @method('DELETE')
                                         <button class="btn btn-sm" type="submit"
@@ -482,7 +482,7 @@
                                         data-update-url="{{ route('admin.products.update', $product) }}"><i
                                             class="fas fa-edit me-1"></i>Edit</button>
                                     <form action="{{ route('admin.products.destroy', $product) }}" method="POST"
-                                        onsubmit="return confirm('Delete this product? If it is linked to past orders, it will be moved to Archived Products safely.');">
+                                        data-confirm="Delete this product? If it is linked to past orders, it will be moved to Archived Products safely.">
                                         @csrf
                                         @method('DELETE')
                                         <button class="btn btn-sm" type="submit"
@@ -554,7 +554,7 @@
                                         data-update-url="{{ route('admin.products.update', $product) }}"><i
                                             class="fas fa-edit me-1"></i>Edit</button>
                                     <form action="{{ route('admin.products.destroy', $product) }}" method="POST"
-                                        onsubmit="return confirm('Delete this product? If it is linked to past orders, it will be moved to Archived Products safely.');">
+                                        data-confirm="Delete this product? If it is linked to past orders, it will be moved to Archived Products safely.">
                                         @csrf
                                         @method('DELETE')
                                         <button class="btn btn-sm" type="submit"
@@ -626,7 +626,7 @@
                                         data-update-url="{{ route('admin.products.update', $product) }}"><i
                                             class="fas fa-edit me-1"></i>Edit</button>
                                     <form action="{{ route('admin.products.destroy', $product) }}" method="POST"
-                                        onsubmit="return confirm('Delete this product? If it is linked to past orders, it will be moved to Archived Products safely.');">
+                                        data-confirm="Delete this product? If it is linked to past orders, it will be moved to Archived Products safely.">
                                         @csrf
                                         @method('DELETE')
                                         <button class="btn btn-sm" type="submit"
@@ -718,7 +718,7 @@
                                         data-update-url="{{ route('admin.products.update', $freebie) }}"><i
                                             class="fas fa-edit me-1"></i>Edit</button>
                                     <form action="{{ route('admin.products.destroy', $freebie) }}" method="POST"
-                                        onsubmit="return confirm('Delete this item? If it is linked to past orders, it will be moved to Archived Products safely.');">
+                                        data-confirm="Delete this item? If it is linked to past orders, it will be moved to Archived Products safely.">
                                         @csrf
                                         @method('DELETE')
                                         <button class="btn btn-sm" type="submit"
@@ -738,7 +738,7 @@
                                         data-update-url="{{ route('admin.freebies.update', $freebie) }}"><i
                                             class="fas fa-edit me-1"></i>Edit</button>
                                     <form action="{{ route('admin.freebies.destroy', $freebie) }}" method="POST"
-                                        onsubmit="return confirm('Delete this freebie?');">
+                                        data-confirm="Are you sure you want to delete this freebie?">
                                         @csrf
                                         @method('DELETE')
                                         <button class="btn btn-sm" type="submit"
@@ -825,7 +825,7 @@
                                             class="fas fa-undo me-1"></i>Bring Back</button>
                                     @if($item['orders_count'] === 0)
                                         <form action="{{ $item['delete_url'] }}" method="POST"
-                                            onsubmit="return confirm('Permanently delete this product? This action cannot be undone.');">
+                                            data-confirm="Permanently delete this product? This action cannot be undone.">
                                             @csrf
                                             @method('DELETE')
                                             <button class="btn btn-sm" type="submit"
@@ -848,7 +848,7 @@
                                         </button>
                                     </form>
                                     <form action="{{ $item['delete_url'] }}" method="POST"
-                                        onsubmit="return confirm('Permanently delete this freebie?');">
+                                        data-confirm="Permanently delete this freebie?">
                                         @csrf
                                         @method('DELETE')
                                         <button class="btn btn-sm" type="submit"

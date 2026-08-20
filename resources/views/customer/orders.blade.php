@@ -468,7 +468,16 @@
 
                     <div class="text-start mt-3">
                         <label class="form-label small fw-bold text-secondary mb-1">Detailed Review / Comments (Optional):</label>
-                        <textarea name="comment" class="form-control" rows="3" placeholder="Tell us what you loved or how we can improve..." style="border-radius:12px; font-size:0.9rem;"></textarea>
+                        <textarea name="comment" class="form-control" rows="3" placeholder="Tell us what you loved or how we can improve (optional)..." style="border-radius:12px; font-size:0.9rem;"></textarea>
+                    </div>
+
+                    <div class="text-start mt-3 p-2 px-3 rounded-3" style="background: #f8fafc; border: 1px dashed #cbd5e1;">
+                        <div class="form-check form-switch d-flex align-items-center justify-content-between p-0 m-0">
+                            <label class="form-check-label small fw-semibold text-dark mb-0 cursor-pointer" for="hideNameCheck{{ $order->id }}">
+                                <i class="fas fa-user-shield me-1 text-primary"></i>Hide my name on review (Post anonymously)
+                            </label>
+                            <input class="form-check-input ms-2" type="checkbox" name="is_anonymous" value="1" id="hideNameCheck{{ $order->id }}" style="cursor:pointer; width: 2.2em; height: 1.2em;">
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer bg-light p-3 border-0">

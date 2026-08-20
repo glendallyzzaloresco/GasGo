@@ -527,11 +527,18 @@
         });
     }
 
-    function deleteRider(event) {
+    async function deleteRider(event) {
         const button = event.target.closest('button');
         const riderId = button.dataset.riderId;
         
-        if (confirm('Are you sure you want to delete this rider account? This action cannot be undone.')) {
+        const confirmed = await window.gasgoConfirm({
+            title: 'Delete Rider',
+            text: 'Are you sure you want to delete this rider account? This action cannot be undone.',
+            isDanger: true,
+            confirmButtonText: '<i class="fas fa-trash-alt me-1"></i>Yes, Delete Rider'
+        });
+
+        if (confirmed) {
             fetch(`/admin/riders/${riderId}`, {
                 method: 'DELETE',
                 headers: {

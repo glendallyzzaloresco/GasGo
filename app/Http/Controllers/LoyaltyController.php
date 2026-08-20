@@ -499,32 +499,22 @@ class LoyaltyController extends Controller
 
     /**
      * Calculate the amount that should count toward loyalty points for an order.
-     * Only applies to tank/cylinder products (appliances & accessories are excluded).
-     * Points are 1 point per ₱100 spend on tank products without deducting voucher discounts or adding delivery fee.
+     * Applies to all product purchases (excluding free reward items).
+     * Points are 1 point per ₱100 spend without adding delivery fee.
      */
     private function calculateSpendFromOrder(Order $order): float
     {
-        $tankSpendTotal = $order->orderItems
+        $productSpendTotal = $order->orderItems
             ->filter(function ($item) {
-                if ($item->is_reward) {
-                    return false;
-                }
-                if ($item->product) {
-                    return $item->product->isCylinder();
-                }
-                $name = strtolower((string) ($item->product_name ?? ''));
-                return (str_contains($name, 'tank') || str_contains($name, 'cylinder') || str_contains($name, 'lpg'))
-                    && !str_contains($name, 'regulator')
-                    && !str_contains($name, 'hose')
-                    && !str_contains($name, 'clamp')
-                    && !str_contains($name, 'stove')
-                    && !str_contains($name, 'burner')
-                    && !str_contains($name, 'paste')
-                    && !str_contains($name, 'hanger');
+                return !$item->is_reward;
             })
             ->sum('subtotal');
 
-        return max(0, (float) $tankSpendTotal);
+        if ($productSpendTotal <= 0) {
+            $productSpendTotal = max(0, (float) ($order->subtotal - $order->discount));
+        }
+
+        return max(0, (float) $productSpendTotal);
     }
 
     // Calculate earned, redeemed, and balance for a given user
