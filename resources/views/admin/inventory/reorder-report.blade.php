@@ -119,6 +119,10 @@
 
     @php
         $lowStockItems = \App\Models\Inventory::with('product')
+            ->where('status', '!=', 'discontinued')
+            ->whereHas('product', function ($q) {
+                $q->where('is_active', true)->where('price', '>', 0);
+            })
             ->where('quantity_on_hand', '<=', 5)
             ->orderBy('quantity_on_hand', 'asc')
             ->get();
