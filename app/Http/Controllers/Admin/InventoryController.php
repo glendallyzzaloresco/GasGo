@@ -389,6 +389,7 @@ class InventoryController extends Controller
             'type' => 'required|in:stock_in,stock_out,empty_in,empty_out,sale,damage,return',
             'reference' => 'required|string|max:100',
             'notes' => 'required|string|max:255',
+            'supplier' => 'nullable|string|max:255',
             'movement_date' => 'nullable|string',
         ]);
 
@@ -402,6 +403,10 @@ class InventoryController extends Controller
 
         DB::transaction(function () use ($inventory, $type, $quantityChange, $movementDate, $validated, $isCylinderProduct) {
             $inventory = Inventory::whereKey($inventory->id)->lockForUpdate()->firstOrFail();
+
+            if (isset($validated['supplier']) && trim((string) $validated['supplier']) !== '') {
+                $inventory->supplier = trim((string) $validated['supplier']);
+            }
 
             $fullIn = 0;
             $fullOut = 0;
@@ -452,6 +457,10 @@ class InventoryController extends Controller
                     $inventory->increment('empty_on_hand', $quantityChange);
                     $emptyIn = $quantityChange;
                 }
+            }
+
+            if (isset($validated['supplier']) && trim((string) $validated['supplier']) !== '') {
+                $inventory->save();
             }
 
             StockMovement::create([

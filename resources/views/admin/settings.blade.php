@@ -95,48 +95,6 @@
                 <div class="card-body">
                     <div class="row g-4">
 
-                        {{-- Clear Cache --}}
-                        <div class="col-md-6">
-                            <div class="border rounded-3 p-4">
-                                <div class="d-flex align-items-start gap-3">
-                                    <div style="width:48px;height:48px;background:#fff3cd;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                        <i class="fas fa-broom" style="color:#856404;font-size:1.3rem;"></i>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <h6 class="fw-bold mb-1">Clear Cache</h6>
-                                        <p class="text-muted small mb-3">Clears application cache and compiled views. Use this after making configuration changes.</p>
-                                        <form action="{{ route('admin.settings.clear-cache') }}" method="POST" data-confirm="Are you sure you want to clear the application cache and views?">
-                                            @csrf
-                                            <button type="submit" class="btn btn-warning btn-sm">
-                                                <i class="fas fa-broom me-1"></i>Clear Cache & Views
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Clear Logs --}}
-                        <div class="col-md-6">
-                            <div class="border rounded-3 p-4">
-                                <div class="d-flex align-items-start gap-3">
-                                    <div style="width:48px;height:48px;background:#f8d7da;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                        <i class="fas fa-file-alt" style="color:#721c24;font-size:1.3rem;"></i>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <h6 class="fw-bold mb-1">Clear Log File</h6>
-                                        <p class="text-muted small mb-3">Empties the Laravel log file. Use this to free up disk space when the log file is too large.</p>
-                                        <form action="{{ route('admin.settings.clear-logs') }}" method="POST" data-confirm="Are you sure you want to clear the Laravel log file? This cannot be undone.">
-                                            @csrf
-                                            <button type="submit" class="btn btn-danger btn-sm">
-                                                <i class="fas fa-trash me-1"></i>Clear Logs
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         {{-- System Activity Logs & Audit Trail Portal Card --}}
                         <div class="col-md-6">
                             <div class="border rounded-3 p-4">
@@ -154,27 +112,6 @@
                                             <i class="fas fa-external-link-alt me-1"></i>Open Activity Logs Portal
                                         </a>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Developer Error Log Viewer --}}
-                        <div class="col-md-6">
-                            <div class="border rounded-3 p-4">
-                                <div class="d-flex align-items-start gap-3">
-                                    <div style="width:48px;height:48px;background:#d1ecf1;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                        <i class="fas fa-terminal" style="color:#0c5460;font-size:1.3rem;"></i>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <h6 class="fw-bold mb-1">Developer Error Log Viewer</h6>
-                                        <p class="text-muted small mb-3">View the last 50 lines of the Laravel error stack trace for debugging.</p>
-                                        <button class="btn btn-info btn-sm text-white" type="button" data-bs-toggle="collapse" data-bs-target="#logViewer">
-                                            <i class="fas fa-eye me-1"></i>View Raw Laravel Log
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="collapse mt-3" id="logViewer">
-                                    <pre id="logContent" class="bg-dark text-light p-3 rounded" style="font-size:.75rem;max-height:300px;overflow-y:auto;">Loading...</pre>
                                 </div>
                             </div>
                         </div>
@@ -380,11 +317,6 @@
 @endsection
 
 @section('scripts')
-<div id="settingsData"
-    data-log-tail-url="{{ url('/admin/settings/log-tail') }}"
-    data-log-size="{{ $logSize ?? 0 }}"
-    style="display:none;"
-></div>
 <script>
 // Toggle password visibility
 function togglePasswordVisibility(button, fieldId) {
@@ -403,10 +335,6 @@ function togglePasswordVisibility(button, fieldId) {
 }
 
 (function () {
-    var el = document.getElementById('settingsData');
-    var logTailUrl = el.dataset.logTailUrl;
-    var logSize = parseFloat(el.dataset.logSize);
-
     var paymentMethodsContainer = document.getElementById('paymentMethodsContainer');
     var addPaymentMethodBtn = document.getElementById('addPaymentMethodBtn');
     var paymentMethodTemplate = `
@@ -487,23 +415,6 @@ function togglePasswordVisibility(button, fieldId) {
         });
 
         reindexPaymentMethodRows();
-    }
-
-    var logViewer = document.getElementById('logViewer');
-    if (logViewer) {
-        logViewer.addEventListener('show.bs.collapse', function () {
-            fetch(logTailUrl)
-                .then(function (r) { return r.text(); })
-                .then(function (text) {
-                    document.getElementById('logContent').textContent = text || 'Log file is empty.';
-                })
-                .catch(function () {
-                    document.getElementById('logContent').textContent =
-                        logSize > 0
-                            ? 'Log endpoint not available.\nLog file exists (' + logSize + ' KB).\nUse Clear Logs button to empty it.'
-                            : 'Log file is empty.';
-                });
-        });
     }
 }());
 </script>

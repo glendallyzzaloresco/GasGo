@@ -684,7 +684,7 @@
                                         <td class="text-muted small">{{ $inventory->updated_at ? $inventory->updated_at->format('M d, Y') : '—' }}</td>
                                         <td>
                                             <div class="inventory-card-actions">
-                                                <button type="button" class="btn btn-sm btn-success" onclick="setAdjustInventory('{{ $inventory->id }}', '{{ addslashes($inventory->product->name) }}', true)" data-bs-toggle="modal" data-bs-target="#adjustStockModal">
+                                                <button type="button" class="btn btn-sm btn-success" onclick="setAdjustInventory('{{ $inventory->id }}', '{{ addslashes($inventory->product->name) }}', true, '{{ addslashes($inventory->supplier ?? '') }}')" data-bs-toggle="modal" data-bs-target="#adjustStockModal">
                                                     <i class="bi bi-plus-circle me-1"></i>Add Stock
                                                 </button>
                                                 <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-outline-primary">
@@ -738,7 +738,7 @@
                                         <td><span class="badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
                                         <td class="text-muted small">{{ $inventory->updated_at ? $inventory->updated_at->format('M d, Y') : '—' }}</td>
                                         <td>
-                                            <button type="button" class="btn btn-sm btn-success" onclick="setAdjustInventory('{{ $inventory->id }}', '{{ addslashes($inventory->product->name) }}', false)" data-bs-toggle="modal" data-bs-target="#adjustStockModal">
+                                            <button type="button" class="btn btn-sm btn-success" onclick="setAdjustInventory('{{ $inventory->id }}', '{{ addslashes($inventory->product->name) }}', false, '{{ addslashes($inventory->supplier ?? '') }}')" data-bs-toggle="modal" data-bs-target="#adjustStockModal">
                                                 <i class="bi bi-plus-circle me-1"></i>Add Stock
                                             </button>
                                         </td>
@@ -974,6 +974,11 @@
                         </select>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label fw-semibold">Supplier</label>
+                        <input type="text" name="supplier" id="adjustSupplier" class="form-control" placeholder="e.g. Solane / Petron / Prycegas">
+                        <div class="form-text text-muted">Optional: Update or set the supplier for this inventory.</div>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label fw-semibold">Reference No. <span class="text-danger">*</span></label>
                         <input type="text" name="reference" id="adjustReference" class="form-control" placeholder="e.g. ADJ-2026-001 / PO-9812" required>
                     </div>
@@ -996,9 +1001,10 @@
 </div>
 
 <script>
-function setAdjustInventory(inventoryId, productName, isCylinder = false) {
+function setAdjustInventory(inventoryId, productName, isCylinder = false, supplier = '') {
     document.getElementById('adjustInventoryId').value = inventoryId;
     document.getElementById('adjustProductName').textContent = productName;
+    document.getElementById('adjustSupplier').value = supplier || '';
     
     const select = document.getElementById('adjustType');
     select.innerHTML = '';

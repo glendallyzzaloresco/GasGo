@@ -328,8 +328,8 @@
                 </div>
                 
                 <div class="detail-row">
-                    <span class="detail-label">Cost Price</span>
-                    <span class="detail-value">₱{{ number_format($inventory->product->cost_price ?? 0, 2) }}</span>
+                    <span class="detail-label">Supplier</span>
+                    <span class="detail-value">{{ $inventory->supplier ?? '-' }}</span>
                 </div>
             </div>
         </div>
@@ -359,8 +359,6 @@
                 </div>
                 @endif
                 
-               
-                
                 <div class="detail-row">
                     <span class="detail-label">Status</span>
                     <span class="detail-value">
@@ -368,11 +366,6 @@
                             {{ ucfirst($inventory->status) }}
                         </span>
                     </span>
-                </div>
-                
-                <div class="detail-row">
-                    <span class="detail-label">Supplier</span>
-                    <span class="detail-value">{{ $inventory->supplier ?? '-' }}</span>
                 </div>
             </div>
         </div>
