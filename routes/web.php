@@ -338,29 +338,11 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::post('/settings/update-gcash', [DashboardController::class, 'updateGCash'])->name('admin.settings.update-gcash');
     Route::post('/settings/update-payment-methods', [DashboardController::class, 'updatePaymentMethods'])->name('admin.settings.update-payment-methods');
     Route::post('/settings/update-delivery-fee', [DashboardController::class, 'updateDeliveryFee'])->name('admin.settings.update-delivery-fee');
-    Route::post('/settings/clear-cache', function () {
-        Artisan::call('cache:clear');
-        Artisan::call('view:clear');
-        \App\Services\ActivityLogger::log('settings', 'deleted', "Admin cleared application cache and compiled views");
-        return back()->with('success', 'Cache cleared successfully.');
-    })->name('admin.settings.clear-cache');
     Route::post('/settings/clear-activity-logs', function () {
         \App\Models\ActivityLog::truncate();
         \App\Services\ActivityLogger::log('settings', 'deleted', "Admin cleared all system activity logs");
         return back()->with('success', 'System activity logs cleared successfully.');
     })->name('admin.settings.clear-activity-logs');
-    Route::post('/settings/clear-logs', function () {
-        $logPath = storage_path('logs/laravel.log');
-        if (file_exists($logPath)) { file_put_contents($logPath, ''); }
-        \App\Services\ActivityLogger::log('settings', 'deleted', "Admin cleared developer error log file (laravel.log)");
-        return back()->with('success', 'Log file cleared successfully.');
-    })->name('admin.settings.clear-logs');
-    Route::get('/settings/log-tail', function () {
-        $logPath = storage_path('logs/laravel.log');
-        if (!file_exists($logPath)) { return response('Log file is empty.', 200); }
-        $lines = array_slice(file($logPath), -50);
-        return response(implode('', $lines), 200)->header('Content-Type', 'text/plain');
-    })->name('admin.settings.log-tail');
 });
 
 // ===== RIDER ROUTES =====
