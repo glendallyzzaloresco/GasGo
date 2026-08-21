@@ -413,15 +413,24 @@
 @section('content')
 <div class="container-fluid p-4">
     @php
-        $totalFullCylinders = (int) \App\Models\Inventory::whereHas('product', function ($query) {
-            $query->cylinders();
-        })->sum('quantity_on_hand');
-        $tankInventoryIds = \App\Models\Inventory::whereHas('product', function ($query) {
-            $query->cylinders();
-        })->pluck('id');
+        $totalFullCylinders = (int) \App\Models\Inventory::where('status', '!=', 'discontinued')
+            ->whereHas('product', function ($query) {
+                $query->where('is_active', true)->cylinders();
+            })->sum('quantity_on_hand');
+        $tankInventoryIds = \App\Models\Inventory::where('status', '!=', 'discontinued')
+            ->whereHas('product', function ($query) {
+                $query->where('is_active', true)->cylinders();
+            })->pluck('id');
         $totalEmptyCylinders = (int) \App\Models\Inventory::whereIn('id', $tankInventoryIds)->sum('empty_on_hand');
-        $totalProducts = (int) \App\Models\Inventory::count();
-        $lowStockProducts = (int) \App\Models\Inventory::where('quantity_on_hand', '>', 0)
+        $totalProducts = (int) \App\Models\Inventory::where('status', '!=', 'discontinued')
+            ->whereHas('product', function ($query) {
+                $query->where('is_active', true)->where('price', '>', 0);
+            })->count();
+        $lowStockProducts = (int) \App\Models\Inventory::where('status', '!=', 'discontinued')
+            ->whereHas('product', function ($query) {
+                $query->where('is_active', true)->where('price', '>', 0);
+            })
+            ->where('quantity_on_hand', '>', 0)
             ->where('quantity_on_hand', '<=', 5)
             ->count();
 

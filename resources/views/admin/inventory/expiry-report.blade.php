@@ -182,12 +182,18 @@
         $expiredItems = \App\Models\Inventory::with('product')
             ->where('expiry_date', '<', now())
             ->where('status', '!=', 'discontinued')
+            ->whereHas('product', function ($q) {
+                $q->where('is_active', true)->where('price', '>', 0);
+            })
             ->orderBy('expiry_date', 'asc')
             ->get();
         
         $expiringItems = \App\Models\Inventory::with('product')
             ->whereBetween('expiry_date', [now(), now()->addMonths(1)])
             ->where('status', '!=', 'discontinued')
+            ->whereHas('product', function ($q) {
+                $q->where('is_active', true)->where('price', '>', 0);
+            })
             ->orderBy('expiry_date', 'asc')
             ->get();
         
