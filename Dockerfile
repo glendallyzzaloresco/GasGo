@@ -33,5 +33,5 @@ RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \
 EXPOSE 10000
 
 # Configure port dynamically from Render's $PORT, run migrations/cache, and start Apache
-CMD sh -c "sed -i \"s/80/\${PORT:-10000}/g\" /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf && php artisan storage:link && php artisan migrate:fresh --seed --force && php artisan config:cache && php artisan route:cache && php artisan view:cache && apache2-foreground"
+CMD sh -c "sed -i \"s/80/\${PORT:-10000}/g\" /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf && php artisan storage:link && php artisan migrate --force && php artisan config:cache && php artisan route:cache && php artisan view:cache && apache2-foreground"
 
