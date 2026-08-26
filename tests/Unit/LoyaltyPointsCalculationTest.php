@@ -61,7 +61,7 @@ class LoyaltyPointsCalculationTest extends TestCase
         $this->assertEquals(1800.00, $spend2);
         $this->assertEquals(18, (int) floor($spend2 / 100));
 
-        // Scenario 3: Order with appliances and accessories (should earn 0 points)
+        // Scenario 3: Order with paid items vs free reward items (reward items should earn 0 points)
         $order3 = new Order([
             'discount_amount' => 0.00,
             'delivery_fee' => 0.00,
@@ -69,30 +69,30 @@ class LoyaltyPointsCalculationTest extends TestCase
         ]);
 
         $applianceProduct = new Product(['name' => 'Gas Stove Double Burner', 'category' => 'appliances']);
-        $accessoryProduct = new Product(['name' => 'LPG Regulator with Gauge', 'category' => 'accessories']);
+        $freebieProduct = new Product(['name' => 'Free Safety Cap', 'category' => 'freebie']);
 
-        $applianceItem = new OrderItem([
+        $paidItem = new OrderItem([
             'product_id' => 2,
             'price' => 2000.00,
             'quantity' => 1,
             'subtotal' => 2000.00,
             'is_reward' => false,
         ]);
-        $applianceItem->setRelation('product', $applianceProduct);
+        $paidItem->setRelation('product', $applianceProduct);
 
-        $accessoryItem = new OrderItem([
+        $rewardItem = new OrderItem([
             'product_id' => 3,
             'price' => 500.00,
             'quantity' => 1,
             'subtotal' => 500.00,
-            'is_reward' => false,
+            'is_reward' => true,
         ]);
-        $accessoryItem->setRelation('product', $accessoryProduct);
+        $rewardItem->setRelation('product', $freebieProduct);
 
-        $order3->setRelation('orderItems', collect([$applianceItem, $accessoryItem]));
+        $order3->setRelation('orderItems', collect([$paidItem, $rewardItem]));
 
         $spend3 = $method->invoke($controller, $order3);
-        $this->assertEquals(0.00, $spend3);
-        $this->assertEquals(0, (int) floor($spend3 / 100));
+        $this->assertEquals(2000.00, $spend3);
+        $this->assertEquals(20, (int) floor($spend3 / 100));
     }
 }

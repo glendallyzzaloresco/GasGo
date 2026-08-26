@@ -47,40 +47,34 @@ class GuestCartMergeTest extends TestCase
         ]);
 
         $response->assertStatus(302);
-        $response->assertRedirect(route('customer.login'));
+        $response->assertRedirect(route('login'));
     }
 
     public function test_session_cart_merges_into_database_cart_on_login()
     {
         $user = User::factory()->create([
             'email' => 'testuser@example.com',
-            'password' => bcrypt('password123'),
+            'password' => bcrypt('Password123!'),
             'role' => 'customer',
         ]);
 
         $product1 = Product::factory()->create(['price' => 100.00, 'stock' => 50]);
         $product2 = Product::factory()->create(['price' => 200.00, 'stock' => 50]);
 
-        // Simulate guest adding items to session cart
         $sessionCart = [
             (string) $product1->id => 2,
             (string) $product2->id => 1,
         ];
 
-        // Login with session cart present
         $response = $this->withSession(['cart' => $sessionCart])
             ->post(route('customer.authenticate'), [
                 'email' => 'testuser@example.com',
-                'password' => 'password123',
+                'password' => 'Password123!',
             ]);
 
-        // User should be authenticated
         $this->assertAuthenticatedAs($user);
-
-        // Session cart should be cleared
         $this->assertFalse(session()->has('cart'));
 
-        // Database cart should contain merged items
         $cartItems = Cart::where('user_id', $user->id)->get();
         $this->assertCount(2, $cartItems);
         $this->assertSame(2, $cartItems->firstWhere('product_id', $product1->id)->quantity);
@@ -91,43 +85,35 @@ class GuestCartMergeTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'testuser@example.com',
-            'password' => bcrypt('password123'),
+            'password' => bcrypt('Password123!'),
             'role' => 'customer',
         ]);
 
         $product1 = Product::factory()->create(['price' => 100.00, 'stock' => 50]);
         $product2 = Product::factory()->create(['price' => 200.00, 'stock' => 50]);
 
-        // User already has items in database cart
         Cart::create([
             'user_id' => $user->id,
             'product_id' => $product1->id,
             'quantity' => 1,
         ]);
 
-        // Guest session cart with overlapping product
         $sessionCart = [
             (string) $product1->id => 2,
             (string) $product2->id => 3,
         ];
 
-        // Login with session cart
         $response = $this->withSession(['cart' => $sessionCart])
             ->post(route('customer.authenticate'), [
                 'email' => 'testuser@example.com',
-                'password' => 'password123',
+                'password' => 'Password123!',
             ]);
 
         $this->assertAuthenticatedAs($user);
 
-        // Database cart should show merged quantities
         $cartItems = Cart::where('user_id', $user->id)->get();
         $this->assertCount(2, $cartItems);
-        
-        // Product 1: 1 (existing) + 2 (from session) = 3
         $this->assertSame(3, $cartItems->firstWhere('product_id', $product1->id)->quantity);
-        
-        // Product 2: 0 (existing) + 3 (from session) = 3
         $this->assertSame(3, $cartItems->firstWhere('product_id', $product2->id)->quantity);
     }
 
@@ -135,7 +121,7 @@ class GuestCartMergeTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'testuser@example.com',
-            'password' => bcrypt('password123'),
+            'password' => bcrypt('Password123!'),
             'role' => 'customer',
         ]);
 
@@ -145,20 +131,15 @@ class GuestCartMergeTest extends TestCase
             (string) $product->id => 2,
         ];
 
-        // Authenticate with session cart and intended checkout
         $response = $this->withSession(['cart' => $sessionCart])
             ->post(route('customer.authenticate'), [
                 'email' => 'testuser@example.com',
-                'password' => 'password123',
+                'password' => 'Password123!',
             ]);
 
-        // Should redirect to dashboard (no intended in this test)
         $response->assertStatus(302);
-
-        // Verify user is authenticated
         $this->assertAuthenticatedAs($user);
 
-        // Verify cart was merged
         $cartItem = Cart::where('user_id', $user->id)
             ->where('product_id', $product->id)
             ->firstOrFail();
@@ -173,23 +154,20 @@ class GuestCartMergeTest extends TestCase
             (string) $product->id => 1,
         ];
 
-        // Register new customer with session cart
         $response = $this->withSession(['cart' => $sessionCart])
             ->post(route('customer.register'), [
                 'name' => 'New Customer',
                 'email' => 'newcustomer@test.com',
                 'phone' => '09121234567',
-                'password' => 'Password123',
-                'password_confirmation' => 'Password123',
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
             ]);
 
         $user = User::where('email', 'newcustomer@test.com')->firstOrFail();
         $this->assertAuthenticatedAs($user);
 
-        // Verify session cart was cleared
         $this->assertFalse(session()->has('cart'));
 
-        // Verify cart was created in database
         $cartItem = Cart::where('user_id', $user->id)
             ->where('product_id', $product->id)
             ->firstOrFail();
@@ -200,15 +178,14 @@ class GuestCartMergeTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'testuser@example.com',
-            'password' => bcrypt('password123'),
+            'password' => bcrypt('Password123!'),
             'role' => 'customer',
         ]);
 
-        // Login with empty session cart
         $response = $this->withSession(['cart' => []])
             ->post(route('customer.authenticate'), [
                 'email' => 'testuser@example.com',
-                'password' => 'password123',
+                'password' => 'Password123!',
             ]);
 
         $this->assertAuthenticatedAs($user);
@@ -219,7 +196,7 @@ class GuestCartMergeTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'testuser@example.com',
-            'password' => bcrypt('password123'),
+            'password' => bcrypt('Password123!'),
             'role' => 'customer',
         ]);
 
@@ -227,18 +204,17 @@ class GuestCartMergeTest extends TestCase
 
         $sessionCart = [
             (string) $product->id => 2,
-            '99999' => 1,  // Non-existent product
+            '99999' => 1,
         ];
 
         $response = $this->withSession(['cart' => $sessionCart])
             ->post(route('customer.authenticate'), [
                 'email' => 'testuser@example.com',
-                'password' => 'password123',
+                'password' => 'Password123!',
             ]);
 
         $this->assertAuthenticatedAs($user);
 
-        // Only the valid product should be in cart
         $cartItems = Cart::where('user_id', $user->id)->get();
         $this->assertCount(1, $cartItems);
         $this->assertSame(2, $cartItems->first()->quantity);

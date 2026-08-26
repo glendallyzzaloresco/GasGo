@@ -330,9 +330,26 @@
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <!-- Sidebar -->
+    @php
+        $industryNoun = $settings->industry_noun ?? 'LPG Tanks';
+        $isWater = str_contains(strtolower($industryNoun), 'water');
+        $isFood = str_contains(strtolower($industryNoun), 'food') || str_contains(strtolower($industryNoun), 'meal');
+        $isAppliance = str_contains(strtolower($industryNoun), 'appliance');
+        $nicheIcon = $isWater ? 'fas fa-tint' : ($isFood ? 'fas fa-utensils' : ($isAppliance ? 'fas fa-blender' : 'fas fa-fire'));
+        $nicheColor = $isWater ? 'var(--color-accent, #00b4d8)' : ($isFood ? 'var(--color-accent, #ff922b)' : ($isAppliance ? 'var(--color-accent, #15aabf)' : 'var(--gasgo-orange, #f7941d)'));
+    @endphp
     <aside class="rider-sidebar" id="riderSidebar">
         <div class="sidebar-brand">
-            <img data-theme-logo src="{{ $settings->navbar_logo_url ?? asset('images/logo-gasgo.png') }}" alt="{{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }}">
+            @if(!empty($settings->navbar_logo_path))
+                <img data-theme-logo src="{{ $settings->navbar_logo_url }}" alt="{{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                <div class="brand-avatar-badge" style="display:none;width:38px;height:38px;border-radius:10px;background:{{ $nicheColor }};color:#fff;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;">
+                    <i class="{{ $nicheIcon }}"></i>
+                </div>
+            @else
+                <div class="brand-avatar-badge" style="width:38px;height:38px;border-radius:10px;background:{{ $nicheColor }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;">
+                    <i class="{{ $nicheIcon }}"></i>
+                </div>
+            @endif
             <h4 class="m-0">{{ $settings->brand_name_primary ?? 'Gas' }}<span>{{ $settings->brand_name_accent ?? 'Go' }}</span></h4>
         </div>
         <div class="sidebar-section">Menu</div>

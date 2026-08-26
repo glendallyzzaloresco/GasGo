@@ -316,17 +316,29 @@
 
                     <div class="password-section">
                         <h5>Change Password</h5>
-                        <p class="field-note">Leave these blank if you do not want to change your password.</p>
+                        <p class="field-note">Leave these blank if you do not want to change your password. Must be at least 8 characters with letters and numbers.</p>
 
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="field-group">
-                                    <label for="password">New Password</label>
+                                    <label for="adminPassword">New Password</label>
                                     <div class="input-group">
-                                        <input id="password" type="password" name="password" class="form-control @error('password') is-invalid @enderror">
-                                        <button class="btn password-toggle-btn" type="button" data-password-toggle="password" aria-label="Toggle password visibility">
+                                        <input id="adminPassword" type="password" name="password" class="form-control @error('password') is-invalid @enderror" minlength="8" autocomplete="new-password" placeholder="Enter new strong password" oninput="checkAdminPasswordStrength(this.value)">
+                                        <button class="btn password-toggle-btn" type="button" data-password-toggle="adminPassword" aria-label="Toggle password visibility">
                                             <i class="fas fa-eye"></i>
                                         </button>
+                                    </div>
+                                    <div id="adminPwStrengthBar" style="height:5px;border-radius:3px;background:#e9ecef;margin-top:6px;overflow:hidden;display:none;">
+                                        <div id="adminPwStrengthFill" style="height:100%;width:0%;background:#dc3545;transition:width .3s ease, background .3s ease;"></div>
+                                    </div>
+                                    <small id="adminPwStrengthText" style="font-size:.75rem;display:block;margin-top:3px;font-weight:600;"></small>
+                                    <div id="adminPwRules" class="password-rules-box mt-2 p-2 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;font-size:0.75rem;display:none;">
+                                        <div class="row g-1">
+                                            <div class="col-6" id="admin-rule-length"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>8+ characters</div>
+                                            <div class="col-6" id="admin-rule-case"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>Upper & lowercase</div>
+                                            <div class="col-6" id="admin-rule-number"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>At least 1 number</div>
+                                            <div class="col-6" id="admin-rule-symbol"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>At least 1 symbol</div>
+                                        </div>
                                     </div>
                                     @error('password')
                                         <div class="field-error">{{ $message }}</div>
@@ -335,13 +347,14 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="field-group">
-                                    <label for="password_confirmation">Confirm Password</label>
+                                    <label for="adminPasswordConfirmation">Confirm Password</label>
                                     <div class="input-group">
-                                        <input id="password_confirmation" type="password" name="password_confirmation" class="form-control">
-                                        <button class="btn password-toggle-btn" type="button" data-password-toggle="password_confirmation" aria-label="Toggle password confirmation visibility">
+                                        <input id="adminPasswordConfirmation" type="password" name="password_confirmation" class="form-control" minlength="8" autocomplete="new-password" placeholder="Confirm new password" oninput="checkAdminPasswordMatch()">
+                                        <button class="btn password-toggle-btn" type="button" data-password-toggle="adminPasswordConfirmation" aria-label="Toggle password confirmation visibility">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                     </div>
+                                    <small id="adminPwMatchText" style="font-size:.75rem;display:none;margin-top:4px;"></small>
                                 </div>
                             </div>
                         </div>
@@ -378,5 +391,87 @@ document.querySelectorAll('[data-password-toggle]').forEach(function (toggleBtn)
         icon.classList.toggle('fa-eye-slash', isPassword);
     });
 });
+
+function checkAdminPasswordStrength(value) {
+    const bar = document.getElementById('adminPwStrengthBar');
+    const fill = document.getElementById('adminPwStrengthFill');
+    const text = document.getElementById('adminPwStrengthText');
+    const rules = document.getElementById('adminPwRules');
+
+    if (!value) {
+        if (bar) bar.style.display = 'none';
+        if (rules) rules.style.display = 'none';
+        if (text) text.textContent = '';
+        checkAdminPasswordMatch();
+        return;
+    }
+
+    if (bar) bar.style.display = 'block';
+    if (rules) rules.style.display = 'block';
+
+    const hasLength = value.length >= 8;
+    const hasCase = /[a-z]/.test(value) && /[A-Z]/.test(value);
+    const hasNumber = /\d/.test(value);
+    const hasSymbol = /[^A-Za-z0-9]/.test(value);
+
+    updateAdminRule('admin-rule-length', hasLength);
+    updateAdminRule('admin-rule-case', hasCase);
+    updateAdminRule('admin-rule-number', hasNumber);
+    updateAdminRule('admin-rule-symbol', hasSymbol);
+
+    let score = 0;
+    if (hasLength) score++;
+    if (hasCase) score++;
+    if (hasNumber) score++;
+    if (hasSymbol) score++;
+
+    const allPassed = hasLength && hasCase && hasNumber && hasSymbol;
+    if (allPassed) {
+        fill.style.width = '100%';
+        fill.style.background = '#28a745';
+        text.textContent = 'Strong password (All requirements met)';
+        text.style.color = '#28a745';
+    } else {
+        const percent = Math.max(25, score * 25);
+        fill.style.width = percent + '%';
+        fill.style.background = score <= 2 ? '#dc3545' : '#f7941d';
+        text.textContent = score <= 2 ? 'Weak password (requirements missing)' : 'Moderate password';
+        text.style.color = score <= 2 ? '#dc3545' : '#f7941d';
+    }
+
+    checkAdminPasswordMatch();
+}
+
+function updateAdminRule(id, passed) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const text = el.textContent.trim().replace(/^✔\s*|^\s*/, '');
+    if (passed) {
+        el.innerHTML = `<i class="fas fa-check-circle text-success me-1"></i><span class="text-success fw-semibold">${text}</span>`;
+    } else {
+        el.innerHTML = `<i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>${text}`;
+    }
+}
+
+function checkAdminPasswordMatch() {
+    const pw = document.getElementById('adminPassword')?.value || '';
+    const confirm = document.getElementById('adminPasswordConfirmation')?.value || '';
+    const matchText = document.getElementById('adminPwMatchText');
+    if (!matchText) return;
+
+    if (!confirm) {
+        matchText.style.display = 'none';
+        return;
+    }
+
+    matchText.style.display = 'block';
+    if (pw === confirm) {
+        matchText.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>Passwords match';
+        matchText.style.color = '#28a745';
+    } else {
+        matchText.innerHTML = '<i class="fas fa-times-circle text-danger me-1"></i>Passwords do not match';
+        matchText.style.color = '#dc3545';
+    }
+}
 </script>
 @endsection

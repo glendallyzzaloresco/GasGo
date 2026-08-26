@@ -205,8 +205,13 @@
             ->filter(fn($f) => !(bool) $f->is_active)
             ->values();
 
+        $industryNoun = $settings->industry_noun ?? 'LPG Tanks';
+        $isWaterNiche = str_contains(strtolower($industryNoun), 'water');
+        $isFoodNiche = str_contains(strtolower($industryNoun), 'food') || str_contains(strtolower($industryNoun), 'meal');
+        $isApplianceNiche = str_contains(strtolower($industryNoun), 'appliance');
+
         $isTankCategory = function ($cat) {
-            return in_array(strtolower(trim((string) $cat)), ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'lpg-tanks', 'lpg tank', 'lpg tanks']);
+            return in_array(strtolower(trim((string) $cat)), ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'lpg-tanks', 'lpg tank', 'lpg tanks', 'water', 'container', 'gallon', 'food', 'foods', 'meal', 'meals']);
         };
 
         $isAccessoryCategory = function ($cat) {
@@ -352,13 +357,13 @@
 
         <!-- Products Grid -->
         <div class="row g-4" id="productsGrid">
-            <!-- LPG Tanks Section -->
+            <!-- Primary Products Section -->
             @if($lpgTankProducts->count() > 0)
                 <div class="col-12">
                     <div
                         style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #e0e0e0;">
-                        <i class="fas fa-fire" style="font-size:1.5rem;color:var(--gasgo-orange);"></i>
-                        <h6 style="margin:0;color:var(--gasgo-blue);font-weight:700;font-size:1.1rem;">LPG Tanks</h6>
+                        <i class="{{ $isWaterNiche ? 'fas fa-tint' : ($isFoodNiche ? 'fas fa-utensils' : ($isApplianceNiche ? 'fas fa-blender' : 'fas fa-fire')) }}" style="font-size:1.5rem;color:var(--gasgo-orange);"></i>
+                        <h6 style="margin:0;color:var(--gasgo-blue);font-weight:700;font-size:1.1rem;">{{ $industryNoun }}</h6>
                         <span
                             style="margin-left:auto;background:#f0f0f0;padding:6px 12px;border-radius:20px;font-size:0.85rem;color:#666;font-weight:600;">{{ $lpgTankProducts->count() }}
                             items</span>
@@ -390,10 +395,20 @@
                                 </div>
                                 <p class="text-muted mb-2" style="font-size:.82rem;">{{ $product->description ?? 'No description' }}
                                 </p>
-                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="price">₱{{ number_format($product->price, 2) }}</span>
                                     <span class="text-muted" style="font-size:.82rem;">Stock: <strong
                                             class="{{ $qty <= 5 ? 'text-danger' : '' }}">{{ $qty }}</strong></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-3" style="font-size:.78rem;">
+                                    <span class="text-muted">Cost: <strong class="text-dark">₱{{ number_format($product->cost_price ?? 0, 2) }}</strong></span>
+                                    @php
+                                        $margin = ($product->price ?? 0) - ($product->cost_price ?? 0);
+                                        $marginPct = ($product->price > 0) ? round(($margin / $product->price) * 100, 1) : 0;
+                                    @endphp
+                                    <span class="badge {{ $margin >= 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle' }}">
+                                        {{ $margin >= 0 ? '+' : '' }}₱{{ number_format($margin, 2) }} ({{ $marginPct }}%)
+                                    </span>
                                 </div>
                                 <div class="d-flex gap-2">
                                     <button class="btn btn-sm flex-grow-1"
@@ -462,10 +477,20 @@
                                 </div>
                                 <p class="text-muted mb-2" style="font-size:.82rem;">{{ $product->description ?? 'No description' }}
                                 </p>
-                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="price">₱{{ number_format($product->price, 2) }}</span>
                                     <span class="text-muted" style="font-size:.82rem;">Stock: <strong
                                             class="{{ $qty <= 5 ? 'text-danger' : '' }}">{{ $qty }}</strong></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-3" style="font-size:.78rem;">
+                                    <span class="text-muted">Cost: <strong class="text-dark">₱{{ number_format($product->cost_price ?? 0, 2) }}</strong></span>
+                                    @php
+                                        $margin = ($product->price ?? 0) - ($product->cost_price ?? 0);
+                                        $marginPct = ($product->price > 0) ? round(($margin / $product->price) * 100, 1) : 0;
+                                    @endphp
+                                    <span class="badge {{ $margin >= 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle' }}">
+                                        {{ $margin >= 0 ? '+' : '' }}₱{{ number_format($margin, 2) }} ({{ $marginPct }}%)
+                                    </span>
                                 </div>
                                 <div class="d-flex gap-2">
                                     <button class="btn btn-sm flex-grow-1"
@@ -534,10 +559,20 @@
                                 </div>
                                 <p class="text-muted mb-2" style="font-size:.82rem;">{{ $product->description ?? 'No description' }}
                                 </p>
-                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="price">₱{{ number_format($product->price, 2) }}</span>
                                     <span class="text-muted" style="font-size:.82rem;">Stock: <strong
                                             class="{{ $qty <= 5 ? 'text-danger' : '' }}">{{ $qty }}</strong></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-3" style="font-size:.78rem;">
+                                    <span class="text-muted">Cost: <strong class="text-dark">₱{{ number_format($product->cost_price ?? 0, 2) }}</strong></span>
+                                    @php
+                                        $margin = ($product->price ?? 0) - ($product->cost_price ?? 0);
+                                        $marginPct = ($product->price > 0) ? round(($margin / $product->price) * 100, 1) : 0;
+                                    @endphp
+                                    <span class="badge {{ $margin >= 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle' }}">
+                                        {{ $margin >= 0 ? '+' : '' }}₱{{ number_format($margin, 2) }} ({{ $marginPct }}%)
+                                    </span>
                                 </div>
                                 <div class="d-flex gap-2">
                                     <button class="btn btn-sm flex-grow-1"
@@ -606,10 +641,20 @@
                                 </div>
                                 <p class="text-muted mb-2" style="font-size:.82rem;">{{ $product->description ?? 'No description' }}
                                 </p>
-                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="price">₱{{ number_format($product->price, 2) }}</span>
                                     <span class="text-muted" style="font-size:.82rem;">Stock: <strong
                                             class="{{ $qty <= 5 ? 'text-danger' : '' }}">{{ $qty }}</strong></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-3" style="font-size:.78rem;">
+                                    <span class="text-muted">Cost: <strong class="text-dark">₱{{ number_format($product->cost_price ?? 0, 2) }}</strong></span>
+                                    @php
+                                        $margin = ($product->price ?? 0) - ($product->cost_price ?? 0);
+                                        $marginPct = ($product->price > 0) ? round(($margin / $product->price) * 100, 1) : 0;
+                                    @endphp
+                                    <span class="badge {{ $margin >= 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle' }}">
+                                        {{ $margin >= 0 ? '+' : '' }}₱{{ number_format($margin, 2) }} ({{ $marginPct }}%)
+                                    </span>
                                 </div>
                                 <div class="d-flex gap-2">
                                     <button class="btn btn-sm flex-grow-1"
@@ -925,27 +970,38 @@
                         <input type="hidden" name="_method" id="productFormMethod" value="POST">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="mb-1">Product Name</label>
+                                <label class="mb-1">Product Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" name="name" id="productName"
                                     placeholder="e.g. Solane 11kg" required>
                             </div>
-                            <div class="col-md-6" id="productSellingPriceCol">
-                                <label class="mb-1">Selling Price (₱)</label>
+                            <div class="col-md-3" id="productSellingPriceCol">
+                                <label class="mb-1">Selling Price (₱) <span class="text-danger">*</span></label>
                                 <input type="number" class="form-control" name="selling_price" id="productSellingPrice"
                                     placeholder="0.00" min="0" step="0.01" required>
                             </div>
+                            <div class="col-md-3" id="productCostPriceCol">
+                                <label class="mb-1">Cost Price (₱) <small class="text-muted">(Capital)</small></label>
+                                <input type="number" class="form-control" name="cost_price" id="productCostPrice"
+                                    placeholder="0.00" min="0" step="0.01">
+                            </div>
                             <div class="col-md-6">
-                                <label class="mb-1">Weight (kg)</label>
+                                <label class="mb-1" id="productWeightLabel">Weight (kg)</label>
                                 <input type="text" class="form-control" name="weight" id="productWeight"
                                     placeholder="e.g. 11kg">
                             </div>
                             <div class="col-md-6">
-                                <label class="mb-1">Category</label>
+                                <label class="mb-1">Category <span class="text-danger">*</span></label>
                                 <select class="form-select" name="category" id="productCategory"
-                                    onchange="handleProductCategoryChange()" required>
-                                    <option value="tank">Tank</option>
-                                    <option value="accessories">Accessories</option>
-                                    <option value="appliances">Appliances</option>
+                                    onchange="handleProductCategoryChange(true)" required>
+                                    @php
+                                        $currentNicheCats = $nicheCategories ?? \App\Services\CategoryService::getCategoriesForCurrentNiche();
+                                    @endphp
+                                    @foreach($currentNicheCats as $ncat)
+                                        <option value="{{ $ncat['slug'] }}" data-exchange="{{ !empty($ncat['requires_exchange']) ? '1' : '0' }}">
+                                            {{ $ncat['name'] }}
+                                        </option>
+                                    @endforeach
+                                    <option value="freebie">Freebie / Promotional Item</option>
                                 </select>
                             </div>
                             <div class="col-md-6 d-flex align-items-center">
@@ -953,7 +1009,7 @@
                                     <input class="form-check-input" type="checkbox" id="productRequiresExchange"
                                         name="requires_exchange" value="1">
                                     <label class="form-check-label" for="productRequiresExchange">
-                                        Requires Empty Container Exchange (e.g. Tank, Gallon)
+                                        Requires Empty Container Exchange (e.g. {{ $isWaterNiche ? '5-Gallon Water Container' : ($isFoodNiche ? 'Food Container / Tiffin' : 'LPG Tank / Cylinder') }})
                                     </label>
                                 </div>
                             </div>
@@ -1141,8 +1197,35 @@
         }
 
         // Product functions
-        function handleProductCategoryChange() {
-            const category = (document.getElementById('productCategory')?.value || '').toLowerCase();
+        function handleProductCategoryChange(isManual = false) {
+            const catSelect = document.getElementById('productCategory');
+            const category = (catSelect?.value || '').toLowerCase();
+            const selectedOption = catSelect?.options[catSelect.selectedIndex];
+            const shouldExchange = selectedOption?.dataset?.exchange === '1' || category === 'tank' || category === 'water';
+            const exchangeCheckbox = document.getElementById('productRequiresExchange');
+
+            if (isManual && exchangeCheckbox) {
+                exchangeCheckbox.checked = shouldExchange;
+            }
+
+            const specLabel = document.getElementById('productWeightLabel');
+            const specInput = document.getElementById('productWeight');
+            if (specLabel && specInput) {
+                if (category === 'water' || category === 'dispensers') {
+                    specLabel.textContent = 'Container Capacity / Volume';
+                    specInput.placeholder = 'e.g. 5-Gallon (18.9L)';
+                } else if (category === 'meals' || category === 'snacks' || category === 'bilao' || category === 'beverages') {
+                    specLabel.textContent = 'Portion / Serving Size';
+                    specInput.placeholder = 'e.g. 1-2 Persons / 1 Pax';
+                } else if (category === 'appliances' || category === 'kitchen' || category === 'parts' || category === 'stoves') {
+                    specLabel.textContent = 'Power / Model Specs';
+                    specInput.placeholder = 'e.g. 220V / Double Burner';
+                } else {
+                    specLabel.textContent = 'Weight (kg)';
+                    specInput.placeholder = 'e.g. 11kg';
+                }
+            }
+
             const sellCol = document.getElementById('productSellingPriceCol');
             const sellInput = document.getElementById('productSellingPrice');
 
@@ -1161,13 +1244,16 @@
             document.getElementById('productFormMethod').value = 'POST';
             document.getElementById('productName').value = '';
             const defaultCategoryOption = document.querySelector('#productCategory option');
-            document.getElementById('productCategory').value = defaultCategoryOption ? defaultCategoryOption.value : '';
-            document.getElementById('productRequiresExchange').checked = false;
+            if (defaultCategoryOption) {
+                document.getElementById('productCategory').value = defaultCategoryOption.value;
+            }
+            document.getElementById('productRequiresExchange').checked = (defaultCategoryOption?.dataset?.exchange === '1');
             document.getElementById('productDescription').value = '';
             document.getElementById('productSellingPrice').value = '';
+            document.getElementById('productCostPrice').value = '';
             document.getElementById('productWeight').value = '';
             document.getElementById('prodActive').checked = true;
-            handleProductCategoryChange();
+            handleProductCategoryChange(false);
         }
 
         function openEditProduct(button) {
@@ -1179,9 +1265,10 @@
             document.getElementById('productRequiresExchange').checked = button.dataset.requiresExchange === '1';
             document.getElementById('productDescription').value = button.dataset.description || '';
             document.getElementById('productSellingPrice').value = button.dataset.sellingPrice || '';
+            document.getElementById('productCostPrice').value = button.dataset.costPrice || '';
             document.getElementById('productWeight').value = button.dataset.weight || '';
             document.getElementById('prodActive').checked = (button.dataset.isActive === '1');
-            handleProductCategoryChange();
+            handleProductCategoryChange(false);
         }
 
         function openRestoreProductModal(name, restoreUrl) {

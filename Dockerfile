@@ -2,7 +2,7 @@ FROM php:8.4-apache
 
 # Install required system packages & PHP extensions
 RUN apt-get update && apt-get install -y \
-    git unzip curl libzip-dev zip libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
+    git unzip curl libzip-dev zip libpng-dev libjpeg62-turbo-dev libfreetype6-dev ca-certificates \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql zip gd opcache \
     && a2enmod rewrite

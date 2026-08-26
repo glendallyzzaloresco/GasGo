@@ -215,8 +215,19 @@ class SalesForecastService
             ? round(($deliveredCount / $deliveryBaseCount) * 100, 1)
             : 0.0;
 
+        $salesProducts = $this->salesByProduct($start, $end);
+        $totalCapital = 0.0;
+        foreach ($salesProducts as $sp) {
+            $totalCapital += (float) ($sp['capital'] ?? 0);
+        }
+        $totalProfit = $totalSales - $totalCapital;
+        $profitMargin = $totalSales > 0 ? round(($totalProfit / $totalSales) * 100, 1) : 0.0;
+
         return [
             'totalSales' => round($totalSales, 2),
+            'totalCapital' => round($totalCapital, 2),
+            'totalProfit' => round($totalProfit, 2),
+            'profitMargin' => $profitMargin,
             'totalOrders' => $totalOrders,
             'avgOrderValue' => round($avgOrderValue, 2),
             'totalItemsSold' => round($itemsSold, 2),
@@ -234,17 +245,28 @@ class SalesForecastService
                 $join->on('oi.order_id', '=', 'o.id')
                     ->on('oi.product_id', '=', 'p.id');
             })
-            ->selectRaw('p.id as product_id, p.name as product_name, SUM(sm.full_out) as units_sold, COALESCE(SUM(COALESCE(oi.subtotal, oi.price * sm.full_out)), 0) as sales_amount')
-            ->groupBy('p.id', 'p.name')
+            ->selectRaw('p.id as product_id, p.name as product_name, COALESCE(p.cost_price, 0) as unit_cost, SUM(sm.full_out) as units_sold, COALESCE(SUM(COALESCE(oi.subtotal, oi.price * sm.full_out)), 0) as sales_amount')
+            ->groupBy('p.id', 'p.name', 'p.cost_price')
             ->orderByDesc('units_sold')
             ->get();
 
         return $rows->map(function ($row) {
+            $unitsSold = (float) $row->units_sold;
+            $revenue = (float) $row->sales_amount;
+            $unitCost = (float) ($row->unit_cost ?? 0);
+            $capital = $unitsSold * $unitCost;
+            $profit = $revenue - $capital;
+            $marginPct = $revenue > 0 ? round(($profit / $revenue) * 100, 1) : 0.0;
+
             return [
                 'product_id' => (int) $row->product_id,
                 'product' => (string) $row->product_name,
-                'units_sold' => (float) $row->units_sold,
-                'sales_amount' => (float) $row->sales_amount,
+                'unit_cost' => $unitCost,
+                'units_sold' => $unitsSold,
+                'sales_amount' => $revenue,
+                'capital' => round($capital, 2),
+                'profit' => round($profit, 2),
+                'margin_pct' => $marginPct,
             ];
         })->values();
     }

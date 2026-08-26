@@ -371,7 +371,7 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold" style="font-size:.88rem;">Password <span class="text-danger">*</span></label>
                             <div class="input-group" style="border-radius:10px;overflow:hidden;">
-                                <input type="password" name="password" id="riderPassword" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Min 6 characters" required>
+                                <input type="password" name="password" id="riderPassword" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Min 8 chars, letters & numbers" minlength="8" pattern="(?=.*[A-Za-z])(?=.*\d).{8,}" title="Password must be at least 8 characters and contain both letters and numbers." required>
                                 <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this, 'riderPassword')" style="border-radius:0 10px 10px 0;">
                                     <i class="fas fa-eye"></i>
                                 </button>
@@ -380,7 +380,7 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold" style="font-size:.88rem;">Confirm Password <span class="text-danger">*</span></label>
                             <div class="input-group" style="border-radius:10px;overflow:hidden;">
-                                <input type="password" name="password_confirmation" id="riderPasswordConfirm" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Min 6 characters" required>
+                                <input type="password" name="password_confirmation" id="riderPasswordConfirm" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Min 8 chars, letters & numbers" minlength="8" required>
                                 <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this, 'riderPasswordConfirm')" style="border-radius:0 10px 10px 0;">
                                     <i class="fas fa-eye"></i>
                                 </button>
@@ -442,9 +442,9 @@
                         </div>
                         <div class="col-md-12">
                             <label class="form-label fw-bold" style="font-size:.88rem;">Password</label>
-                            <p class="text-muted" style="font-size:.8rem;margin-bottom:6px;">Leave empty to keep current password</p>
+                            <p class="text-muted" style="font-size:.8rem;margin-bottom:6px;">Leave empty to keep current password (min 8 chars with letters & numbers)</p>
                             <div class="input-group" style="border-radius:10px;overflow:hidden;">
-                                <input type="password" id="editPassword" name="password" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Min 6 characters">
+                                <input type="password" id="editPassword" name="password" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Min 8 chars, letters & numbers" minlength="8" pattern="(?=.*[A-Za-z])(?=.*\d).{8,}" title="Password must be at least 8 characters and contain both letters and numbers.">
                                 <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this, 'editPassword')" style="border-radius:0 10px 10px 0;">
                                     <i class="fas fa-eye"></i>
                                 </button>
@@ -492,7 +492,7 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold" style="font-size:.88rem;">Password <span class="text-danger">*</span></label>
                             <div class="input-group" style="border-radius:10px;overflow:hidden;">
-                                <input type="password" name="password" id="adminPassword" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Password" required>
+                                <input type="password" name="password" id="adminPassword" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Min 8 chars, letters & numbers" minlength="8" pattern="(?=.*[A-Za-z])(?=.*\d).{8,}" title="Password must be at least 8 characters and contain both letters and numbers." required>
                                 <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this, 'adminPassword')" style="border-radius:0 10px 10px 0;">
                                     <i class="fas fa-eye"></i>
                                 </button>
@@ -504,7 +504,7 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold" style="font-size:.88rem;">Confirm Password <span class="text-danger">*</span></label>
                             <div class="input-group" style="border-radius:10px;overflow:hidden;">
-                                <input type="password" name="password_confirmation" id="adminPasswordConfirm" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Confirm password" required>
+                                <input type="password" name="password_confirmation" id="adminPasswordConfirm" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Confirm password" minlength="8" required>
                                 <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this, 'adminPasswordConfirm')" style="border-radius:0 10px 10px 0;">
                                     <i class="fas fa-eye"></i>
                                 </button>

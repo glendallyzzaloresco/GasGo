@@ -143,7 +143,7 @@ class CustomerController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => 'required|string|max:20',
             'address' => 'nullable|string|max:500',
-            'password' => ['nullable', 'confirmed', Password::min(8)->letters()->numbers()],
+            'password' => ['nullable', 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
         ]);
 
         $user->name = $validated['name'];
@@ -301,7 +301,7 @@ class CustomerController extends Controller
             'email' => 'required|string|email|max:255|unique:users,email',
             'phone' => 'required|string|max:20',
             'address' => 'nullable|string|max:500',
-            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
+            'password' => ['required', 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
         ]);
 
         // Hash password with argon2id

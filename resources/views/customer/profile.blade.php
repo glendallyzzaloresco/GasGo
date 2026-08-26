@@ -271,14 +271,31 @@
                     </div>
 
                     <div class="password-grid">
-                        <h5 class="fw-bold mb-2" style="color:var(--gasgo-blue);">Change Password</h5>
-                        <p class="field-note">Leave these blank if you do not want to change your password.</p>
+                        <h5 class="fw-bold mb-2" style="color:var(--gasgo-blue);"><i class="fas fa-lock me-2 text-warning"></i>Change Password</h5>
+                        <p class="field-note">Leave blank if you do not want to change your password. Must be at least 8 characters with uppercase, lowercase, numbers, and symbols.</p>
 
                         <div class="row g-3 mt-1">
                             <div class="col-md-6">
                                 <div class="field-group">
-                                    <label for="password">New Password</label>
-                                    <input id="password" type="password" name="password" class="form-control form-control-gasgo @error('password') is-invalid @enderror">
+                                    <label for="profilePassword">New Password</label>
+                                    <div class="position-relative">
+                                        <input id="profilePassword" type="password" name="password" class="form-control form-control-gasgo @error('password') is-invalid @enderror" minlength="8" autocomplete="new-password" placeholder="Enter new strong password" oninput="checkProfilePasswordStrength(this.value)">
+                                        <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-muted text-decoration-none pe-3" onclick="toggleFieldPassword('profilePassword', this)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div id="profPwStrengthBar" style="height:5px;border-radius:3px;background:#e9ecef;margin-top:6px;overflow:hidden;display:none;">
+                                        <div id="profPwStrengthFill" style="height:100%;width:0%;background:#dc3545;transition:width .3s ease, background .3s ease;"></div>
+                                    </div>
+                                    <small id="profPwStrengthText" style="font-size:.75rem;display:block;margin-top:3px;font-weight:600;"></small>
+                                    <div id="profPwRules" class="password-rules-box mt-2 p-2 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;font-size:0.75rem;display:none;">
+                                        <div class="row g-1">
+                                            <div class="col-6" id="prof-rule-length"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>8+ characters</div>
+                                            <div class="col-6" id="prof-rule-case"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>Upper & lowercase</div>
+                                            <div class="col-6" id="prof-rule-number"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>At least 1 number</div>
+                                            <div class="col-6" id="prof-rule-symbol"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>At least 1 symbol</div>
+                                        </div>
+                                    </div>
                                     @error('password')
                                         <div class="field-error">{{ $message }}</div>
                                     @enderror
@@ -286,8 +303,14 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="field-group">
-                                    <label for="password_confirmation">Confirm New Password</label>
-                                    <input id="password_confirmation" type="password" name="password_confirmation" class="form-control form-control-gasgo">
+                                    <label for="profilePasswordConfirmation">Confirm New Password</label>
+                                    <div class="position-relative">
+                                        <input id="profilePasswordConfirmation" type="password" name="password_confirmation" class="form-control form-control-gasgo" minlength="8" autocomplete="new-password" placeholder="Confirm new password" oninput="checkProfilePasswordMatch()">
+                                        <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-muted text-decoration-none pe-3" onclick="toggleFieldPassword('profilePasswordConfirmation', this)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <small id="profPwMatchText" style="font-size:.75rem;display:none;margin-top:4px;"></small>
                                 </div>
                             </div>
                         </div>
@@ -306,4 +329,103 @@
         </div>
     </div>
 </section>
+@endsection
+
+@section('scripts')
+<script>
+function toggleFieldPassword(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const icon = btn.querySelector('i');
+    if (!input || !icon) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+}
+
+function checkProfilePasswordStrength(value) {
+    const bar = document.getElementById('profPwStrengthBar');
+    const fill = document.getElementById('profPwStrengthFill');
+    const text = document.getElementById('profPwStrengthText');
+    const rules = document.getElementById('profPwRules');
+
+    if (!value) {
+        if (bar) bar.style.display = 'none';
+        if (rules) rules.style.display = 'none';
+        if (text) text.textContent = '';
+        checkProfilePasswordMatch();
+        return;
+    }
+
+    if (bar) bar.style.display = 'block';
+    if (rules) rules.style.display = 'block';
+
+    const hasLength = value.length >= 8;
+    const hasCase = /[a-z]/.test(value) && /[A-Z]/.test(value);
+    const hasNumber = /\d/.test(value);
+    const hasSymbol = /[^A-Za-z0-9]/.test(value);
+
+    updateProfRule('prof-rule-length', hasLength);
+    updateProfRule('prof-rule-case', hasCase);
+    updateProfRule('prof-rule-number', hasNumber);
+    updateProfRule('prof-rule-symbol', hasSymbol);
+
+    let score = 0;
+    if (hasLength) score++;
+    if (hasCase) score++;
+    if (hasNumber) score++;
+    if (hasSymbol) score++;
+
+    const allPassed = hasLength && hasCase && hasNumber && hasSymbol;
+    if (allPassed) {
+        fill.style.width = '100%';
+        fill.style.background = '#28a745';
+        text.textContent = 'Strong password (All requirements met)';
+        text.style.color = '#28a745';
+    } else {
+        const percent = Math.max(25, score * 25);
+        fill.style.width = percent + '%';
+        fill.style.background = score <= 2 ? '#dc3545' : '#f7941d';
+        text.textContent = score <= 2 ? 'Weak password (requirements missing)' : 'Moderate password';
+        text.style.color = score <= 2 ? '#dc3545' : '#f7941d';
+    }
+
+    checkProfilePasswordMatch();
+}
+
+function updateProfRule(id, passed) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const text = el.textContent.trim().replace(/^✔\s*|^\s*/, '');
+    if (passed) {
+        el.innerHTML = `<i class="fas fa-check-circle text-success me-1"></i><span class="text-success fw-semibold">${text}</span>`;
+    } else {
+        el.innerHTML = `<i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>${text}`;
+    }
+}
+
+function checkProfilePasswordMatch() {
+    const pw = document.getElementById('profilePassword')?.value || '';
+    const confirm = document.getElementById('profilePasswordConfirmation')?.value || '';
+    const matchText = document.getElementById('profPwMatchText');
+    if (!matchText) return;
+
+    if (!confirm) {
+        matchText.style.display = 'none';
+        return;
+    }
+
+    matchText.style.display = 'block';
+    if (pw === confirm) {
+        matchText.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>Passwords match';
+        matchText.style.color = '#28a745';
+    } else {
+        matchText.innerHTML = '<i class="fas fa-times-circle text-danger me-1"></i>Passwords do not match';
+        matchText.style.color = '#dc3545';
+    }
+}
+</script>
 @endsection

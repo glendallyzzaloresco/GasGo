@@ -99,44 +99,46 @@ class HomepageSettingController extends Controller
             'why_choose_subtitle' => $validated['why_choose_subtitle'] ?? 'We make delivery convenient, safe, and rewarding',
         ];
 
+        $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+
         if ($request->boolean('remove_navbar_logo')) {
-            $this->deletePublicFile($settings->navbar_logo_path);
+            $this->deletePublicFile($settings->navbar_logo_path, $disk);
             $payload['navbar_logo_path'] = null;
         }
 
         if ($request->boolean('remove_footer_logo')) {
-            $this->deletePublicFile($settings->footer_logo_path);
+            $this->deletePublicFile($settings->footer_logo_path, $disk);
             $payload['footer_logo_path'] = null;
         }
 
         if ($request->boolean('remove_home_hero_image')) {
-            $this->deletePublicFile($settings->home_hero_image_path);
+            $this->deletePublicFile($settings->home_hero_image_path, $disk);
             $payload['home_hero_image_path'] = null;
         }
 
         if ($request->boolean('remove_promo_banner_image')) {
-            $this->deletePublicFile($settings->promo_banner_image_path);
+            $this->deletePublicFile($settings->promo_banner_image_path, $disk);
             $payload['promo_banner_image_path'] = null;
         }
 
         if ($request->hasFile('navbar_logo')) {
-            $this->deletePublicFile($settings->navbar_logo_path);
-            $payload['navbar_logo_path'] = $request->file('navbar_logo')->store('branding', 'public');
+            $this->deletePublicFile($settings->navbar_logo_path, $disk);
+            $payload['navbar_logo_path'] = $request->file('navbar_logo')->store('branding', $disk);
         }
 
         if ($request->hasFile('footer_logo')) {
-            $this->deletePublicFile($settings->footer_logo_path);
-            $payload['footer_logo_path'] = $request->file('footer_logo')->store('branding', 'public');
+            $this->deletePublicFile($settings->footer_logo_path, $disk);
+            $payload['footer_logo_path'] = $request->file('footer_logo')->store('branding', $disk);
         }
 
         if ($request->hasFile('home_hero_image')) {
-            $this->deletePublicFile($settings->home_hero_image_path);
-            $payload['home_hero_image_path'] = $request->file('home_hero_image')->store('branding', 'public');
+            $this->deletePublicFile($settings->home_hero_image_path, $disk);
+            $payload['home_hero_image_path'] = $request->file('home_hero_image')->store('branding', $disk);
         }
 
         if ($request->hasFile('promo_banner_image')) {
-            $this->deletePublicFile($settings->promo_banner_image_path);
-            $payload['promo_banner_image_path'] = $request->file('promo_banner_image')->store('branding', 'public');
+            $this->deletePublicFile($settings->promo_banner_image_path, $disk);
+            $payload['promo_banner_image_path'] = $request->file('promo_banner_image')->store('branding', $disk);
         }
 
         $settings->update($payload);
@@ -152,11 +154,19 @@ class HomepageSettingController extends Controller
         ];
 
         if (! empty($payload['navbar_logo_path'])) {
-            $themePayload['logoUrl'] = Storage::url($payload['navbar_logo_path']);
+            $themePayload['logoUrl'] = Storage::disk($disk)->url($payload['navbar_logo_path']);
+        } elseif ($request->boolean('remove_navbar_logo')) {
+            $themePayload['logoUrl'] = '/images/logo-gasgo.png';
         }
 
         if (\Illuminate\Support\Facades\Schema::hasTable('site_theme')) {
             SiteTheme::query()->updateOrCreate(['id' => 1], $themePayload);
+        }
+
+        try {
+            $nicheKey = \App\Services\CategoryService::detectNicheKey($payload['industry_noun'] ?? null);
+            \App\Services\CategoryService::syncCategoriesForNiche($nicheKey);
+        } catch (\Throwable $e) {
         }
 
         \App\Services\ActivityLogger::log('settings', 'updated', "Admin updated store branding and homepage settings ({$payload['brand_name_primary']} {$payload['brand_name_accent']})", ['brand' => $payload['brand_name_primary'] . ' ' . $payload['brand_name_accent']]);
@@ -164,14 +174,14 @@ class HomepageSettingController extends Controller
         return redirect()->route('admin.settings.homepage')->with('success', 'Homepage settings updated successfully.');
     }
 
-    private function deletePublicFile(?string $path): void
+    private function deletePublicFile(?string $path, string $disk = 'public'): void
     {
         if (! $path) {
             return;
         }
 
         if (! str_starts_with($path, 'http://') && ! str_starts_with($path, 'https://')) {
-            Storage::delete($path);
+            Storage::disk($disk)->delete($path);
         }
     }
 }

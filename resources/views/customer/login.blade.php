@@ -281,17 +281,33 @@
 @endsection
 
 @section('content')
-@php($activeTab = request()->get('tab') ?? old('auth_tab', 'login'))
+@php($activeTab = request()->input('tab') ?? old('auth_tab', 'login'))
 <section class="auth-section">
     <div class="auth-card">
         <div class="row g-0">
             <!-- Left Side (Top Banner on Mobile) -->
+            @php
+                $industryNoun = $settings->industry_noun ?? 'LPG Tanks';
+                $isWater = str_contains(strtolower($industryNoun), 'water');
+                $isFood = str_contains(strtolower($industryNoun), 'food') || str_contains(strtolower($industryNoun), 'meal');
+                $isAppliance = str_contains(strtolower($industryNoun), 'appliance');
+                $nicheIcon = $isWater ? 'fas fa-tint' : ($isFood ? 'fas fa-utensils' : ($isAppliance ? 'fas fa-blender' : 'fas fa-fire'));
+            @endphp
             <div class="col-12 col-lg-5 d-flex">
-                <div class="auth-sidebar w-100">
-                    <img src="{{ $settings->navbar_logo_url ?? asset('images/logo-gasgo.png') }}" alt="{{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }}">
+                <div class="auth-sidebar w-100 text-center">
+                    @if(!empty($settings->navbar_logo_path))
+                        <img src="{{ $settings->navbar_logo_url }}" alt="{{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }}" style="max-height:80px;max-width:140px;object-fit:contain;margin:0 auto;" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';">
+                        <div class="brand-avatar-badge" style="display:none;width:64px;height:64px;border-radius:16px;background:rgba(255,255,255,0.2);color:#fff;align-items:center;justify-content:center;font-size:2rem;margin:0 auto;">
+                            <i class="{{ $nicheIcon }}"></i>
+                        </div>
+                    @else
+                        <div class="brand-avatar-badge" style="display:inline-flex;width:64px;height:64px;border-radius:16px;background:rgba(255,255,255,0.2);color:#fff;align-items:center;justify-content:center;font-size:2rem;margin:0 auto;">
+                            <i class="{{ $nicheIcon }}"></i>
+                        </div>
+                    @endif
                     <h3 class="mt-3 text-white fw-bold">{{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }}</h3>
                     <p>{{ $settings->hero_subtitle ?? 'Your trusted delivery partner with real-time tracking' }}</p>
-                    <ul class="auth-features">
+                    <ul class="auth-features text-start">
                         <li><i class="fas fa-bolt"></i> Fast & Reliable Delivery</li>
                         <li><i class="fas fa-map-marker-alt"></i> Real-Time GPS Tracking</li>
                         <li><i class="fas fa-gift"></i> Earn Loyalty Rewards</li>
@@ -359,7 +375,7 @@
 
                     <!-- Register Form -->
                     <div id="registerForm" class="auth-pane" @if ($activeTab !== 'register') style="display:none;" @endif>
-                        @if (request()->get('redirect') === 'checkout')
+                        @if (request()->input('redirect') === 'checkout')
                             <div class="auth-alert auth-alert-error" style="background: #fff3cd; color: #856404; border-left: 4px solid #ff9800;">
                                 <i class="fas fa-info-circle me-2"></i>
                                 <strong>To complete your purchase:</strong> You need to register or login to checkout your order.
@@ -399,25 +415,40 @@
                                 @enderror
                             </div>
                             <div class="form-floating-gasgo">
-                                <label>Password</label>
+                                <label>Password <span class="text-danger">*</span></label>
                                 <div class="password-field-wrapper">
-                                    <input type="password" name="password" placeholder="Create a password" class="password-input @error('password') is-invalid @enderror" minlength="8" autocomplete="new-password" required>
+                                    <input type="password" name="password" id="registerPassword" placeholder="Create a strong password" class="password-input @error('password') is-invalid @enderror" minlength="8" autocomplete="new-password" required oninput="checkPasswordStrength(this.value)">
                                     <button type="button" class="password-toggle-btn" onclick="togglePassword(this)">
                                         <i class="fas fa-eye"></i>
                                     </button>
+                                </div>
+                                <div id="passwordStrengthBar" style="height:6px;border-radius:3px;background:#e9ecef;margin-top:8px;overflow:hidden;">
+                                    <div id="passwordStrengthFill" style="height:100%;width:0%;background:#dc3545;transition:width .3s ease, background .3s ease;"></div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-1">
+                                    <small id="passwordStrengthText" style="font-size:.78rem;font-weight:600;color:#6c757d;">Must meet all security requirements</small>
+                                </div>
+                                <div class="password-rules-box mt-2 p-2 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;font-size:0.75rem;">
+                                    <div class="row g-1">
+                                        <div class="col-6" id="rule-length"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>8+ characters</div>
+                                        <div class="col-6" id="rule-case"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>Upper & lowercase</div>
+                                        <div class="col-6" id="rule-number"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>At least 1 number</div>
+                                        <div class="col-6" id="rule-symbol"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>At least 1 symbol</div>
+                                    </div>
                                 </div>
                                 @error('password')
                                     <div class="field-error">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="form-floating-gasgo">
-                                <label>Confirm Password</label>
+                                <label>Confirm Password <span class="text-danger">*</span></label>
                                 <div class="password-field-wrapper">
-                                    <input type="password" name="password_confirmation" placeholder="Confirm your password" class="password-input" minlength="8" autocomplete="new-password" required>
+                                    <input type="password" name="password_confirmation" id="registerPasswordConfirm" placeholder="Confirm your password" class="password-input" minlength="8" autocomplete="new-password" required oninput="checkPasswordMatch()">
                                     <button type="button" class="password-toggle-btn" onclick="togglePassword(this)">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                 </div>
+                                <small id="passwordMatchText" style="font-size:.75rem;display:none;margin-top:4px;"></small>
                                 @error('password_confirmation')
                                     <div class="field-error">{{ $message }}</div>
                                 @enderror
@@ -468,6 +499,79 @@ function togglePassword(button) {
         input.type = 'password';
         icon.classList.remove('fa-eye-slash');
         icon.classList.add('fa-eye');
+    }
+}
+
+function checkPasswordStrength(value) {
+    const fill = document.getElementById('passwordStrengthFill');
+    const text = document.getElementById('passwordStrengthText');
+    
+    const hasLength = value.length >= 8;
+    const hasCase = /[a-z]/.test(value) && /[A-Z]/.test(value);
+    const hasNumber = /\d/.test(value);
+    const hasSymbol = /[^A-Za-z0-9]/.test(value);
+
+    updateRule('rule-length', hasLength);
+    updateRule('rule-case', hasCase);
+    updateRule('rule-number', hasNumber);
+    updateRule('rule-symbol', hasSymbol);
+
+    let score = 0;
+    if (hasLength) score++;
+    if (hasCase) score++;
+    if (hasNumber) score++;
+    if (hasSymbol) score++;
+    if (value.length >= 12) score++;
+
+    const levels = [
+        { width: '0%', color: '#dc3545', label: 'Enter password to check strength' },
+        { width: '25%', color: '#dc3545', label: 'Weak password' },
+        { width: '50%', color: '#f7941d', label: 'Moderate password' },
+        { width: '75%', color: '#17a2b8', label: 'Good password' },
+        { width: '100%', color: '#28a745', label: 'Strong password (All requirements met!)' },
+    ];
+
+    const allPassed = hasLength && hasCase && hasNumber && hasSymbol;
+    const idx = allPassed ? 4 : Math.min(score, 3);
+    const level = levels[value ? idx : 0];
+    
+    fill.style.width = value ? level.width : '0%';
+    fill.style.background = level.color;
+    text.textContent = value ? level.label : 'Must meet all security requirements';
+    text.style.color = level.color;
+
+    checkPasswordMatch();
+}
+
+function updateRule(elementId, passed) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    if (passed) {
+        el.innerHTML = `<i class="fas fa-check-circle text-success me-1"></i><span class="text-success fw-semibold">${el.textContent.trim()}</span>`;
+    } else {
+        const rawText = el.textContent.trim().replace(/^✔\s*|^\s*/, '');
+        el.innerHTML = `<i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>${rawText}`;
+    }
+}
+
+function checkPasswordMatch() {
+    const pw = document.getElementById('registerPassword')?.value || '';
+    const confirm = document.getElementById('registerPasswordConfirm')?.value || '';
+    const matchText = document.getElementById('passwordMatchText');
+    if (!matchText) return;
+
+    if (!confirm) {
+        matchText.style.display = 'none';
+        return;
+    }
+
+    matchText.style.display = 'block';
+    if (pw === confirm) {
+        matchText.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>Passwords match';
+        matchText.style.color = '#28a745';
+    } else {
+        matchText.innerHTML = '<i class="fas fa-times-circle text-danger me-1"></i>Passwords do not match';
+        matchText.style.color = '#dc3545';
     }
 }
 </script>

@@ -227,7 +227,7 @@
 </div>
 
 <!-- Stats Row -->
-<div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-2 g-md-3 mb-3">
+<div class="row row-cols-2 row-cols-md-4 g-2 g-md-3 mb-3">
     <div class="col">
         <div class="stat-card" onclick="showModal('totalOrdersModal')">
             <div class="d-flex justify-content-between align-items-start">
@@ -240,19 +240,6 @@
             <small class="text-muted">All time orders</small>
         </div>
     </div>
-    <div class="col">
-        <div class="stat-card" onclick="showModal('revenueModal')">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <p>Revenue</p>
-                    <h3>₱{{ number_format($revenue, 2) }}</h3>
-                </div>
-                <div class="stat-icon orange"><i class="fas fa-peso-sign"></i></div>
-            </div>
-            <small class="text-muted">Total revenue</small>
-        </div>
-    </div>
-    
     <div class="col">
         <div class="stat-card" onclick="showModal('activeRidersModal')">
             <div class="d-flex justify-content-between align-items-start">
@@ -578,48 +565,6 @@
             </div>
             <a href="{{ route('admin.orders') }}" class="btn btn-gasgo w-100 mt-4">
                 <i class="fas fa-list me-2"></i>View All Orders
-            </a>
-        </div>
-    </div>
-</div>
-
-<!-- Revenue Modal -->
-<div id="revenueModal" class="modal-detail">
-    <div class="modal-detail-content">
-        <div class="modal-header-custom">
-            <h4><i class="fas fa-peso-sign me-2"></i>Revenue Details</h4>
-            <button class="close-modal" onclick="closeModal('revenueModal')">&times;</button>
-        </div>
-        <div class="modal-body-custom">
-            @php
-                $deliveredAmount = $orders->where('status', 'delivered')->sum(fn($order) => $order->fee_free_total);
-                $pendingAmount = $orders->where('status', 'pending')->sum(fn($order) => $order->fee_free_total);
-                $approvedAmount = $orders->where('status', 'approved')->sum(fn($order) => $order->fee_free_total);
-                $assignedAmount = $orders->where('status', 'assigned')->sum(fn($order) => $order->fee_free_total);
-                $outForDeliveryAmount = $orders->where('status', 'out_for_delivery')->sum(fn($order) => $order->fee_free_total);
-            @endphp
-            <div class="detail-item">
-                <div class="detail-label">Total Revenue (All Orders)</div>
-                <div class="detail-value">₱{{ number_format($revenue, 2) }}</div>
-                <div class="detail-subtitle">From {{ $orders->count() }} orders</div>
-            </div>
-            <div class="detail-item" style="background: #d4edda; margin-top: 20px;">
-                <div class="detail-label">Completed Revenue</div>
-                <div class="detail-value">₱{{ number_format($deliveredAmount, 2) }}</div>
-                <div class="detail-subtitle">From {{ $orders->where('status', 'delivered')->count() }} delivered orders</div>
-            </div>
-            <div class="detail-item" style="background: #e8f4fc; margin-top: 12px;">
-                <div class="detail-label">In Progress Revenue</div>
-                <div class="detail-value">₱{{ number_format($approvedAmount + $assignedAmount + $outForDeliveryAmount, 2) }}</div>
-                <div class="detail-subtitle">From {{ $orders->where('status', 'approved')->count() + $orders->where('status', 'assigned')->count() + $orders->where('status', 'out_for_delivery')->count() }} active orders</div>
-            </div>
-            <div class="detail-item" style="background: #fff3cd; margin-top: 12px;">
-                <div class="detail-label">Pending Revenue</div>
-                <div class="detail-value">₱{{ number_format($pendingAmount, 2) }}</div>
-                <div class="detail-subtitle">From {{ $orders->where('status', 'pending')->count() }} pending orders</div>
-            </div>
-            <a href="{{ route('admin.orders') }}" class="btn btn-gasgo w-100 mt-4">
-                <i class="fas fa-chart-bar me-2"></i>View Revenue Report
             </a>
         </div>
     </div>

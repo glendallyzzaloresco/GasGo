@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class RiderController extends Controller
 {
@@ -185,7 +186,7 @@ class RiderController extends Controller
             'name'           => 'required|string|max:255',
             'email'          => 'required|email|max:255|unique:users,email',
             'phone'          => 'required|string|max:20',
-            'password'       => 'required|string|min:6|confirmed',
+            'password'       => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
             'address'        => 'nullable|string|max:500',
             'vehicle_type'   => 'nullable|string|max:255',
             'plate_number'   => 'nullable|string|max:255',
@@ -286,7 +287,7 @@ class RiderController extends Controller
             'phone' => 'required|string|max:20',
             'vehicle_type' => 'nullable|string|max:255',
             'plate_number' => 'nullable|string|max:255',
-            'password' => 'nullable|string|min:6',
+            'password' => ['nullable', Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
         ]);
 
         // Prepare update data

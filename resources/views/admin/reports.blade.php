@@ -232,58 +232,79 @@
         </div>
 
         <div class="row g-3">
-            <div class="col-xl col-lg-4 col-md-6 col-sm-6">
-                <div class="stat-card" style="cursor: pointer;" onclick="openSalesDetails()">
-                    <p>Total Sales</p>
-                    <h3>₱{{ number_format($salesSummary['totalSales'] ?? 0, 2) }}</h3>
+            <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
+                <div class="stat-card" style="border-left: 4px solid #64748b;">
+                    <p><i class="fas fa-coins text-secondary me-1"></i>Capital (COGS)</p>
+                    <h3 class="text-secondary">₱{{ number_format($salesSummary['totalCapital'] ?? 0, 2) }}</h3>
+                    <small class="text-muted" style="font-size:.75rem;">Total product cost invested</small>
                 </div>
             </div>
-            <div class="col-xl col-lg-4 col-md-6 col-sm-6">
-                <div class="stat-card">
-                    <p>Total Orders</p>
-                    <h3>{{ number_format($salesSummary['totalOrders'] ?? 0) }}</h3>
+            <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
+                <div class="stat-card" style="cursor: pointer; border-left: 4px solid var(--gasgo-blue);" onclick="openSalesDetails()">
+                    <p><i class="fas fa-chart-line text-primary me-1"></i>Revenue (Total Sales)</p>
+                    <h3 style="color:var(--gasgo-blue);">₱{{ number_format($salesSummary['totalSales'] ?? 0, 2) }}</h3>
+                    <small class="text-muted" style="font-size:.75rem;">Total sales generated</small>
                 </div>
             </div>
-           
-            <div class="col-xl col-lg-4 col-md-6 col-sm-6">
-                <div class="stat-card">
-                    <p>Total Items Sold</p>
-                    <h3>{{ number_format($salesSummary['totalItemsSold'] ?? 0) }}</h3>
+            <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
+                <div class="stat-card" style="border-left: 4px solid #28a745;">
+                    <p><i class="fas fa-hand-holding-dollar text-success me-1"></i>Gross Profit</p>
+                    <h3 class="text-success">₱{{ number_format($salesSummary['totalProfit'] ?? 0, 2) }}</h3>
+                    <small class="text-muted" style="font-size:.75rem;">Net profit: <strong>{{ number_format($salesSummary['profitMargin'] ?? 0, 1) }}%</strong> margin</small>
                 </div>
             </div>
-        
+            <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
+                <div class="stat-card" style="border-left: 4px solid var(--gasgo-orange);">
+                    <p><i class="fas fa-boxes-stacked text-warning me-1"></i>Volume & Orders</p>
+                    <h3 style="color:var(--gasgo-orange);">{{ number_format($salesSummary['totalItemsSold'] ?? 0) }} <small style="font-size:.85rem;color:#64748b;">units</small></h3>
+                    <small class="text-muted" style="font-size:.75rem;">Across {{ number_format($salesSummary['totalOrders'] ?? 0) }} orders</small>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="row g-3 mb-3">
-        <div class="col-lg-6">
+        <div class="col-lg-7">
             <div class="report-card h-100">
                 <div class="section-heading">
                     <div>
-                        <h6 class="fw-bold mb-1" style="color:var(--gasgo-blue);">Sales by Product</h6>
-                        <p class="section-note">Inventory OUT units and mapped sales amount by product.</p>
+                        <h6 class="fw-bold mb-1" style="color:var(--gasgo-blue);"><i class="fas fa-list-check me-2"></i>Product Sales & Profit Breakdown</h6>
+                        <p class="section-note">Capital cost, revenue, profit, and margin per product for {{ $periodLabel }}.</p>
                     </div>
                 </div>
-                <div class="table-responsive" style="max-height:300px;">
+                <div class="table-responsive" style="max-height:340px;">
                     <table class="table table-sm align-middle mb-0">
                         <thead>
-                            <tr>
+                            <tr class="table-light">
                                 <th>Product</th>
-                                <th class="text-end">Units Sold</th>
-                                <th class="text-end">Sales Amount</th>
+                                <th class="text-end">Cost</th>
+                                <th class="text-end">Sold</th>
+                                <th class="text-end">Capital</th>
+                                <th class="text-end">Revenue</th>
+                                <th class="text-end">Profit</th>
+                                <th class="text-end">Margin</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($salesByProduct as $row)
                                 <tr>
-                                    <td>{{ $row['product'] }}</td>
-                                    <td class="text-end">{{ number_format($row['units_sold']) }}</td>
-                                    <td class="text-end">₱{{ number_format($row['sales_amount'], 2) }}</td>
+                                    <td class="fw-semibold">{{ $row['product'] }}</td>
+                                    <td class="text-end text-muted small">₱{{ number_format($row['unit_cost'] ?? 0, 2) }}</td>
+                                    <td class="text-end fw-bold">{{ number_format($row['units_sold']) }}</td>
+                                    <td class="text-end text-secondary">₱{{ number_format($row['capital'] ?? 0, 2) }}</td>
+                                    <td class="text-end fw-semibold">₱{{ number_format($row['sales_amount'], 2) }}</td>
+                                    <td class="text-end fw-bold {{ ($row['profit'] ?? 0) >= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ ($row['profit'] ?? 0) >= 0 ? '+' : '' }}₱{{ number_format($row['profit'] ?? 0, 2) }}
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="badge {{ ($row['margin_pct'] ?? 0) >= 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle' }}" style="font-size:.72rem;">
+                                            {{ number_format($row['margin_pct'] ?? 0, 1) }}%
+                                        </span>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="3" class="text-center text-muted py-3">No inventory OUT transactions found.
-                                    </td>
+                                    <td colspan="7" class="text-center text-muted py-3">No inventory OUT transactions found for selected date range.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -291,11 +312,11 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-6">
+        <div class="col-lg-5">
             <div class="report-card h-100">
                 <div class="section-heading">
                     <div>
-                        <h6 class="fw-bold mb-1" style="color:var(--gasgo-blue);">Sales by Category</h6>
+                        <h6 class="fw-bold mb-1" style="color:var(--gasgo-blue);"><i class="fas fa-pie-chart me-2"></i>Sales by Category</h6>
                         <p class="section-note">LPG Tanks, Appliances, Accessories, and Others.</p>
                     </div>
                 </div>

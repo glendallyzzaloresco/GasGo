@@ -232,15 +232,16 @@
     $img = $product->resolved_image;
     $productCategory = strtolower((string) ($product->category ?? 'tank'));
     
-    // Determine spec label based on category
-    if ($productCategory === 'tank') {
-        $specLabel = 'Weight/Size';
+    if (in_array($productCategory, ['water', 'dispensers'], true)) {
+        $specLabel = 'Capacity / Volume';
+    } elseif (in_array($productCategory, ['meals', 'snacks', 'bilao', 'beverages'], true)) {
+        $specLabel = 'Portion / Serving Size';
+    } elseif (in_array($productCategory, ['appliances', 'stoves', 'kitchen', 'parts'], true)) {
+        $specLabel = 'Model / Power Specs';
     } elseif ($productCategory === 'accessories') {
-        $specLabel = 'Length/Size';
-    } elseif ($productCategory === 'appliances') {
-        $specLabel = 'Specifications';
+        $specLabel = 'Dimensions / Size';
     } else {
-        $specLabel = 'Weight/Size';
+        $specLabel = 'Weight / Size';
     }
 @endphp
 
@@ -261,9 +262,9 @@
             <div class="product-detail-card">
                 <div class="product-detail-img">
                     @if($img)
-                        <img src="{{ $img }}" alt="{{ $product->name }}">
+                        <img src="{{ $img }}" alt="{{ $product->name }}" onerror="this.onerror=null;this.src='{{ asset('images/default-product.png') }}';">
                     @else
-                        <span class="text-muted small">No image available</span>
+                        <img src="{{ asset('images/default-product.png') }}" alt="{{ $product->name }}">
                     @endif
                 </div>
             </div>
