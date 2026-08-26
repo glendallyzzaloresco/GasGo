@@ -827,6 +827,12 @@
         $navCartCount = Auth::check()
             ? \App\Models\Cart::where('user_id', Auth::id())->sum('quantity')
             : collect(session('cart', []))->sum(fn ($qty) => (int) $qty);
+        $industryNoun = $homepageSettings->industry_noun ?? 'LPG Tanks';
+        $isWater = str_contains(strtolower($industryNoun), 'water');
+        $isFood = str_contains(strtolower($industryNoun), 'food') || str_contains(strtolower($industryNoun), 'meal');
+        $isAppliance = str_contains(strtolower($industryNoun), 'appliance');
+        $nicheIcon = $isWater ? 'fas fa-tint' : ($isFood ? 'fas fa-utensils' : ($isAppliance ? 'fas fa-blender' : 'fas fa-fire'));
+        $nicheColor = $isWater ? 'var(--color-accent, #00b4d8)' : ($isFood ? 'var(--color-accent, #ff922b)' : ($isAppliance ? 'var(--color-accent, #15aabf)' : 'var(--gasgo-orange, #f7941d)'));
     @endphp
 
     <!-- Navbar -->
@@ -834,7 +840,16 @@
     <nav class="navbar navbar-expand-lg navbar-gasgo">
         <div class="container">
             <a class="navbar-brand" href="{{ url('/') }}">
-                <img data-theme-logo src="{{ $homepageSettings->navbar_logo_url }}" alt="{{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }} Icon">
+                @if(!empty($homepageSettings->navbar_logo_path))
+                    <img data-theme-logo src="{{ $homepageSettings->navbar_logo_url }}" alt="{{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }} Icon" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';">
+                    <span class="brand-avatar-badge" style="display:none;width:34px;height:34px;border-radius:8px;background:{{ $nicheColor }};color:#fff;align-items:center;justify-content:center;font-size:1rem;margin-right:8px;">
+                        <i class="{{ $nicheIcon }}"></i>
+                    </span>
+                @else
+                    <span class="brand-avatar-badge" style="display:inline-flex;width:34px;height:34px;border-radius:8px;background:{{ $nicheColor }};color:#fff;align-items:center;justify-content:center;font-size:1rem;margin-right:8px;">
+                        <i class="{{ $nicheIcon }}"></i>
+                    </span>
+                @endif
                 <span class="brand-text">{{ $homepageSettings->brand_name_primary ?? 'Gas' }}<span class="go">{{ $homepageSettings->brand_name_accent ?? 'Go' }}</span></span>
             </a>
             

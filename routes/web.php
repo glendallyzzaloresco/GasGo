@@ -268,6 +268,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
         Route::get('/{inventory}/edit', [InventoryController::class, 'edit'])->name('admin.inventory.edit');
         Route::put('/{inventory}', [InventoryController::class, 'update'])->name('admin.inventory.update');
         Route::post('/{inventory}/adjust', [InventoryController::class, 'adjust'])->name('admin.inventory.adjust');
+        Route::post('/freebies/{freebie}/adjust', [InventoryController::class, 'adjustFreebie'])->name('admin.inventory.freebies.adjust');
         Route::post('/movements/{movement}/mark-returned', [InventoryController::class, 'markCylinderReturned'])->name('admin.inventory.movement.mark-returned');
 
         // Inventory Movements Ledger

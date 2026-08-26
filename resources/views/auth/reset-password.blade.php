@@ -171,12 +171,24 @@
                 </div>
 
                 <div class="form-floating-gasgo">
-                    <label>New Password</label>
+                    <label>New Password <span class="text-danger">*</span></label>
                     <div class="password-field-wrapper">
-                        <input type="password" name="password" placeholder="Enter new password (min. 8 characters)" class="@error('password') is-invalid @enderror" autocomplete="new-password" required minlength="8">
+                        <input type="password" name="password" id="resetPasswordInput" placeholder="New strong password" class="@error('password') is-invalid @enderror" autocomplete="new-password" required minlength="8" oninput="checkResetPasswordStrength(this.value)">
                         <button type="button" class="password-toggle-btn" onclick="togglePassword(this)">
                             <i class="fas fa-eye"></i>
                         </button>
+                    </div>
+                    <div id="resetPwStrengthBar" style="height:5px;border-radius:3px;background:#e9ecef;margin-top:6px;overflow:hidden;display:none;">
+                        <div id="resetPwStrengthFill" style="height:100%;width:0%;background:#dc3545;transition:width .3s ease, background .3s ease;"></div>
+                    </div>
+                    <small id="resetPwStrengthText" style="font-size:.75rem;display:block;margin-top:3px;font-weight:600;"></small>
+                    <div id="resetPwRules" class="password-rules-box mt-2 p-2 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;font-size:0.75rem;display:none;">
+                        <div class="row g-1">
+                            <div class="col-6" id="reset-rule-length"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>8+ characters</div>
+                            <div class="col-6" id="reset-rule-case"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>Upper & lowercase</div>
+                            <div class="col-6" id="reset-rule-number"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>At least 1 number</div>
+                            <div class="col-6" id="reset-rule-symbol"><i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>At least 1 symbol</div>
+                        </div>
                     </div>
                     @error('password')
                         <div class="field-error">{{ $message }}</div>
@@ -184,13 +196,14 @@
                 </div>
 
                 <div class="form-floating-gasgo">
-                    <label>Confirm New Password</label>
+                    <label>Confirm New Password <span class="text-danger">*</span></label>
                     <div class="password-field-wrapper">
-                        <input type="password" name="password_confirmation" placeholder="Confirm your new password" autocomplete="new-password" required minlength="8">
+                        <input type="password" name="password_confirmation" id="resetPasswordConfirmInput" placeholder="Confirm your new password" autocomplete="new-password" required minlength="8" oninput="checkResetPasswordMatch()">
                         <button type="button" class="password-toggle-btn" onclick="togglePassword(this)">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
+                    <small id="resetPwMatchText" style="font-size:.75rem;display:none;margin-top:4px;"></small>
                 </div>
 
                 <button type="submit" class="btn-auth">
@@ -231,6 +244,88 @@
             input.type = 'password';
             icon.classList.remove('fa-eye-slash');
             icon.classList.add('fa-eye');
+        }
+    }
+
+    function checkResetPasswordStrength(value) {
+        const bar = document.getElementById('resetPwStrengthBar');
+        const fill = document.getElementById('resetPwStrengthFill');
+        const text = document.getElementById('resetPwStrengthText');
+        const rules = document.getElementById('resetPwRules');
+
+        if (!value) {
+            if (bar) bar.style.display = 'none';
+            if (rules) rules.style.display = 'none';
+            if (text) text.textContent = '';
+            checkResetPasswordMatch();
+            return;
+        }
+
+        if (bar) bar.style.display = 'block';
+        if (rules) rules.style.display = 'block';
+
+        const hasLength = value.length >= 8;
+        const hasCase = /[a-z]/.test(value) && /[A-Z]/.test(value);
+        const hasNumber = /\d/.test(value);
+        const hasSymbol = /[^A-Za-z0-9]/.test(value);
+
+        updateResetRule('reset-rule-length', hasLength);
+        updateResetRule('reset-rule-case', hasCase);
+        updateResetRule('reset-rule-number', hasNumber);
+        updateResetRule('reset-rule-symbol', hasSymbol);
+
+        let score = 0;
+        if (hasLength) score++;
+        if (hasCase) score++;
+        if (hasNumber) score++;
+        if (hasSymbol) score++;
+
+        const allPassed = hasLength && hasCase && hasNumber && hasSymbol;
+        if (allPassed) {
+            fill.style.width = '100%';
+            fill.style.background = '#28a745';
+            text.textContent = 'Strong password (All requirements met)';
+            text.style.color = '#28a745';
+        } else {
+            const percent = Math.max(25, score * 25);
+            fill.style.width = percent + '%';
+            fill.style.background = score <= 2 ? '#dc3545' : '#f7941d';
+            text.textContent = score <= 2 ? 'Weak password (requirements missing)' : 'Moderate password';
+            text.style.color = score <= 2 ? '#dc3545' : '#f7941d';
+        }
+
+        checkResetPasswordMatch();
+    }
+
+    function updateResetRule(id, passed) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const text = el.textContent.trim().replace(/^✔\s*|^\s*/, '');
+        if (passed) {
+            el.innerHTML = `<i class="fas fa-check-circle text-success me-1"></i><span class="text-success fw-semibold">${text}</span>`;
+        } else {
+            el.innerHTML = `<i class="fas fa-circle text-muted me-1" style="font-size:.5rem;"></i>${text}`;
+        }
+    }
+
+    function checkResetPasswordMatch() {
+        const pw = document.getElementById('resetPasswordInput')?.value || '';
+        const confirm = document.getElementById('resetPasswordConfirmInput')?.value || '';
+        const matchText = document.getElementById('resetPwMatchText');
+        if (!matchText) return;
+
+        if (!confirm) {
+            matchText.style.display = 'none';
+            return;
+        }
+
+        matchText.style.display = 'block';
+        if (pw === confirm) {
+            matchText.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>Passwords match';
+            matchText.style.color = '#28a745';
+        } else {
+            matchText.innerHTML = '<i class="fas fa-times-circle text-danger me-1"></i>Passwords do not match';
+            matchText.style.color = '#dc3545';
         }
     }
 </script>

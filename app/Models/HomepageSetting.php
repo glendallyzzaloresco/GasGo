@@ -183,11 +183,16 @@ class HomepageSetting extends Model
             return $fallback ? asset($fallback) : null;
         }
 
-        $normalized = ltrim($path, '/');
-
-        if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
-            return $path;
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $parsed = parse_url($path);
+            $host = $parsed['host'] ?? '';
+            if (! in_array($host, ['localhost', '127.0.0.1', '::1'], true)) {
+                return $path;
+            }
+            $path = $parsed['path'] ?? '';
         }
+
+        $normalized = ltrim($path, '/');
 
         if (str_starts_with($normalized, 'images/')) {
             return asset($normalized);
@@ -204,6 +209,10 @@ class HomepageSetting extends Model
 
             if (file_exists(storage_path('app/public/' . $normalized))) {
                 return asset('storage/' . $normalized);
+            }
+
+            if (config('filesystems.default') === 's3') {
+                return \Illuminate\Support\Facades\Storage::disk('s3')->url($normalized);
             }
 
             if (\Illuminate\Support\Facades\Storage::disk('public')->exists($normalized)) {

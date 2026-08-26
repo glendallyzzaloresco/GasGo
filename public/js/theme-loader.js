@@ -30,10 +30,30 @@ window.loadTheme = async function loadTheme() {
 
         const logoElements = document.querySelectorAll('[data-theme-logo]');
         if (logoElements.length && (theme.logoUrl || theme.logo_url)) {
-            const logoUrl = theme.logoUrl || theme.logo_url;
-            logoElements.forEach((element) => {
-                element.src = logoUrl;
-            });
+            let logoUrl = theme.logoUrl || theme.logo_url;
+            if (typeof logoUrl === 'string' && logoUrl.trim() !== '') {
+                try {
+                    if (logoUrl.startsWith('http://') || logoUrl.startsWith('https://')) {
+                        const parsed = new URL(logoUrl);
+                        if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+                            let cleanPath = parsed.pathname;
+                            logoUrl = (basePath || '') + cleanPath;
+                        }
+                    } else if (logoUrl.startsWith('/')) {
+                        logoUrl = (basePath || '') + logoUrl;
+                    }
+                } catch (e) {
+                    // Keep existing logoUrl
+                }
+
+                logoElements.forEach((element) => {
+                    element.onerror = function () {
+                        this.onerror = null;
+                        this.src = (basePath || '') + '/images/logo-gasgo.png';
+                    };
+                    element.src = logoUrl;
+                });
+            }
         }
 
         document.dispatchEvent(new CustomEvent('gasgo:theme-loaded', { detail: theme }));

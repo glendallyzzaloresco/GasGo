@@ -351,20 +351,17 @@
                                     </div>
                                     <p class="text-muted small mb-3">Click what you sell to instantly auto-tune store branding, slogans, color palettes, and headlines:</p>
                                     <div class="d-flex flex-wrap gap-2">
-                                        <button type="button" class="btn btn-preset-card btn-preset" data-preset="water">
-                                            <i class="fas fa-tint text-info fs-6"></i> Water Refilling Station
-                                        </button>
                                         <button type="button" class="btn btn-preset-card btn-preset" data-preset="lpg">
                                             <i class="fas fa-fire text-warning fs-6"></i> LPG Gas Business
                                         </button>
-                                        <button type="button" class="btn btn-preset-card btn-preset" data-preset="grocery">
-                                            <i class="fas fa-shopping-basket text-success fs-6"></i> Grocery & Fresh Mart
+                                        <button type="button" class="btn btn-preset-card btn-preset" data-preset="water">
+                                            <i class="fas fa-tint text-info fs-6"></i> Water Refilling Station
                                         </button>
-                                        <button type="button" class="btn btn-preset-card btn-preset" data-preset="pharmacy">
-                                            <i class="fas fa-pills text-danger fs-6"></i> Pharmacy & Medical
+                                        <button type="button" class="btn btn-preset-card btn-preset" data-preset="foods">
+                                            <i class="fas fa-utensils text-danger fs-6"></i> Foods & Meals
                                         </button>
-                                        <button type="button" class="btn btn-preset-card btn-preset" data-preset="hardware">
-                                            <i class="fas fa-tools text-secondary fs-6"></i> Hardware & Supplies
+                                        <button type="button" class="btn btn-preset-card btn-preset" data-preset="appliances">
+                                            <i class="fas fa-blender text-success fs-6"></i> Appliances
                                         </button>
                                     </div>
                                 </div>
@@ -765,19 +762,6 @@
 
         // Niche Preset Presets Map
         const presets = {
-            water: {
-                brand_primary: 'Aqua', brand_accent: 'Pure', industry_noun: 'Purified Water',
-                prefix: 'Pure, Clean', highlight: 'Water Delivery', suffix: 'to Your Doorstep',
-                subtitle: 'Fresh, purified drinking water delivered directly to your home or office.',
-                button_label: 'Order Water Now', products_title: 'Our Water Products',
-                products_subtitle: 'Choose from 5-Gallon round, slim containers, and bottled water',
-                promo_title: 'Get 1 FREE Water Gallon Refill on First Order!',
-                promo_subtitle: 'Register today and start earning water loyalty points.',
-                footer_desc: 'Your trusted neighborhood water refilling station providing 100% pure, safe drinking water.',
-                how_title: 'How It Works', how_sub: 'Order purified water in 4 simple steps',
-                why_title: 'Why Choose AquaPure?', why_sub: 'Certified 21-stage purification process',
-                primary_color: '#0088cc', accent_color: '#00b4d8', bg_color: '#f0f9ff', sidebar_color: '#03045e'
-            },
             lpg: {
                 brand_primary: 'Gas', brand_accent: 'Go', industry_noun: 'LPG Tanks',
                 prefix: 'Fast, Reliable', highlight: 'LPG Delivery', suffix: 'to Your Door',
@@ -791,44 +775,44 @@
                 why_title: 'Why Choose Us?', why_sub: 'Certified products with guaranteed safety',
                 primary_color: '#1a6db0', accent_color: '#f7941d', bg_color: '#f4f7fb', sidebar_color: '#111b35'
             },
-            grocery: {
-                brand_primary: 'Quick', brand_accent: 'Mart', industry_noun: 'Groceries',
-                prefix: 'Fresh & Daily', highlight: 'Grocery Delivery', suffix: 'in 30 Minutes',
-                subtitle: 'Shop fresh produce, snacks, and daily household essentials delivered fast.',
-                button_label: 'Shop Fresh Mart', products_title: 'Grocery Essentials',
-                products_subtitle: 'Quality fresh fruits, vegetables, snacks, and kitchen items',
-                promo_title: '15% OFF Your First Grocery Basket!',
-                promo_subtitle: 'Sign up now and enjoy instant discounts on fresh groceries.',
-                footer_desc: 'Your online supermart for fresh food, drinks, and everyday essentials.',
-                how_title: 'Easy Grocery Shopping', how_sub: 'Shop fresh items in 4 quick steps',
-                why_title: 'Why Shop with QuickMart?', why_sub: 'Farm-fresh guarantee & superfast rider delivery',
-                primary_color: '#2b8a3e', accent_color: '#f59f00', bg_color: '#f8fbf8', sidebar_color: '#1b4332'
+            water: {
+                brand_primary: 'Aqua', brand_accent: 'Pure', industry_noun: 'Purified Water',
+                prefix: 'Pure, Clean', highlight: 'Water Delivery', suffix: 'to Your Doorstep',
+                subtitle: 'Fresh, purified drinking water delivered directly to your home or office.',
+                button_label: 'Order Water Now', products_title: 'Our Water Products',
+                products_subtitle: 'Choose from 5-Gallon round, slim containers, and bottled water',
+                promo_title: 'Get 1 FREE Water Gallon Refill on First Order!',
+                promo_subtitle: 'Register today and start earning water loyalty points.',
+                footer_desc: 'Your trusted neighborhood water refilling station providing 100% pure, safe drinking water.',
+                how_title: 'How It Works', how_sub: 'Order purified water in 4 simple steps',
+                why_title: 'Why Choose AquaPure?', why_sub: 'Certified 21-stage purification process',
+                primary_color: '#0088cc', accent_color: '#00b4d8', bg_color: '#f0f9ff', sidebar_color: '#03045e'
             },
-            pharmacy: {
-                brand_primary: 'Medi', brand_accent: 'Care', industry_noun: 'Medicine',
-                prefix: 'Trusted & Fast', highlight: 'Pharmacy Delivery', suffix: 'Straight to You',
-                subtitle: 'Order vitamins, OTC medicines, and health essentials safely online.',
-                button_label: 'Browse Medicines', products_title: 'Healthcare Products',
-                products_subtitle: 'Certified pharmaceutical products, vitamins, and hygiene supplies',
-                promo_title: 'Free Delivery on All Health Essentials!',
-                promo_subtitle: 'Register now for prescription reminders and rewards.',
-                footer_desc: 'Licensed online drugstore bringing genuine medicines to your doorstep.',
-                how_title: 'How To Order', how_sub: 'Get your health supplies in 4 safe steps',
-                why_title: 'Why MediCare?', why_sub: 'Licensed pharmacists & 100% authentic medicine guaranteed',
-                primary_color: '#d9480f', accent_color: '#0ca678', bg_color: '#fffaf8', sidebar_color: '#495057'
+            foods: {
+                brand_primary: 'Food', brand_accent: 'Go', industry_noun: 'Food & Meals',
+                prefix: 'Hot, Fresh', highlight: 'Food & Meals', suffix: 'Delivered to You',
+                subtitle: 'Delicious meals, snacks, and refreshing drinks delivered hot and fast to your doorstep.',
+                button_label: 'Order Food Now', products_title: 'Our Food & Menu',
+                products_subtitle: 'Freshly cooked rice meals, tasty snacks, and refreshing beverages',
+                promo_title: 'Free Drink with Every Meal Order!',
+                promo_subtitle: 'Sign up now and start earning food reward points with every dish.',
+                footer_desc: 'Your favorite local food & meal delivery service. Freshly cooked with love.',
+                how_title: 'Order Food in 4 Steps', how_sub: 'Pick your favorites and get them delivered hot & fast',
+                why_title: 'Why Choose FoodGo?', why_sub: 'Hot & fresh ingredients with express delivery',
+                primary_color: '#e03131', accent_color: '#ff922b', bg_color: '#fff5f5', sidebar_color: '#2b1d1d'
             },
-            hardware: {
-                brand_primary: 'Build', brand_accent: 'Pro', industry_noun: 'Hardware',
-                prefix: 'Heavy Duty', highlight: 'Hardware & Tools', suffix: 'Delivered to Site',
-                subtitle: 'High quality construction tools, plumbing, electrical supplies, and hardware.',
-                button_label: 'Browse Hardware Catalog', products_title: 'Hardware & Tools',
-                products_subtitle: 'Quality tools, fasteners, electrical, and plumbing supplies',
-                promo_title: 'Get Contractor Discounts Today!',
-                promo_subtitle: 'Register your account for trade pricing and fast site delivery.',
-                footer_desc: 'Your reliable supplier for construction, electrical, and plumbing materials.',
-                how_title: 'Ordering Hardware Made Simple', how_sub: 'Get site supplies in 4 easy steps',
-                why_title: 'Why BuildPro Supplies?', why_sub: 'Industrial quality grade tools & fast job site delivery',
-                primary_color: '#343a40', accent_color: '#e65c00', bg_color: '#f8f9fa', sidebar_color: '#212529'
+            appliances: {
+                brand_primary: 'Appliance', brand_accent: 'Hub', industry_noun: 'Appliances',
+                prefix: 'Durable, Modern', highlight: 'Appliances & Stoves', suffix: 'Delivered Home',
+                subtitle: 'High quality gas stoves, burners, safety regulators, and kitchen appliances.',
+                button_label: 'Explore Appliances', products_title: 'Our Appliances',
+                products_subtitle: 'Single/double burner stoves, heavy-duty regulators, hoses, and kitchen tools',
+                promo_title: '10% OFF Your First Kitchen Appliance Order!',
+                promo_subtitle: 'Create an account for official warranty tracking and special discounts.',
+                footer_desc: 'Your trusted source for quality gas stoves and certified appliances.',
+                how_title: 'How It Works', how_sub: 'Order appliances in 4 simple steps',
+                why_title: 'Why Choose ApplianceHub?', why_sub: 'Certified authentic brands with reliable warranty',
+                primary_color: '#0ca678', accent_color: '#15aabf', bg_color: '#e6fcf5', sidebar_color: '#083329'
             }
         };
 

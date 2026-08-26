@@ -306,14 +306,18 @@
     <div class="filter-bar" data-aos="fade-up">
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <span class="fw-bold text-muted me-2"><i class="fas fa-filter me-1"></i>Filter:</span>
-            <a href="{{ route('customer.products') }}" class="filter-btn {{ !request('category') ? 'active' : '' }}">All</a>
+            <a href="javascript:void(0)" onclick="filterProducts('all', this)" class="filter-btn {{ !request('category') || request('category') === 'all' ? 'active' : '' }}"><i class="fas fa-th-large me-1"></i>All</a>
             @if(isset($categories) && count($categories) > 0)
                 @foreach($categories as $cat)
-                    <a href="{{ route('customer.products', ['category' => strtolower($cat)]) }}" class="filter-btn {{ strtolower(request('category')) === strtolower($cat) ? 'active' : '' }}">{{ ucfirst($cat) }}</a>
+                    @php
+                        $catSlug = is_array($cat) ? ($cat['slug'] ?? '') : strtolower((string)$cat);
+                        $catName = is_array($cat) ? ($cat['name'] ?? ucfirst($catSlug)) : ucfirst($catSlug);
+                        $catIcon = is_array($cat) ? ($cat['icon_class'] ?? 'fas fa-tag') : 'fas fa-tag';
+                    @endphp
+                    <a href="javascript:void(0)" onclick="filterProducts('{{ $catSlug }}', this)" class="filter-btn {{ strtolower(request('category', '')) === $catSlug ? 'active' : '' }}">
+                        <i class="{{ $catIcon }} me-1"></i>{{ $catName }}
+                    </a>
                 @endforeach
-            @else
-                <a href="{{ route('customer.products', ['category' => 'tank']) }}" class="filter-btn {{ strtolower(request('category')) === 'tank' ? 'active' : '' }}">Primary</a>
-                <a href="{{ route('customer.products', ['category' => 'accessories']) }}" class="filter-btn {{ strtolower(request('category')) === 'accessories' ? 'active' : '' }}">Accessories</a>
             @endif
             <div class="ms-auto">
                 <input type="text" class="form-control form-control-gasgo" placeholder="Search products..." id="searchProduct" onkeyup="searchProducts(this.value)" style="padding:10px 18px;font-size:.9rem;">
@@ -325,8 +329,9 @@
     <div class="row g-4" id="productGrid">
         @forelse($products as $index => $product)
             @php
-                $rawCat = $product->category ? trim($product->category) : ($homepageSettings->industry_noun ?? 'Product');
-                $categorySlug = strtolower($rawCat);
+                $categorySlug = strtolower(trim((string) ($product->category ?? 'tank')));
+                $categoryLabel = $product->category_label;
+                $categoryIcon = $product->category_icon;
                 
                 $inStock = (int) ($product->quantity_on_hand ?? 0) > 0;
                 $img = $product->resolved_image;
@@ -335,16 +340,16 @@
                 <a href="{{ route('customer.product.show', $product->id) }}" style="text-decoration: none; color: inherit;">
                     <div class="product-card">
                         <div class="product-img">
-                            <span class="product-badge">{{ ucfirst($rawCat) }}</span>
+                            <span class="product-badge" style="background:{{ $product->category_color }};"><i class="{{ $categoryIcon }} me-1"></i>{{ $categoryLabel }}</span>
                             @if($img)
-                                <img src="{{ $img }}" alt="{{ $product->name }}" class="img-fluid">
+                                <img src="{{ $img }}" alt="{{ $product->name }}" class="img-fluid" onerror="this.onerror=null;this.src='{{ asset('images/default-product.png') }}';">
                             @else
-                                <span class="text-muted small">No image available</span>
+                                <img src="{{ asset('images/default-product.png') }}" alt="{{ $product->name }}" class="img-fluid">
                             @endif
                         </div>
                         <div class="product-body">
                             <h5>{{ $product->name }}</h5>
-                            <p class="product-weight"><i class="fas fa-weight-hanging me-1"></i>{{ $product->weight ?: ucfirst($rawCat) }}</p>
+                            <p class="product-weight"><i class="fas fa-tag me-1"></i>{{ $product->weight ?: $categoryLabel }}</p>
                             <p class="product-stock {{ $inStock ? 'in' : 'out' }}"><i class="fas {{ $inStock ? 'fa-check-circle' : 'fa-times-circle' }} me-1"></i>{{ $inStock ? 'In Stock' : 'Out of Stock' }}</p>
                             <hr>
                             <div class="d-flex justify-content-between align-items-center gap-2" style="margin-bottom: 12px;">

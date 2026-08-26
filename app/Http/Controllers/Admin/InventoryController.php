@@ -613,9 +613,47 @@ class InventoryController extends Controller
             );
         }
 
+
         return response($csv, 200, [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="inventory-' . date('Y-m-d') . '.csv"',
         ]);
+    }
+
+    /**
+     * Adjust stock for freebies (Stock In, Stock Out, Damage, Return, Adjustment)
+     */
+    public function adjustFreebie(Request $request, Freebie $freebie)
+    {
+        $validated = $request->validate([
+            'quantity_change' => 'required|integer|min:1',
+            'type' => 'required|in:stock_in,stock_out,return,damage,adjustment',
+            'reference' => 'required|string|max:100',
+            'notes' => 'required|string|max:255',
+        ]);
+
+        $type = $validated['type'];
+        $quantityChange = (int) $validated['quantity_change'];
+        $oldStock = (int) ($freebie->stock ?? 0);
+
+        if ($type === 'stock_in' || $type === 'return') {
+            $freebie->increment('stock', $quantityChange);
+        } elseif ($type === 'stock_out' || $type === 'damage') {
+            if ($oldStock < $quantityChange) {
+                return back()->with('error', 'Insufficient freebie stock for this adjustment (Available: ' . $oldStock . ').');
+            }
+            $freebie->decrement('stock', $quantityChange);
+        } elseif ($type === 'adjustment') {
+            $freebie->update(['stock' => $quantityChange]);
+        }
+
+        \App\Services\ActivityLogger::log(
+            'inventory',
+            'adjust_freebie',
+            "Adjusted stock for freebie: {$freebie->name} ({$type}, Qty: {$quantityChange})",
+            ['freebie_id' => $freebie->id, 'reference' => $validated['reference'], 'type' => $type]
+        );
+
+        return back()->with('success', "Stock for freebie '{$freebie->name}' updated successfully.");
     }
 }

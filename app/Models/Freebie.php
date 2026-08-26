@@ -38,11 +38,18 @@ class Freebie extends Model
     public function getResolvedImageAttribute()
     {
         if ($this->image) {
-            if (str_starts_with($this->image, 'http://') || str_starts_with($this->image, 'https://')) {
-                return $this->image;
+            $path = $this->image;
+            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                $parsed = parse_url($path);
+                $host = $parsed['host'] ?? '';
+                if (in_array($host, ['localhost', '127.0.0.1', '::1'], true)) {
+                    $path = $parsed['path'] ?? '';
+                } else {
+                    return $path;
+                }
             }
 
-            $normalized = ltrim($this->image, '/');
+            $normalized = ltrim($path, '/');
 
             if (str_starts_with($normalized, 'images/')) {
                 return asset($normalized);
@@ -50,6 +57,10 @@ class Freebie extends Model
 
             if (str_starts_with($normalized, 'storage/')) {
                 $normalized = substr($normalized, 8);
+            }
+
+            if (config('filesystems.default') === 's3') {
+                return \Illuminate\Support\Facades\Storage::disk('s3')->url($normalized);
             }
 
             if (file_exists(public_path('storage/' . $normalized))) {

@@ -21,32 +21,23 @@ class ProductController extends Controller
             ->where('is_active', true)
             ->where('price', '>', 0);
 
-        // Apply category filter if provided (case-insensitive & handles aliases)
+        $categories = \App\Services\CategoryService::getCategoriesForCurrentNiche();
+        $categorySlugs = collect($categories)->pluck('slug')->all();
+
+        // Apply category filter if provided
         $category = $request->query('category');
-        if ($category) {
+        if ($category && $category !== 'all') {
             $catLower = strtolower(trim($category));
-            $targetSlug = match ($catLower) {
-                'tank', 'tanks', 'cylinder', 'cylinders' => 'lpg-tanks',
-                'accessories', 'accessory' => 'accessories',
-                'appliances', 'appliance' => 'appliances',
-                default => \Illuminate\Support\Str::slug($catLower),
-            };
-
-            $matchedCategory = \App\Models\Category::where('slug', $targetSlug)
-                ->orWhereRaw('LOWER(name) = ?', [$catLower])
-                ->first();
-
-            if ($matchedCategory) {
-                $query->where('category_id', $matchedCategory->id);
-            }
+            $query->where(function ($q) use ($catLower) {
+                $q->where('category', $catLower)
+                  ->orWhereHas('categoryModel', function ($sq) use ($catLower) {
+                      $sq->where('slug', $catLower)->orWhereRaw('LOWER(name) = ?', [$catLower]);
+                  });
+            });
         }
 
         $products = $query->orderBy('name')->get();
         $activeCategory = $category;
-
-        $categories = \App\Models\Category::where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name');
 
         return view('customer.product', compact('products', 'activeCategory', 'categories'));
     }
@@ -99,15 +90,20 @@ class ProductController extends Controller
             })
             ->values();
 
-        return view('admin.products', compact('products', 'freebies', 'productCategories'));
+        $nicheConfig = \App\Services\CategoryService::getCurrentNicheConfig();
+        $nicheCategories = \App\Services\CategoryService::getCategoriesForCurrentNiche();
+
+        return view('admin.products', compact('products', 'freebies', 'productCategories', 'nicheConfig', 'nicheCategories'));
     }
 
     // Admin: store a new product
     public function store(Request $request)
     {
+        $allowedCats = implode(',', \App\Services\CategoryService::getAllAllowedCategorySlugs());
+
         $validated = $request->validate([
             'name'           => 'required|string|max:255',
-            'category'       => 'required|in:tank,accessories,appliances,freebie',
+            'category'       => "required|in:{$allowedCats}",
             'requires_exchange'    => 'nullable|boolean',
             'description'    => 'nullable|string',
             'price'          => 'nullable|numeric|min:0',
@@ -228,9 +224,11 @@ class ProductController extends Controller
     // Admin: update an existing product
     public function update(Request $request, Product $product)
     {
+        $allowedCats = implode(',', \App\Services\CategoryService::getAllAllowedCategorySlugs());
+
         $validated = $request->validate([
             'name'           => 'required|string|max:255',
-            'category'       => 'required|in:tank,accessories,appliances,freebie',
+            'category'       => "required|in:{$allowedCats}",
             'requires_exchange'    => 'nullable|boolean',
             'description'    => 'nullable|string',
             'price'          => 'nullable|numeric|min:0',

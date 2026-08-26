@@ -31,7 +31,7 @@ return new class extends Migration
             'accentColor' => '#f7941d',
             'backgroundColor' => '#f4f7fb',
             'sidebarBackground' => '#111b35',
-            'logoUrl' => asset('images/logo-gasgo.png'),
+            'logoUrl' => '/images/logo-gasgo.png',
             'footerDescription' => 'Your trusted partner for fast, reliable LPG delivery. Track your orders in real-time and earn rewards with every purchase.',
             'contactAddress' => 'PNR Site Estacion San Miguel Calasiao Pangasinan',
             'contactPhone' => '+63 912 345 6789',

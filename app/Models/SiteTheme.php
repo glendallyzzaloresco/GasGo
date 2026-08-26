@@ -30,6 +30,54 @@ class SiteTheme extends Model
 
     public const UPDATED_AT = 'updated_at';
 
+    public function getLogoUrlAttribute(?string $value): ?string
+    {
+        try {
+            $setting = HomepageSetting::first();
+            if ($setting && !empty($setting->navbar_logo_path)) {
+                return $setting->navbar_logo_url;
+            }
+        } catch (\Throwable $e) {
+        }
+
+        if (! $value) {
+            return asset('images/logo-gasgo.png');
+        }
+
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            $parsed = parse_url($value);
+            $host = $parsed['host'] ?? '';
+            if (! in_array($host, ['localhost', '127.0.0.1', '::1'], true)) {
+                return $value;
+            }
+            $value = $parsed['path'] ?? '';
+        }
+
+        $normalized = ltrim((string) $value, '/');
+
+        if (str_starts_with($normalized, 'images/')) {
+            return asset($normalized);
+        }
+
+        if (str_starts_with($normalized, 'storage/')) {
+            $normalized = substr($normalized, 8);
+        }
+
+        if (config('filesystems.default') === 's3') {
+            return \Illuminate\Support\Facades\Storage::disk('s3')->url($normalized);
+        }
+
+        if (file_exists(public_path('storage/' . $normalized)) || file_exists(storage_path('app/public/' . $normalized))) {
+            return asset('storage/' . $normalized);
+        }
+
+        if (file_exists(public_path($normalized))) {
+            return asset($normalized);
+        }
+
+        return asset('images/logo-gasgo.png');
+    }
+
     public static function singleton(): self
     {
         $theme = static::query()->first();

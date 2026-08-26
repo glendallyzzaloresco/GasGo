@@ -449,7 +449,7 @@
             </div>
             @if($heroProductImage)
                 <div class="col-lg-6 text-center mt-4 mt-lg-0" data-aos="fade-left">
-                    <img src="{{ $heroProductImage }}" alt="Featured Product" class="img-fluid mx-auto d-block" style="max-height:380px;border-radius:20px;">
+                    <img src="{{ $heroProductImage }}" alt="Featured Product" class="img-fluid mx-auto d-block" style="max-height:380px;border-radius:20px;" onerror="this.onerror=null;this.src='{{ asset('images/default-product.png') }}';">
                 </div>
             @endif
         </div>
@@ -492,12 +492,12 @@
                     <div class="product-card">
                         <div class="product-img">
                             @if($img)
-                                <img src="{{ $img }}" alt="{{ $product->name }}" class="img-fluid">
+                                <img src="{{ $img }}" alt="{{ $product->name }}" class="img-fluid" onerror="this.onerror=null;this.src='{{ asset('images/default-product.png') }}';">
                             @else
-                                <span class="text-muted small">No image available</span>
+                                <img src="{{ asset('images/default-product.png') }}" alt="{{ $product->name }}" class="img-fluid">
                             @endif
                             @if($product->category)
-                                <span class="product-badge {{ strtolower($product->category) === 'accessories' ? 'accessory' : '' }}">{{ $product->category }}</span>
+                                <span class="product-badge" style="background:{{ $product->category_color }};"><i class="{{ $product->category_icon }} me-1"></i>{{ $product->category_label }}</span>
                             @endif
                         </div>
                         <div class="product-body">

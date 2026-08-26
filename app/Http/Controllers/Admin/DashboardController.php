@@ -27,9 +27,6 @@ class DashboardController extends Controller
     public function dashboard()
     {
         $totalOrders = Order::count();
-        $revenue = Order::whereHas('delivery', function ($query) {
-            $query->where('status', 'delivered');
-        })->selectRaw('COALESCE(SUM(subtotal - discount), 0) as revenue')->value('revenue') ?? 0;
         $pendingOrders = Order::where('status', 'pending')->count();
         $totalCustomers = User::where('role', 'customer')->count();
 
@@ -106,7 +103,6 @@ class DashboardController extends Controller
 
         return view('admin.dashboard', compact(
             'totalOrders',
-            'revenue',
             'pendingOrders',
             'totalCustomers',
             'orders',
@@ -573,7 +569,7 @@ class DashboardController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')],
-            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
+            'password' => ['required', 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
         ]);
 
         $newAdmin = User::create([
@@ -597,12 +593,13 @@ class DashboardController extends Controller
         ]);
 
         $homepageSettings = HomepageSetting::singleton();
+        $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
 
         if ($request->hasFile('gcash_image')) {
             if (!empty($homepageSettings->gcash_image_path)) {
-                Storage::delete($homepageSettings->gcash_image_path);
+                Storage::disk($disk)->delete($homepageSettings->gcash_image_path);
             }
-            $validated['gcash_image_path'] = $request->file('gcash_image')->store('payment-methods', 'public');
+            $validated['gcash_image_path'] = $request->file('gcash_image')->store('payment-methods', $disk);
         }
 
         unset($validated['gcash_image']);
@@ -624,9 +621,10 @@ class DashboardController extends Controller
             'payment_methods.*.image' => 'nullable|image|max:2048',
         ]);
 
+        $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
         $uploadedMethods = $request->file('payment_methods', []);
         $methods = collect($validated['payment_methods'] ?? [])
-            ->map(function ($method, $index) use ($uploadedMethods) {
+            ->map(function ($method, $index) use ($uploadedMethods, $disk) {
                 $label = trim((string) ($method['label'] ?? ''));
                 $key = Str::of($label)
                     ->lower()
@@ -642,9 +640,9 @@ class DashboardController extends Controller
                 $uploadedImage = data_get($uploadedMethods, $index . '.image');
                 if ($uploadedImage) {
                     if ($imagePath !== '') {
-                        Storage::delete($imagePath);
+                        Storage::disk($disk)->delete($imagePath);
                     }
-                    $imagePath = $uploadedImage->store('payment-methods', 'public');
+                    $imagePath = $uploadedImage->store('payment-methods', $disk);
                 }
 
                 return [
@@ -695,7 +693,7 @@ class DashboardController extends Controller
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => 'nullable|string|max:20',
-            'password' => ['nullable', 'confirmed', Password::min(8)->letters()->numbers()],
+            'password' => ['nullable', 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
         ]);
 
         $user->name = $validated['name'];

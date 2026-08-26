@@ -56,9 +56,11 @@ class SiteThemeController extends Controller
             'contactPhone' => $request->input('contactPhone', $theme->contactPhone),
         ];
 
+        $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+
         if ($request->hasFile('logo')) {
-            $logoPath = $request->file('logo')->store('theme', 'public');
-            $payload['logoUrl'] = Storage::url($logoPath);
+            $logoPath = $request->file('logo')->store('theme', $disk);
+            $payload['logoUrl'] = Storage::disk($disk)->url($logoPath);
         }
 
         $theme->fill($payload);

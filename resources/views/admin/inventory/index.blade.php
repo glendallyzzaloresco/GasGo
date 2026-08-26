@@ -413,6 +413,21 @@
 @section('content')
 <div class="container-fluid p-4">
     @php
+        $settings = \App\Models\HomepageSetting::first();
+        $industryNoun = $settings->industry_noun ?? 'LPG Tanks';
+        $nicheKey = \App\Services\CategoryService::detectNicheKey($industryNoun);
+        $isWaterNiche = ($nicheKey === 'water');
+        $isFoodNiche = ($nicheKey === 'foods');
+        $isApplianceNiche = ($nicheKey === 'appliances');
+
+        $fullStockLabel = $isWaterNiche ? 'Full Gallons' : ($isFoodNiche ? 'Menu Items' : ($isApplianceNiche ? 'In-Stock Units' : 'Full Tanks'));
+        $emptyStockLabel = $isWaterNiche ? 'Empty Gallons' : ($isFoodNiche ? 'Portions Sold' : ($isApplianceNiche ? 'Total Stocked' : 'Empty Tanks'));
+        $receivedTodayLabel = $isWaterNiche ? 'Full Gallons Received Today' : ($isFoodNiche ? 'Stock Units Received Today' : ($isApplianceNiche ? 'Units Restocked Today' : 'Full Cylinders Received Today'));
+        $releasedTodayLabel = $isWaterNiche ? 'Gallons Delivered Today' : ($isFoodNiche ? 'Orders Dispatched Today' : ($isApplianceNiche ? 'Units Dispatched / Sold Today' : 'Full Cylinders Released Today'));
+        $emptyReceivedTodayLabel = $isWaterNiche ? 'Empty Gallons Returned Today' : ($isFoodNiche ? 'Orders Completed Today' : ($isApplianceNiche ? 'Registered / In Service' : 'Empty Cylinders Received Today'));
+        $inventorySubtitle = $isWaterNiche ? 'Live stock overview by water container types and accessories.' : ($isFoodNiche ? 'Live stock overview by menu items, snacks, and beverages.' : ($isApplianceNiche ? 'Live stock overview by appliance models and parts.' : 'Live stock overview by product and cylinder size.'));
+        $movementSubtitle = $isWaterNiche ? 'Recent water container movements with refill and return flow details.' : ($isFoodNiche ? 'Recent food portion movements and dispatch history.' : ($isApplianceNiche ? 'Recent appliance replenishment and distribution flow details.' : 'Recent cylinder movements with full and empty flow details.'));
+
         $totalFullCylinders = (int) \App\Models\Inventory::where('status', '!=', 'discontinued')
             ->whereHas('product', function ($query) {
                 $query->where('is_active', true)->cylinders();
@@ -464,7 +479,7 @@
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <div class="text-uppercase small fw-semibold text-muted" style="font-size:0.7rem;"><i class="bi bi-box2-heart me-1"></i>Full Tanks</div>
+                            <div class="text-uppercase small fw-semibold text-muted" style="font-size:0.7rem;"><i class="bi bi-box2-heart me-1"></i>{{ $fullStockLabel }}</div>
                             <div class="h4 fw-bold mt-1 mb-0">{{ number_format($totalFullCylinders) }}</div>
                         </div>
                         <div class="rounded-circle bg-success-subtle p-2 text-success"><i class="bi bi-box2-heart fs-6"></i></div>
@@ -477,7 +492,7 @@
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <div class="text-uppercase small fw-semibold text-muted" style="font-size:0.7rem;"><i class="bi bi-bucket me-1"></i>Empty Tanks</div>
+                            <div class="text-uppercase small fw-semibold text-muted" style="font-size:0.7rem;"><i class="bi bi-bucket me-1"></i>{{ $emptyStockLabel }}</div>
                             <div class="h4 fw-bold mt-1 mb-0">{{ number_format($totalEmptyCylinders) }}</div>
                         </div>
                         <div class="rounded-circle bg-warning-subtle p-2 text-warning"><i class="bi bi-bucket fs-6"></i></div>
@@ -547,7 +562,7 @@
         <div class="col-12 col-md-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body p-3 text-center">
-                    <div class="text-muted small fw-semibold mb-1" style="font-size:0.75rem;">Full Cylinders Received Today</div>
+                    <div class="text-muted small fw-semibold mb-1" style="font-size:0.75rem;">{{ $receivedTodayLabel }}</div>
                     <div class="h4 fw-bold text-success mb-0">{{ (int) ($dailyMovementTotals->full_in ?? 0) }}</div>
                     <div class="text-muted small" style="font-size:0.7rem;">Incoming stock</div>
                 </div>
@@ -556,7 +571,7 @@
         <div class="col-12 col-md-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body p-3 text-center">
-                    <div class="text-muted small fw-semibold mb-1" style="font-size:0.75rem;">Full Cylinders Released Today</div>
+                    <div class="text-muted small fw-semibold mb-1" style="font-size:0.75rem;">{{ $releasedTodayLabel }}</div>
                     <div class="h4 fw-bold text-primary mb-0">{{ (int) ($dailyMovementTotals->full_out ?? 0) }}</div>
                     <div class="text-muted small" style="font-size:0.7rem;">Distributed stock</div>
                 </div>
@@ -565,7 +580,7 @@
         <div class="col-12 col-md-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body p-3 text-center">
-                    <div class="text-muted small fw-semibold mb-1" style="font-size:0.75rem;">Empty Cylinders Received Today</div>
+                    <div class="text-muted small fw-semibold mb-1" style="font-size:0.75rem;">{{ $emptyReceivedTodayLabel }}</div>
                     <div class="h4 fw-bold text-warning mb-0">{{ (int) ($dailyMovementTotals->empty_in ?? 0) }}</div>
                     <div class="text-muted small" style="font-size:0.7rem;">Returned empties</div>
                 </div>
@@ -578,7 +593,7 @@
             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-3">
                 <div>
                     <h5 class="fw-bold mb-1"><i class="bi bi-cubes me-2 text-primary"></i>Current Inventory</h5>
-                    <p class="text-muted mb-0">Live stock overview by product and cylinder size.</p>
+                    <p class="text-muted mb-0">{{ $inventorySubtitle }}</p>
                 </div>
                 <div class="text-muted small">Showing {{ $inventories->count() }} of {{ $inventories->total() }} records</div>
             </div>
@@ -600,9 +615,14 @@
                     <label class="form-label small fw-semibold">Category</label>
                     <select name="category" class="form-select">
                         <option value="">All</option>
-                        <option value="tank" {{ request('category') === 'tank' ? 'selected' : '' }}>Tank</option>
-                        <option value="accessories" {{ request('category') === 'accessories' ? 'selected' : '' }}>Accessories</option>
-                        <option value="appliances" {{ request('category') === 'appliances' ? 'selected' : '' }}>Appliances</option>
+                        @php
+                            $inventoryNicheCats = \App\Services\CategoryService::getCategoriesForCurrentNiche();
+                        @endphp
+                        @foreach($inventoryNicheCats as $icat)
+                            <option value="{{ $icat['slug'] }}" {{ request('category') === $icat['slug'] ? 'selected' : '' }}>
+                                {{ $icat['name'] }}
+                            </option>
+                        @endforeach
                         <option value="freebie" {{ request('category') === 'freebie' ? 'selected' : '' }}>Freebies</option>
                     </select>
                 </div>
@@ -621,12 +641,20 @@
             </form>
 
             <div class="table-responsive">
+                @php
+                    $industryNoun = $settings->industry_noun ?? ($homepageSettings->industry_noun ?? 'LPG Tanks');
+                    $isWaterNiche = str_contains(strtolower($industryNoun), 'water');
+                    $isFoodNiche = str_contains(strtolower($industryNoun), 'food') || str_contains(strtolower($industryNoun), 'meal');
+                    $isApplianceNiche = str_contains(strtolower($industryNoun), 'appliance');
+                    $containerLabel = $isWaterNiche ? 'Empty Containers / Gallons' : ($isFoodNiche ? 'Returned Containers' : ($isApplianceNiche ? 'Units in Service' : 'Empty Cylinders'));
+                    $containerNameSingular = $isWaterNiche ? 'Container' : ($isFoodNiche ? 'Container' : ($isApplianceNiche ? 'Unit' : 'Cylinder'));
+                @endphp
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
                             <th>Product</th>
                             <th>Qty On Hand</th>
-                            <th>Empty Cylinders</th>
+                            <th>{{ $containerLabel }}</th>
                             <th>Status</th>
                             <th>Last Updated</th>
                             <th>Actions</th>
@@ -648,7 +676,7 @@
                         @else
                             @if($tankInventories->count())
                                 <tr class="table-secondary">
-                                    <td colspan="6" class="fw-bold">Tank Products</td>
+                                    <td colspan="6" class="fw-bold">{{ $industryNoun }} {{ $isWaterNiche ? 'Containers / Products' : ($isFoodNiche ? 'Items / Meals' : ($isApplianceNiche ? 'Units' : 'Products')) }}</td>
                                 </tr>
                                 @foreach($tankInventories as $inventory)
                                     @php
@@ -709,7 +737,7 @@
 
                             @if($nonTankInventories->count())
                                 <tr class="table-secondary">
-                                    <td colspan="6" class="fw-bold">Non-Tank Products</td>
+                                    <td colspan="6" class="fw-bold">{{ $isWaterNiche ? 'Dispensers & Water Accessories' : ($isFoodNiche ? 'Snacks, Beverages & Extra Orders' : ($isApplianceNiche ? 'Kitchen Appliances & Parts' : 'Safety Accessories & Other Products')) }}</td>
                                 </tr>
                                 @foreach($nonTankInventories as $inventory)
                                     @php
@@ -796,8 +824,11 @@
                                         <td><span class="badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
                                         <td class="text-muted small">{{ $freebie->updated_at ? $freebie->updated_at->format('M d, Y') : '—' }}</td>
                                         <td>
-                                            <a href="{{ route('admin.products', ['tab' => 'freebies']) }}" class="btn btn-sm btn-success">
-                                                <i class="bi bi-plus-circle me-1"></i>Manage Freebie
+                                            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#adjustStockModal" onclick="setAdjustFreebie({{ $freebie->id }}, '{{ addslashes($freebie->name) }}', '{{ (int)$freebie->stock }}')">
+                                                <i class="bi bi-plus-circle me-1"></i>Add Stock
+                                            </button>
+                                            <a href="{{ route('admin.products', ['tab' => 'freebies']) }}" class="btn btn-sm btn-outline-secondary ms-1" title="Edit details">
+                                                <i class="bi bi-pencil"></i>
                                             </a>
                                         </td>
                                     </tr>
@@ -818,7 +849,7 @@
             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-3">
                 <div>
                     <h5 class="fw-bold mb-1"><i class="bi bi-arrow-left-right me-2 text-info"></i>Inventory Movement History</h5>
-                    <p class="text-muted mb-0">Recent cylinder movements with full and empty flow details.</p>
+                    <p class="text-muted mb-0">{{ $movementSubtitle }}</p>
                 </div>
                 <div class="text-muted small">Latest {{ $movementSnapshot->count() }} records</div>
             </div>
@@ -1015,6 +1046,9 @@ function setAdjustInventory(inventoryId, productName, isCylinder = false, suppli
     document.getElementById('adjustProductName').textContent = productName;
     document.getElementById('adjustSupplier').value = supplier || '';
     
+    const supplierBox = document.getElementById('adjustSupplier')?.closest('.mb-3');
+    if (supplierBox) supplierBox.style.display = 'block';
+
     const select = document.getElementById('adjustType');
     select.innerHTML = '';
     
@@ -1023,12 +1057,13 @@ function setAdjustInventory(inventoryId, productName, isCylinder = false, suppli
     defaultOpt.textContent = 'Select type';
     select.appendChild(defaultOpt);
 
+    const containerWord = "{{ $containerNameSingular }}";
     if (isCylinder) {
         const options = [
-            { value: 'stock_in', label: 'Stock In (Full Cylinders Received)' },
-            { value: 'stock_out', label: 'Stock Out (Full Cylinders Released)' },
-            { value: 'empty_in', label: 'Empty Cylinders Received (Returned Empties)' },
-            { value: 'empty_out', label: 'Empty Cylinders Released (Sent for Refill)' },
+            { value: 'stock_in', label: `Stock In (Full ${containerWord}s Received / Restocked)` },
+            { value: 'stock_out', label: `Stock Out (Full ${containerWord}s Released / Sold)` },
+            { value: 'empty_in', label: `Empty ${containerWord}s Received (Returned Empties)` },
+            { value: 'empty_out', label: `Empty ${containerWord}s Released (Sent for Refill / Supplier)` },
             { value: 'return', label: 'Customer Return' },
             { value: 'damage', label: 'Damage / Defective' }
         ];
@@ -1058,6 +1093,42 @@ function setAdjustInventory(inventoryId, productName, isCylinder = false, suppli
     document.getElementById('adjustQuantity').value = '';
     document.getElementById('adjustNotes').value = '';
     document.getElementById('adjustStockForm').setAttribute('action', `/admin/inventory/${inventoryId}/adjust`);
+}
+
+function setAdjustFreebie(freebieId, freebieName, currentStock) {
+    document.getElementById('adjustInventoryId').value = freebieId;
+    document.getElementById('adjustProductName').innerHTML = `<span class="badge bg-warning text-dark me-2">Freebie</span> ${freebieName} <small class="text-muted">(Current: ${currentStock})</small>`;
+    
+    const supplierBox = document.getElementById('adjustSupplier')?.closest('.mb-3');
+    if (supplierBox) supplierBox.style.display = 'none';
+
+    const select = document.getElementById('adjustType');
+    select.innerHTML = '';
+
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = 'Select type';
+    select.appendChild(defaultOpt);
+
+    const options = [
+        { value: 'stock_in', label: 'Stock In (Add Stock / Freebies Received)' },
+        { value: 'stock_out', label: 'Stock Out (Released / Given Out)' },
+        { value: 'return', label: 'Returned to Stock' },
+        { value: 'damage', label: 'Damaged / Expired / Lost' },
+        { value: 'adjustment', label: 'Direct Stock Count Adjustment' }
+    ];
+    options.forEach(opt => {
+        const el = document.createElement('option');
+        el.value = opt.value;
+        el.textContent = opt.label;
+        select.appendChild(el);
+    });
+
+    select.value = 'stock_in';
+    document.getElementById('adjustReference').value = 'FRB-STK-' + Date.now().toString().slice(-6);
+    document.getElementById('adjustQuantity').value = '';
+    document.getElementById('adjustNotes').value = '';
+    document.getElementById('adjustStockForm').setAttribute('action', `/admin/inventory/freebies/${freebieId}/adjust`);
 }
 
 document.addEventListener('DOMContentLoaded', function () {

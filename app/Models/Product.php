@@ -144,15 +144,8 @@ class Product extends Model
         $name = strtolower(trim((string) ($this->attributes['name'] ?? '')));
         $cat = strtolower(trim((string) $this->category));
 
-        // Exclude accessories, appliances, freebies and non-tank items
-        if (in_array($cat, ['accessories', 'appliances', 'appliance', 'freebie'], true) ||
-            str_contains($name, 'hanger') ||
-            str_contains($name, 'paste') ||
-            str_contains($name, 'regulator') ||
-            str_contains($name, 'hose') ||
-            str_contains($name, 'clamp') ||
-            str_contains($name, 'stove') ||
-            str_contains($name, 'burner')) {
+        // Exclude non-exchange items
+        if (in_array($cat, ['accessories', 'appliances', 'appliance', 'kitchen', 'parts', 'meals', 'snacks', 'beverages', 'bilao', 'dispensers', 'freebie'], true) && empty($this->attributes['requires_exchange'])) {
             return false;
         }
 
@@ -164,15 +157,65 @@ class Product extends Model
             return true;
         }
 
-        if (in_array($cat, ['tank', 'cylinder', 'lpg', 'lpg-tanks', 'tanks', 'cylinders'], true)) {
+        if (in_array($cat, ['tank', 'cylinder', 'water', 'lpg', 'lpg-tanks', 'tanks', 'cylinders'], true)) {
             return true;
         }
 
-        if (str_contains($name, 'tank') || str_contains($name, 'cylinder') || str_contains($name, 'lpg')) {
+        if (str_contains($name, 'tank') || str_contains($name, 'cylinder') || str_contains($name, 'lpg') || str_contains($name, '5-gallon') || str_contains($name, 'refill gallon')) {
             return true;
         }
 
         return false;
+    }
+
+    /**
+     * Get dynamic category display label.
+     */
+    public function getCategoryLabelAttribute(): string
+    {
+        return \App\Services\CategoryService::formatCategoryLabel($this->category ?? 'tank');
+    }
+
+    /**
+     * Get dynamic category icon class.
+     */
+    public function getCategoryIconAttribute(): string
+    {
+        $cat = strtolower((string) ($this->category ?? ''));
+        return match ($cat) {
+            'water' => 'fas fa-tint',
+            'dispensers' => 'fas fa-faucet',
+            'meals' => 'fas fa-utensils',
+            'snacks' => 'fas fa-burger',
+            'beverages' => 'fas fa-mug-hot',
+            'bilao' => 'fas fa-bowl-rice',
+            'appliances', 'stoves' => 'fas fa-fire-burner',
+            'kitchen' => 'fas fa-blender',
+            'parts' => 'fas fa-screwdriver-wrench',
+            'accessories' => 'fas fa-tools',
+            'freebie' => 'fas fa-gift',
+            default => 'fas fa-fire',
+        };
+    }
+
+    /**
+     * Get dynamic category color code.
+     */
+    public function getCategoryColorAttribute(): string
+    {
+        $cat = strtolower((string) ($this->category ?? ''));
+        return match ($cat) {
+            'water', 'dispensers' => '#0088cc',
+            'meals' => '#e03131',
+            'snacks' => '#ff922b',
+            'beverages' => '#f06595',
+            'bilao' => '#fab005',
+            'appliances', 'stoves' => '#0ca678',
+            'kitchen' => '#15aabf',
+            'parts', 'accessories' => '#f7941d',
+            'freebie' => '#e67700',
+            default => '#1a6db0',
+        };
     }
 
     /**
@@ -236,7 +279,13 @@ class Product extends Model
         }
 
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            return $path;
+            $parsed = parse_url($path);
+            $host = $parsed['host'] ?? '';
+            if (in_array($host, ['localhost', '127.0.0.1', '::1'], true)) {
+                $path = $parsed['path'] ?? '';
+            } else {
+                return $path;
+            }
         }
 
         $normalized = ltrim($path, '/');
@@ -247,6 +296,10 @@ class Product extends Model
 
         if (str_starts_with($normalized, 'storage/')) {
             $normalized = substr($normalized, 8);
+        }
+
+        if (config('filesystems.default') === 's3') {
+            return \Illuminate\Support\Facades\Storage::disk('s3')->url($normalized);
         }
 
         if (file_exists(public_path('storage/' . $normalized))) {

@@ -300,7 +300,8 @@ class DeliveryController extends Controller
             'delivery_notes' => 'nullable|string|max:500',
         ]);
 
-        $path = $request->file('proof_photo')->store('delivery-proofs', 'public');
+        $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+        $path = $request->file('proof_photo')->store('delivery-proofs', $disk);
         $delivery->update([
             'proof_photo'    => $path,
             'delivery_notes' => $validated['delivery_notes'] ?? null,
