@@ -142,17 +142,17 @@ class Product extends Model
     public function getIsCylinderAttribute($value = null): bool
     {
         $name = strtolower(trim((string) ($this->attributes['name'] ?? '')));
-        $cat = strtolower(trim((string) $this->category));
+        $cat = strtolower(trim((string) ($this->attributes['category'] ?? '')));
 
-        // Explicit exchange flag takes highest priority
-        if (!empty($this->attributes['requires_exchange'])) {
-            return true;
-        }
-
-        // Exclude non-exchange items: appliances, accessories, stoves, burners, regulators, hoses, etc.
+        // Exclude non-exchange items first: appliances, accessories, stoves, burners, regulators, hoses, etc.
         if (in_array($cat, ['accessories', 'appliances', 'appliance', 'kitchen', 'parts', 'meals', 'snacks', 'beverages', 'bilao', 'dispensers', 'freebie'], true)
             || str_contains($name, 'stove') || str_contains($name, 'burner') || str_contains($name, 'regulator') || str_contains($name, 'hose') || str_contains($name, 'clamp')) {
             return false;
+        }
+
+        // Explicit exchange flag takes priority for valid container items
+        if (!empty($this->attributes['requires_exchange'])) {
+            return true;
         }
 
         if (!empty($this->attributes['is_cylinder'])) {

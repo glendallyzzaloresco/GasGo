@@ -1203,8 +1203,6 @@
                                 <label class="mb-1">Category</label>
                                 <select class="form-select" name="category" id="freebieCategory">
                                     <option value="Promotional Gifts">Promotional Gifts</option>
-                                    <option value="Accessories">Accessories</option>
-                                    <option value="Safety Items">Safety Items</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
@@ -1220,11 +1218,6 @@
                             <div class="col-12">
                                 <label class="mb-1">Freebie Image</label>
                                 <input type="file" class="form-control" name="image" accept="image/*">
-                            </div>
-                            <div class="col-12">
-                                <label class="mb-1">Stock</label>
-                                <input type="number" class="form-control" name="stock" id="freebieStock"
-                                    placeholder="Quantity available" value="0" min="0" required>
                             </div>
                             <div class="col-12">
                                 <div class="form-check form-switch">
@@ -1724,7 +1717,6 @@
             document.getElementById('freebieDescription').value = '';
             document.getElementById('freebieRewardPoints').value = '0';
             document.getElementById('freebieCategory').value = 'Promotional Gifts';
-            document.getElementById('freebieStock').value = '0';
             document.getElementById('freebieActive').checked = true;
         }
 
@@ -1736,7 +1728,6 @@
             document.getElementById('freebieDescription').value = button.dataset.description || '';
             document.getElementById('freebieRewardPoints').value = button.dataset.rewardPoints || '0';
             document.getElementById('freebieCategory').value = button.dataset.category || 'Promotional Gifts';
-            document.getElementById('freebieStock').value = button.dataset.stock || '0';
             document.getElementById('freebieActive').checked = (button.dataset.isActive === '1');
         }
 

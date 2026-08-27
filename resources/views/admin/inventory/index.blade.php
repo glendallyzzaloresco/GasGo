@@ -662,11 +662,53 @@
                     </thead>
                     <tbody>
                         @php
-                            $tankInventories = $inventories->filter(fn($inventory) => $inventory->product?->isCylinder());
-                            $nonTankInventories = $inventories->reject(function ($inventory) {
-                                return $inventory->product?->isCylinder() || strtolower((string) ($inventory->product?->category ?? '')) === 'freebie';
+                            $nicheCats = \App\Services\CategoryService::getCategoriesForCurrentNiche();
+                            
+                            $isMatchingCategory = function($product, $slug) {
+                                if (!$product) return false;
+                                $cat = strtolower(trim((string) $product->category));
+                                $name = strtolower(trim((string) $product->name));
+                                
+                                return match ($slug) {
+                                    'tank', 'tanks', 'cylinder', 'cylinders' => in_array($cat, ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'lpg-tanks']) || str_contains($name, 'tank') || str_contains($name, 'cylinder'),
+                                    'appliances', 'appliance' => in_array($cat, ['appliances', 'appliance', 'stove', 'burner', 'burners', 'kitchen']) || str_contains($name, 'stove') || str_contains($name, 'burner'),
+                                    'accessories', 'accessory' => in_array($cat, ['accessories', 'accessory', 'tools', 'tool', 'hanger', 'hangers', 'parts', 'part']) || str_contains($name, 'regulator') || str_contains($name, 'hose') || str_contains($name, 'clamp'),
+                                    'water' => in_array($cat, ['water', 'container', 'gallon']) || str_contains($name, 'water') || str_contains($name, 'gallon'),
+                                    'dispensers' => in_array($cat, ['dispensers', 'dispenser', 'stands', 'rack']),
+                                    'meals' => in_array($cat, ['meals', 'meal', 'rice']),
+                                    'snacks' => in_array($cat, ['snacks', 'snack', 'finger']),
+                                    'beverages' => in_array($cat, ['beverages', 'beverage', 'drink', 'drinks']),
+                                    'bilao' => in_array($cat, ['bilao', 'tray', 'package']),
+                                    default => ($cat === strtolower($slug)),
+                                };
+                            };
+
+                            // Group inventories by configured niche categories
+                            $groupedInventories = collect();
+                            $handledInventoryIds = collect();
+
+                            foreach ($nicheCats as $ncat) {
+                                $matched = $inventories->filter(function ($inv) use ($ncat, $isMatchingCategory, $handledInventoryIds) {
+                                    if ($handledInventoryIds->contains($inv->id)) return false;
+                                    if (strtolower((string) ($inv->product?->category ?? '')) === 'freebie') return false;
+                                    return $isMatchingCategory($inv->product, $ncat['slug']);
+                                });
+
+                                if ($matched->isNotEmpty()) {
+                                    $groupedInventories->put($ncat['name'], $matched);
+                                    $handledInventoryIds = $handledInventoryIds->concat($matched->pluck('id'));
+                                }
+                            }
+
+                            // Any unhandled non-freebie inventories
+                            $unhandled = $inventories->reject(function ($inv) use ($handledInventoryIds) {
+                                return $handledInventoryIds->contains($inv->id) || strtolower((string) ($inv->product?->category ?? '')) === 'freebie';
                             });
-                            $inventoryRowCount = $tankInventories->count() + $nonTankInventories->count() + (!$freebies->isEmpty() ? $freebies->count() : 0);
+                            if ($unhandled->isNotEmpty()) {
+                                $groupedInventories->put('Other Products', $unhandled);
+                            }
+
+                            $inventoryRowCount = $groupedInventories->sum(fn($group) => $group->count()) + (!$freebies->isEmpty() ? $freebies->count() : 0);
                         @endphp
 
                         @if($inventoryRowCount === 0)
@@ -674,11 +716,11 @@
                                 <td colspan="6" class="text-center text-muted py-4">No inventory records found.</td>
                             </tr>
                         @else
-                            @if($tankInventories->count())
+                            @foreach($groupedInventories as $groupTitle => $groupItems)
                                 <tr class="table-secondary">
-                                    <td colspan="6" class="fw-bold">{{ $isWaterNiche ? 'Water Containers / Refills' : ($isFoodNiche ? 'Items / Meals' : ($isApplianceNiche ? 'Units' : 'Tank Products')) }}</td>
+                                    <td colspan="6" class="fw-bold">{{ $groupTitle }}</td>
                                 </tr>
-                                @foreach($tankInventories as $inventory)
+                                @foreach($groupItems as $inventory)
                                     @php
                                         $stockLevel = $inventory->quantity_on_hand <= 0 ? 'out_of_stock' : ($inventory->quantity_on_hand <= 5 ? 'low_stock' : 'in_stock');
                                         $statusLabel = match ($stockLevel) {
@@ -692,6 +734,7 @@
                                             default => 'bg-success',
                                         };
                                         $productImage = data_get($inventory->product, 'resolved_image');
+                                        $isExchangeable = $inventory->supportsEmptyCylinderTracking();
                                     @endphp
                                     <tr>
                                         <td>
@@ -711,7 +754,7 @@
                                         </td>
                                         <td class="fw-semibold">{{ (int) $inventory->quantity_on_hand }}</td>
                                         <td class="fw-semibold">
-                                            @if($inventory->supportsEmptyCylinderTracking())
+                                            @if($isExchangeable)
                                                 {{ (int) $inventory->empty_on_hand }}
                                             @else
                                                 <span class="text-muted">N/A</span>
@@ -721,7 +764,7 @@
                                         <td class="text-muted small">{{ $inventory->updated_at ? $inventory->updated_at->format('M d, Y') : '—' }}</td>
                                         <td>
                                             <div class="inventory-card-actions">
-                                                <button type="button" class="btn btn-sm btn-success" onclick="setAdjustInventory('{{ $inventory->id }}', '{{ addslashes($inventory->product->name) }}', true, '{{ addslashes($inventory->supplier ?? '') }}')" data-bs-toggle="modal" data-bs-target="#adjustStockModal">
+                                                <button type="button" class="btn btn-sm btn-success" onclick="setAdjustInventory('{{ $inventory->id }}', '{{ addslashes($inventory->product->name) }}', {{ $isExchangeable ? 'true' : 'false' }}, '{{ addslashes($inventory->supplier ?? '') }}')" data-bs-toggle="modal" data-bs-target="#adjustStockModal">
                                                     <i class="bi bi-plus-circle me-1"></i>Add Stock
                                                 </button>
                                                 <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-outline-primary">
@@ -731,62 +774,11 @@
                                         </td>
                                     </tr>
                                 @endforeach
-                            @endif
+                            @endforeach
 
-                           
-
-                            @if($nonTankInventories->count())
+                            @if(!$freebies->isEmpty())
                                 <tr class="table-secondary">
-                                    <td colspan="6" class="fw-bold">{{ $isWaterNiche ? 'Dispensers & Water Accessories' : ($isFoodNiche ? 'Snacks, Beverages & Extra Orders' : ($isApplianceNiche ? 'Kitchen Appliances & Parts' : 'Safety Accessories & Other Products')) }}</td>
-                                </tr>
-                                @foreach($nonTankInventories as $inventory)
-                                    @php
-                                        $stockLevel = $inventory->quantity_on_hand <= 0 ? 'out_of_stock' : ($inventory->quantity_on_hand <= 5 ? 'low_stock' : 'in_stock');
-                                        $statusLabel = match ($stockLevel) {
-                                            'out_of_stock' => 'Out of Stock',
-                                            'low_stock' => 'Low Stock',
-                                            default => 'In Stock',
-                                        };
-                                        $statusClass = match ($stockLevel) {
-                                            'out_of_stock' => 'bg-danger',
-                                            'low_stock' => 'bg-warning text-dark',
-                                            default => 'bg-success',
-                                        };
-                                        $productImage = data_get($inventory->product, 'resolved_image');
-                                    @endphp
-                                    <tr>
-                                        <td>
-                                            <div class="d-flex align-items-center gap-3">
-                                                <div class="rounded-circle bg-light overflow-hidden d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
-                                                    @if($productImage)
-                                                        <img src="{{ $productImage }}" alt="{{ data_get($inventory->product, 'name', 'Product Image') }}" style="width: 100%; height: 100%; object-fit: cover;">
-                                                    @else
-                                                        <i class="bi bi-box2-heart text-primary"></i>
-                                                    @endif
-                                                </div>
-                                                <div>
-                                                    <div class="fw-semibold">{{ data_get($inventory->product, 'name', 'Unnamed Product') }}</div>
-                                                    <div class="text-muted small">{{ ucfirst(data_get($inventory->product, 'category', 'General')) }}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="fw-semibold">{{ (int) $inventory->quantity_on_hand }}</td>
-                                        <td class="fw-semibold"><span class="text-muted">N/A</span></td>
-                                        <td><span class="badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
-                                        <td class="text-muted small">{{ $inventory->updated_at ? $inventory->updated_at->format('M d, Y') : '—' }}</td>
-                                        <td>
-                                            <button type="button" class="btn btn-sm btn-success" onclick="setAdjustInventory('{{ $inventory->id }}', '{{ addslashes($inventory->product->name) }}', false, '{{ addslashes($inventory->supplier ?? '') }}')" data-bs-toggle="modal" data-bs-target="#adjustStockModal">
-                                                <i class="bi bi-plus-circle me-1"></i>Add Stock
-                                            </button>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            @endif
-                        @endif
-
-                         @if(!$freebies->isEmpty())
-                                <tr class="table-secondary">
-                                    <td colspan="6" class="fw-bold">Freebies</td>
+                                    <td colspan="6" class="fw-bold">Freebies / Promotional Items</td>
                                 </tr>
                                 @foreach($freebies as $freebie)
                                     @php
@@ -834,6 +826,7 @@
                                     </tr>
                                 @endforeach
                             @endif
+                        @endif
                     </tbody>
                 </table>
             </div>
