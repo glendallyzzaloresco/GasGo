@@ -1,3 +1,6 @@
+@php
+    $activeTab = $activeTab ?? request()->input('tab') ?? old('auth_tab', 'login');
+@endphp
 @extends('layouts.customer')
 
 @section('title', 'Login / Register')
@@ -281,28 +284,28 @@
 @endsection
 
 @section('content')
-@php($activeTab = request()->input('tab') ?? old('auth_tab', 'login'))
+@php
+    $activeTab = request()->input('tab') ?? old('auth_tab', 'login');
+    $industryNoun = $settings->industry_noun ?? 'LPG Tanks';
+    $isWater = str_contains(strtolower($industryNoun), 'water');
+    $isFood = str_contains(strtolower($industryNoun), 'food') || str_contains(strtolower($industryNoun), 'meal');
+    $isAppliance = str_contains(strtolower($industryNoun), 'appliance');
+    $nicheIcon = $nicheIcon ?? ($isWater ? 'fas fa-tint' : ($isFood ? 'fas fa-utensils' : ($isAppliance ? 'fas fa-blender' : 'fas fa-fire')));
+@endphp
 <section class="auth-section">
     <div class="auth-card">
         <div class="row g-0">
             <!-- Left Side (Top Banner on Mobile) -->
-            @php
-                $industryNoun = $settings->industry_noun ?? 'LPG Tanks';
-                $isWater = str_contains(strtolower($industryNoun), 'water');
-                $isFood = str_contains(strtolower($industryNoun), 'food') || str_contains(strtolower($industryNoun), 'meal');
-                $isAppliance = str_contains(strtolower($industryNoun), 'appliance');
-                $nicheIcon = $isWater ? 'fas fa-tint' : ($isFood ? 'fas fa-utensils' : ($isAppliance ? 'fas fa-blender' : 'fas fa-fire'));
-            @endphp
             <div class="col-12 col-lg-5 d-flex">
                 <div class="auth-sidebar w-100 text-center">
                     @if(!empty($settings->navbar_logo_path))
                         <img src="{{ $settings->navbar_logo_url }}" alt="{{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }}" style="max-height:80px;max-width:140px;object-fit:contain;margin:0 auto;" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';">
                         <div class="brand-avatar-badge" style="display:none;width:64px;height:64px;border-radius:16px;background:rgba(255,255,255,0.2);color:#fff;align-items:center;justify-content:center;font-size:2rem;margin:0 auto;">
-                            <i class="{{ $nicheIcon }}"></i>
+                            <i class="{{ $nicheIcon ?? 'fas fa-fire' }}"></i>
                         </div>
                     @else
                         <div class="brand-avatar-badge" style="display:inline-flex;width:64px;height:64px;border-radius:16px;background:rgba(255,255,255,0.2);color:#fff;align-items:center;justify-content:center;font-size:2rem;margin:0 auto;">
-                            <i class="{{ $nicheIcon }}"></i>
+                            <i class="{{ $nicheIcon ?? 'fas fa-fire' }}"></i>
                         </div>
                     @endif
                     <h3 class="mt-3 text-white fw-bold">{{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }}</h3>
@@ -325,18 +328,18 @@
                         <div class="auth-alert auth-alert-error">{{ session('error') }}</div>
                     @endif
 
-                    @if ($errors->any() && $activeTab === 'register')
+                    @if ($errors->any() && ($activeTab ?? 'login') === 'register')
                         <div class="auth-alert auth-alert-error">Please fix the highlighted registration fields and try again.</div>
                     @endif
 
                     <!-- Tab Buttons -->
                     <div class="tab-btns">
-                        <button type="button" class="{{ $activeTab === 'login' ? 'active' : '' }}" id="loginTab" onclick="showTab('login')">Login</button>
-                        <button type="button" class="{{ $activeTab === 'register' ? 'active' : '' }}" id="registerTab" onclick="showTab('register')">Register</button>
+                        <button type="button" class="{{ ($activeTab ?? 'login') === 'login' ? 'active' : '' }}" id="loginTab" onclick="showTab('login')">Login</button>
+                        <button type="button" class="{{ ($activeTab ?? 'login') === 'register' ? 'active' : '' }}" id="registerTab" onclick="showTab('register')">Register</button>
                     </div>
 
                     <!-- Login Form -->
-                    <div id="loginForm" class="auth-pane" @if ($activeTab !== 'login') style="display:none;" @endif>
+                    <div id="loginForm" class="auth-pane" @if (($activeTab ?? 'login') !== 'login') style="display:none;" @endif>
                         <h3>Welcome Back!</h3>
                         <p class="sub">Login to your {{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }} account</p>
                         <form action="{{ route('customer.authenticate') }}" method="POST" autocomplete="off">
@@ -374,7 +377,7 @@
                     </div>
 
                     <!-- Register Form -->
-                    <div id="registerForm" class="auth-pane" @if ($activeTab !== 'register') style="display:none;" @endif>
+                    <div id="registerForm" class="auth-pane" @if (($activeTab ?? 'login') !== 'register') style="display:none;" @endif>
                         @if (request()->input('redirect') === 'checkout')
                             <div class="auth-alert auth-alert-error" style="background: #fff3cd; color: #856404; border-left: 4px solid #ff9800;">
                                 <i class="fas fa-info-circle me-2"></i>

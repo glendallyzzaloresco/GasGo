@@ -65,15 +65,24 @@ class AppServiceProvider extends ServiceProvider
                 if (! Schema::hasTable('homepage_settings')) {
                     $view->with('homepageSettings', $defaults);
                     $view->with('settings', $defaults);
+                    $view->with('nicheIcon', 'fas fa-fire');
                     return;
                 }
 
                 $settings = HomepageSetting::singleton();
+                $industryNoun = $settings->industry_noun ?? 'LPG Tanks';
+                $isWater = str_contains(strtolower($industryNoun), 'water');
+                $isFood = str_contains(strtolower($industryNoun), 'food') || str_contains(strtolower($industryNoun), 'meal');
+                $isAppliance = str_contains(strtolower($industryNoun), 'appliance');
+                $nicheIcon = $isWater ? 'fas fa-tint' : ($isFood ? 'fas fa-utensils' : ($isAppliance ? 'fas fa-blender' : 'fas fa-fire'));
+
                 $view->with('homepageSettings', $settings);
                 $view->with('settings', $settings);
+                $view->with('nicheIcon', $nicheIcon);
             } catch (\Throwable $e) {
                 $view->with('homepageSettings', $defaults);
                 $view->with('settings', $defaults);
+                $view->with('nicheIcon', 'fas fa-fire');
             }
         });
 

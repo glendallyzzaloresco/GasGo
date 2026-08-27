@@ -16,8 +16,13 @@ class CategoryService
             'lpg' => [
                 'name' => 'LPG Gas Business',
                 'industry_noun' => 'LPG Tanks',
+                'item_noun' => 'LPG Product',
+                'info_section_title' => 'LPG Product Information & Specs',
+                'container_noun' => 'LPG Tank / Cylinder',
+                'product_placeholder' => 'e.g. Solane 11kg LPG Tank',
+                'desc_placeholder' => 'e.g. 11kg Solane LPG tank with safety cap and seal, ideal for domestic kitchens...',
                 'spec_label' => 'Weight (kg)',
-                'spec_placeholder' => 'e.g. 11kg',
+                'spec_placeholder' => 'e.g. 11kg / 2.7kg / 50kg',
                 'categories' => [
                     [
                         'slug' => 'tank',
@@ -25,6 +30,7 @@ class CategoryService
                         'description' => 'Standard and commercial LPG tanks and cylinders',
                         'icon_class' => 'fas fa-fire',
                         'color_code' => '#1a6db0',
+                        'placeholder' => 'e.g. Solane 11kg LPG Tank (Refill)',
                         'requires_exchange' => true,
                     ],
                     [
@@ -33,6 +39,7 @@ class CategoryService
                         'description' => 'Regulators, gas hoses, clamps, and fittings',
                         'icon_class' => 'fas fa-tools',
                         'color_code' => '#f7941d',
+                        'placeholder' => 'e.g. Heavy Duty LPG Regulator w/ Gauge',
                         'requires_exchange' => false,
                     ],
                     [
@@ -41,6 +48,7 @@ class CategoryService
                         'description' => 'Single and double burners, cast iron stoves',
                         'icon_class' => 'fas fa-blender',
                         'color_code' => '#27ae60',
+                        'placeholder' => 'e.g. Heavy Duty Cast Iron Stove (Single Burner)',
                         'requires_exchange' => false,
                     ],
                 ],
@@ -48,8 +56,13 @@ class CategoryService
             'water' => [
                 'name' => 'Water Refilling Station',
                 'industry_noun' => 'Purified Water',
-                'spec_label' => 'Container Capacity',
-                'spec_placeholder' => 'e.g. 5-Gallon (18.9L)',
+                'item_noun' => 'Water Product',
+                'info_section_title' => 'Water Refill & Container Details',
+                'container_noun' => '5-Gallon Water Container',
+                'product_placeholder' => 'e.g. 5-Gallon Round Purified Water Refill',
+                'desc_placeholder' => 'e.g. 16-stage purified drinking water, sealed and sanitized 5-gallon bottle...',
+                'spec_label' => 'Container Capacity / Volume',
+                'spec_placeholder' => 'e.g. 5-Gallon (18.9L) / 350ml / 500ml',
                 'categories' => [
                     [
                         'slug' => 'water',
@@ -57,6 +70,7 @@ class CategoryService
                         'description' => '5-Gallon round, slim bottles, and refill gallons',
                         'icon_class' => 'fas fa-tint',
                         'color_code' => '#0088cc',
+                        'placeholder' => 'e.g. 5-Gallon Round Purified Water Refill',
                         'requires_exchange' => true,
                     ],
                     [
@@ -65,6 +79,7 @@ class CategoryService
                         'description' => 'Tabletop dispensers, floor stands, and gallon racks',
                         'icon_class' => 'fas fa-faucet',
                         'color_code' => '#00b4d8',
+                        'placeholder' => 'e.g. Tabletop Water Dispenser with Faucet',
                         'requires_exchange' => false,
                     ],
                     [
@@ -73,6 +88,7 @@ class CategoryService
                         'description' => 'Non-spill caps, electric pumps, and cleaning brushes',
                         'icon_class' => 'fas fa-pump-soap',
                         'color_code' => '#03045e',
+                        'placeholder' => 'e.g. USB Rechargeable Electric Gallon Pump',
                         'requires_exchange' => false,
                     ],
                 ],
@@ -80,8 +96,13 @@ class CategoryService
             'foods' => [
                 'name' => 'Foods & Meals',
                 'industry_noun' => 'Food & Meals',
+                'item_noun' => 'Food / Meal Item',
+                'info_section_title' => 'Food & Meal Details',
+                'container_noun' => 'Food Container / Tiffin',
+                'product_placeholder' => 'e.g. Special Beef Pares with Garlic Rice',
+                'desc_placeholder' => 'e.g. Slow-cooked tender beef pares served with fragrant garlic fried rice and hot soup...',
                 'spec_label' => 'Portion / Serving Size',
-                'spec_placeholder' => 'e.g. 1-2 Persons / 1 Pax',
+                'spec_placeholder' => 'e.g. 1-2 Persons / 1 Pax / Solo Meal',
                 'categories' => [
                     [
                         'slug' => 'meals',
@@ -89,6 +110,7 @@ class CategoryService
                         'description' => 'Freshly cooked rice meals and specialty dishes',
                         'icon_class' => 'fas fa-utensils',
                         'color_code' => '#e03131',
+                        'placeholder' => 'e.g. Special Beef Pares with Garlic Rice',
                         'requires_exchange' => false,
                     ],
                     [
@@ -97,6 +119,7 @@ class CategoryService
                         'description' => 'Pancit, sandwiches, finger food, and sides',
                         'icon_class' => 'fas fa-burger',
                         'color_code' => '#ff922b',
+                        'placeholder' => 'e.g. Crispy Chicken Burger with Fries',
                         'requires_exchange' => false,
                     ],
                     [
@@ -105,6 +128,7 @@ class CategoryService
                         'description' => 'Refreshing drinks, iced tea, juices, and desserts',
                         'icon_class' => 'fas fa-mug-hot',
                         'color_code' => '#f06595',
+                        'placeholder' => 'e.g. Signature Iced Milk Tea (16oz)',
                         'requires_exchange' => false,
                     ],
                     [
@@ -113,38 +137,56 @@ class CategoryService
                         'description' => 'Family trays and party feast packages',
                         'icon_class' => 'fas fa-bowl-rice',
                         'color_code' => '#fab005',
+                        'placeholder' => 'e.g. Pancit Canton Party Bilao (Medium - 6-8 Pax)',
                         'requires_exchange' => false,
                     ],
                 ],
             ],
             'appliances' => [
-                'name' => 'Appliances',
+                'name' => 'Appliances & Electronics',
                 'industry_noun' => 'Appliances',
-                'spec_label' => 'Power / Model Specs',
-                'spec_placeholder' => 'e.g. 220V / Double Burner',
+                'item_noun' => 'Appliance',
+                'info_section_title' => 'Appliance Information & Specs',
+                'container_noun' => 'Product Box / Packaging',
+                'product_placeholder' => 'e.g. Inverter Refrigerator 2-Door 250L',
+                'desc_placeholder' => 'e.g. High-efficiency 2-door inverter refrigerator with smart cooling, no-frost technology, and 10-year compressor warranty...',
+                'spec_label' => 'Model / Power Specs',
+                'spec_placeholder' => 'e.g. 220V / Inverter / 250L / 1200W',
                 'categories' => [
                     [
                         'slug' => 'appliances',
-                        'name' => 'Gas Stoves & Hobs',
-                        'description' => 'Single/double burner stoves and glass-top hobs',
-                        'icon_class' => 'fas fa-fire-burner',
+                        'name' => 'Major Home Appliances',
+                        'description' => 'Refrigerators, washing machines, and air conditioners',
+                        'icon_class' => 'fas fa-tv',
                         'color_code' => '#0ca678',
+                        'placeholder' => 'e.g. Inverter Refrigerator 2-Door 250L',
                         'requires_exchange' => false,
                     ],
                     [
                         'slug' => 'kitchen',
-                        'name' => 'Kitchen Appliances',
-                        'description' => 'Rice cookers, electric kettles, and air fryers',
+                        'name' => 'Small Kitchen Appliances',
+                        'description' => 'Air fryers, rice cookers, microwaves, and blenders',
                         'icon_class' => 'fas fa-blender',
                         'color_code' => '#15aabf',
+                        'placeholder' => 'e.g. Digital Air Fryer 4.5L w/ Touch Screen',
+                        'requires_exchange' => false,
+                    ],
+                    [
+                        'slug' => 'living',
+                        'name' => 'Living & Cooling Appliances',
+                        'description' => 'Electric fans, air purifiers, vacuum cleaners, and heaters',
+                        'icon_class' => 'fas fa-fan',
+                        'color_code' => '#20c997',
+                        'placeholder' => 'e.g. 16-Inch High Velocity Stand Fan',
                         'requires_exchange' => false,
                     ],
                     [
                         'slug' => 'parts',
-                        'name' => 'Parts & Replacement',
-                        'description' => 'Burner caps, ignition knobs, and safety valves',
+                        'name' => 'Appliance Parts & Accessories',
+                        'description' => 'Remotes, cables, replacement filters, and mounting brackets',
                         'icon_class' => 'fas fa-screwdriver-wrench',
-                        'color_code' => '#20c997',
+                        'color_code' => '#748ffc',
+                        'placeholder' => 'e.g. Universal Remote Control / Air Filter',
                         'requires_exchange' => false,
                     ],
                 ],
@@ -208,7 +250,7 @@ class CategoryService
      */
     public static function getAllAllowedCategorySlugs(): array
     {
-        $slugs = ['tank', 'water', 'meals', 'snacks', 'beverages', 'bilao', 'dispensers', 'accessories', 'appliances', 'kitchen', 'parts', 'freebie'];
+        $slugs = ['tank', 'water', 'meals', 'snacks', 'beverages', 'bilao', 'dispensers', 'accessories', 'appliances', 'kitchen', 'living', 'parts', 'freebie'];
         return array_unique($slugs);
     }
 

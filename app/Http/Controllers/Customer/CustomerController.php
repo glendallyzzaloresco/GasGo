@@ -173,9 +173,10 @@ class CustomerController extends Controller
         return back()->with('success', $message);
     }
 
-    public function login()
+    public function login(Request $request)
     {
-        return view('customer.login');
+        $activeTab = $request->input('tab') ?? old('auth_tab', 'login');
+        return view('customer.login', compact('activeTab'));
     }
 
     public function authenticate(Request $request)

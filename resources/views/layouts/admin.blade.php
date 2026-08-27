@@ -645,11 +645,11 @@
             @if(!empty($settings->navbar_logo_path))
                 <img data-theme-logo src="{{ $settings->navbar_logo_url }}" alt="{{ trim($settings->brand_name_primary . ' ' . $settings->brand_name_accent) }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
                 <div class="brand-avatar-badge" style="display:none;width:38px;height:38px;border-radius:10px;background:{{ $nicheColor }};color:#fff;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;">
-                    <i class="{{ $nicheIcon }}"></i>
+                    <i class="{{ $nicheIcon ?? 'fas fa-fire' }}"></i>
                 </div>
             @else
-                <div class="brand-avatar-badge" style="width:38px;height:38px;border-radius:10px;background:{{ $nicheColor }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;">
-                    <i class="{{ $nicheIcon }}"></i>
+                <div class="brand-avatar-badge" style="display:inline-flex;width:38px;height:38px;border-radius:10px;background:var(--gasgo-blue);color:#fff;align-items:center;justify-content:center;font-size:1.2rem;">
+                    <i class="{{ $nicheIcon ?? 'fas fa-fire' }}"></i>
                 </div>
             @endif
             <h4 class="m-0">{{ $settings->brand_name_primary ?? 'Gas' }}<span>{{ $settings->brand_name_accent ?? 'Go' }}</span></h4>

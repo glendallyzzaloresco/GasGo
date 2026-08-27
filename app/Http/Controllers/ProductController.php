@@ -110,6 +110,7 @@ class ProductController extends Controller
             'cost_price'     => 'nullable|numeric|min:0',
             'selling_price'  => 'required_unless:category,freebie|nullable|numeric|min:0',
             'stock'          => 'nullable|integer|min:0',
+            'reorder_level'  => 'nullable|integer|min:0',
             'weight'         => 'nullable|string|max:255',
             'image'          => 'nullable|image|max:2048',
             'is_active'      => 'boolean',
@@ -126,6 +127,8 @@ class ProductController extends Controller
         }
         $validated['is_active'] = $request->boolean('is_active');
         $validated['stock'] = (int) ($validated['stock'] ?? 0);
+        $reorderLevel = isset($validated['reorder_level']) ? (int) $validated['reorder_level'] : 5;
+        unset($validated['reorder_level']);
 
         if ($request->hasFile('image')) {
             $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
@@ -147,7 +150,7 @@ class ProductController extends Controller
 
             $message = 'Freebie added to Freebies successfully.';
 
-            if ($request->expectsJson()) {
+            if ($request->expectsJson() || $request->ajax()) {
                 return response()->json(['success' => true, 'message' => $message, 'freebie_id' => $freebie->id], 200);
             }
 
@@ -178,7 +181,7 @@ class ProductController extends Controller
         }
         unset($validated['category']);
 
-        DB::transaction(function () use ($validated) {
+        DB::transaction(function () use ($validated, $reorderLevel) {
             $product = Product::create($validated);
 
             // Keep inventory synced with product stock on creation.
@@ -186,7 +189,7 @@ class ProductController extends Controller
                 ['product_id' => $product->id],
                 [
                     'quantity_on_hand' => (int) $validated['stock'],
-                    'reorder_level' => 5,
+                    'reorder_level' => $reorderLevel,
                     'status' => 'active',
                 ]
             );
@@ -214,7 +217,7 @@ class ProductController extends Controller
 
         $message = 'Product created successfully.';
 
-        if ($request->expectsJson()) {
+        if ($request->expectsJson() || $request->ajax()) {
             return response()->json(['success' => true, 'message' => $message], 200);
         }
 
@@ -235,6 +238,7 @@ class ProductController extends Controller
             'cost_price'     => 'nullable|numeric|min:0',
             'selling_price'  => 'required_unless:category,freebie|nullable|numeric|min:0',
             'stock'          => 'nullable|integer|min:0',
+            'reorder_level'  => 'nullable|integer|min:0',
             'weight'         => 'nullable|string|max:255',
             'image'          => 'nullable|image|max:2048',
             'is_active'      => 'boolean',
@@ -250,6 +254,8 @@ class ProductController extends Controller
             unset($validated['requires_exchange']);
         }
         $validated['is_active'] = $request->boolean('is_active');
+        $reorderLevel = isset($validated['reorder_level']) ? (int) $validated['reorder_level'] : null;
+        unset($validated['reorder_level']);
 
         if ($request->hasFile('image')) {
             $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
@@ -306,17 +312,22 @@ class ProductController extends Controller
         }
         unset($validated['category']);
 
-        DB::transaction(function () use ($product, $validated) {
+        DB::transaction(function () use ($product, $validated, $reorderLevel) {
             $product->update($validated);
 
             $inventory = Inventory::firstOrCreate(
                 ['product_id' => $product->id],
                 [
                     'quantity_on_hand' => 0,
-                    'reorder_level' => 5,
+                    'reorder_level' => $reorderLevel ?? 5,
                     'status' => 'active',
                 ]
             );
+
+            $inventoryUpdate = [];
+            if ($reorderLevel !== null) {
+                $inventoryUpdate['reorder_level'] = $reorderLevel;
+            }
 
             // Keep inventory and product stock aligned when stock is provided from form.
             if (array_key_exists('stock', $validated)) {
@@ -324,10 +335,8 @@ class ProductController extends Controller
                 $newStock = (int) $validated['stock'];
                 $difference = $newStock - $oldStock;
 
-                $inventory->update([
-                    'quantity_on_hand' => $newStock,
-                    'last_restocked' => Carbon::now(),
-                ]);
+                $inventoryUpdate['quantity_on_hand'] = $newStock;
+                $inventoryUpdate['last_restocked'] = Carbon::now();
 
                 // Create stock movement record if there's a difference
                 if ($difference != 0) {
@@ -351,12 +360,16 @@ class ProductController extends Controller
                 }
             }
 
+            if (!empty($inventoryUpdate)) {
+                $inventory->update($inventoryUpdate);
+            }
+
             \App\Services\ActivityLogger::log('products', 'updated', "Admin updated product: {$product->name} (Price: ₱" . number_format($product->price ?? $product->selling_price ?? 0, 2) . ", Stock: {$product->stock})", ['product_id' => $product->id, 'name' => $product->name, 'stock' => $product->stock]);
         });
 
         $message = 'Product updated successfully.';
 
-        if ($request->expectsJson()) {
+        if ($request->expectsJson() || $request->ajax()) {
             return response()->json(['success' => true, 'message' => $message], 200);
         }
 
