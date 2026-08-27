@@ -196,6 +196,13 @@ class InventoryController extends Controller
             $movementsQuery->where('type', $request->input('movement_type'));
         }
 
+        if ($request->filled('movement_product_id')) {
+            $prodId = (int) $request->input('movement_product_id');
+            $movementsQuery->whereHas('inventory', function ($q) use ($prodId) {
+                $q->where('product_id', $prodId);
+            });
+        }
+
         if ($request->filled('movement_search')) {
             $search = '%' . $request->input('movement_search') . '%';
             $movementsQuery->where(function ($q) use ($search) {
@@ -204,6 +211,7 @@ class InventoryController extends Controller
             });
         }
 
+        $allProductsForMovements = Product::where('is_active', true)->orderBy('name')->get();
         $recentStockMovements = $movementsQuery->limit(20)->get();
 
         // Get current empty tanks count for cylinder products with latest delivery date
@@ -312,6 +320,7 @@ class InventoryController extends Controller
             'stockReceived',
             'dailyMovementTotals',
             'recentStockMovements',
+            'allProductsForMovements',
             'emptyTankReturnsByDate',
             'selectedEmptyDate',
             'totalEmptyReturnedByDate',

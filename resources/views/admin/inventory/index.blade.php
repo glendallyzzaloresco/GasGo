@@ -881,7 +881,7 @@
                     <label for="movement_product_id" class="form-label small fw-semibold">Product</label>
                     <select name="movement_product_id" id="movement_product_id" class="form-select">
                         <option value="">All Products</option>
-                        @foreach($allProductsForMovements as $prod)
+                        @foreach(($allProductsForMovements ?? []) as $prod)
                             <option value="{{ $prod->id }}" {{ request('movement_product_id') == $prod->id ? 'selected' : '' }}>
                                 {{ $prod->name }}
                             </option>
