@@ -127,10 +127,19 @@ class ProductController extends Controller
 
         $rawCategory = strtolower((string) $validated['category']);
         $isFreebie = ($rawCategory === 'freebie');
-        $isTankCategory = in_array($rawCategory, ['tank', 'tanks', 'cylinder', 'cylinders']) || str_contains(strtolower($validated['name']), 'tank');
+        $isNonExchangeCat = in_array($rawCategory, ['accessories', 'appliances', 'appliance', 'kitchen', 'parts', 'meals', 'snacks', 'beverages', 'bilao', 'dispensers', 'freebie'], true)
+            || str_contains(strtolower($validated['name']), 'stove')
+            || str_contains(strtolower($validated['name']), 'burner')
+            || str_contains(strtolower($validated['name']), 'regulator')
+            || str_contains(strtolower($validated['name']), 'hose');
+        $isTankCategory = in_array($rawCategory, ['tank', 'tanks', 'cylinder', 'cylinders', 'water']) || str_contains(strtolower($validated['name']), 'tank');
 
         if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
-            $validated['requires_exchange'] = $request->has('requires_exchange') ? $request->boolean('requires_exchange') : $isTankCategory;
+            if ($isNonExchangeCat) {
+                $validated['requires_exchange'] = false;
+            } else {
+                $validated['requires_exchange'] = $request->boolean('requires_exchange', $isTankCategory);
+            }
         } else {
             unset($validated['requires_exchange']);
         }
@@ -198,7 +207,6 @@ class ProductController extends Controller
                 ['product_id' => $product->id],
                 [
                     'quantity_on_hand' => (int) $validated['stock'],
-                    'reorder_level' => $reorderLevel,
                     'status' => 'active',
                 ]
             );
@@ -255,10 +263,19 @@ class ProductController extends Controller
 
         $rawCategory = strtolower((string) $validated['category']);
         $isFreebie = ($rawCategory === 'freebie');
-        $isTankCategory = in_array($rawCategory, ['tank', 'tanks', 'cylinder', 'cylinders']) || str_contains(strtolower($validated['name']), 'tank');
+        $isNonExchangeCat = in_array($rawCategory, ['accessories', 'appliances', 'appliance', 'kitchen', 'parts', 'meals', 'snacks', 'beverages', 'bilao', 'dispensers', 'freebie'], true)
+            || str_contains(strtolower($validated['name']), 'stove')
+            || str_contains(strtolower($validated['name']), 'burner')
+            || str_contains(strtolower($validated['name']), 'regulator')
+            || str_contains(strtolower($validated['name']), 'hose');
+        $isTankCategory = in_array($rawCategory, ['tank', 'tanks', 'cylinder', 'cylinders', 'water']) || str_contains(strtolower($validated['name']), 'tank');
 
         if (\Illuminate\Support\Facades\Schema::hasColumn('products', 'requires_exchange')) {
-            $validated['requires_exchange'] = $request->has('requires_exchange') ? $request->boolean('requires_exchange') : ($product->requires_exchange ?? $isTankCategory);
+            if ($isNonExchangeCat) {
+                $validated['requires_exchange'] = false;
+            } else {
+                $validated['requires_exchange'] = $request->boolean('requires_exchange');
+            }
         } else {
             unset($validated['requires_exchange']);
         }
@@ -328,15 +345,11 @@ class ProductController extends Controller
                 ['product_id' => $product->id],
                 [
                     'quantity_on_hand' => 0,
-                    'reorder_level' => $reorderLevel ?? 5,
                     'status' => 'active',
                 ]
             );
 
             $inventoryUpdate = [];
-            if ($reorderLevel !== null) {
-                $inventoryUpdate['reorder_level'] = $reorderLevel;
-            }
 
             // Keep inventory and product stock aligned when stock is provided from form.
             if (array_key_exists('stock', $validated)) {
@@ -442,7 +455,6 @@ class ProductController extends Controller
                 ['product_id' => $product->id],
                 [
                     'quantity_on_hand' => 0,
-                    'reorder_level' => 5,
                     'status' => 'active',
                 ]
             );
@@ -487,7 +499,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name'                  => 'required|string|max:255',
             'description'           => 'nullable|string',
-            'stock'                 => 'required|integer|min:0',
+            'stock'                 => 'nullable|integer|min:0',
             'category'              => 'nullable|string|max:255',
             'reward_points_required'=> 'nullable|integer|min:0',
             'redemption_type'       => 'nullable|in:loyalty_points,auto_included,promotional',
@@ -500,6 +512,7 @@ class ProductController extends Controller
             $validated['image'] = $request->file('image')->store('freebies', $disk);
         }
 
+        $validated['stock'] = (int) ($validated['stock'] ?? 0);
         $validated['reward_points_required'] = (int) ($validated['reward_points_required'] ?? 0);
         $validated['redemption_type'] = $validated['redemption_type'] ?? 'promotional';
         $validated['is_active'] = $request->boolean('is_active');
@@ -523,7 +536,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name'                  => 'required|string|max:255',
             'description'           => 'nullable|string',
-            'stock'                 => 'required|integer|min:0',
+            'stock'                 => 'nullable|integer|min:0',
             'category'              => 'nullable|string|max:255',
             'reward_points_required'=> 'nullable|integer|min:0',
             'redemption_type'       => 'nullable|in:loyalty_points,auto_included,promotional',
@@ -536,6 +549,11 @@ class ProductController extends Controller
             $validated['image'] = $request->file('image')->store('freebies', $disk);
         }
 
+        if (isset($validated['stock'])) {
+            $validated['stock'] = (int) $validated['stock'];
+        } else {
+            unset($validated['stock']);
+        }
         $validated['reward_points_required'] = (int) ($validated['reward_points_required'] ?? 0);
         $validated['redemption_type'] = $validated['redemption_type'] ?? ($freebie->redemption_type ?: 'promotional');
         $validated['is_active'] = $request->boolean('is_active');

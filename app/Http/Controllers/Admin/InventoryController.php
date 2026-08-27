@@ -670,9 +670,14 @@ class InventoryController extends Controller
         $freebie->refresh();
 
         // Ensure backing product and inventory record exist for stock movement tracking
+        $freebieCategory = \App\Models\Category::where('slug', 'freebie')
+            ->orWhereRaw('LOWER(name) LIKE ?', ['%freebie%'])
+            ->first();
+
         $product = Product::firstOrCreate(
-            ['name' => $freebie->name, 'category' => 'freebie'],
+            ['name' => $freebie->name],
             [
+                'category_id' => $freebieCategory?->id,
                 'price' => 0,
                 'is_active' => true,
                 'image' => $freebie->image,
@@ -685,7 +690,6 @@ class InventoryController extends Controller
             [
                 'quantity_on_hand' => $freebie->stock,
                 'status' => 'active',
-                'reorder_level' => 5,
             ]
         );
 
