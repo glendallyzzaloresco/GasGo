@@ -843,11 +843,11 @@
                 @if(!empty($homepageSettings->navbar_logo_path))
                     <img data-theme-logo src="{{ $homepageSettings->navbar_logo_url }}" alt="{{ trim(($homepageSettings->brand_name_primary ?? 'Gas') . ' ' . ($homepageSettings->brand_name_accent ?? 'Go')) }} Icon" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';">
                     <span class="brand-avatar-badge" style="display:none;width:34px;height:34px;border-radius:8px;background:{{ $nicheColor }};color:#fff;align-items:center;justify-content:center;font-size:1rem;margin-right:8px;">
-                        <i class="{{ $nicheIcon }}"></i>
+                        <i class="{{ $nicheIcon ?? 'fas fa-fire' }}"></i>
                     </span>
                 @else
                     <span class="brand-avatar-badge" style="display:inline-flex;width:34px;height:34px;border-radius:8px;background:{{ $nicheColor }};color:#fff;align-items:center;justify-content:center;font-size:1rem;margin-right:8px;">
-                        <i class="{{ $nicheIcon }}"></i>
+                        <i class="{{ $nicheIcon ?? 'fas fa-fire' }}"></i>
                     </span>
                 @endif
                 <span class="brand-text">{{ $homepageSettings->brand_name_primary ?? 'Gas' }}<span class="go">{{ $homepageSettings->brand_name_accent ?? 'Go' }}</span></span>
