@@ -54,6 +54,11 @@ class OrderInventoryService
                 $emptyIn = $quantity;
             }
 
+            $notes = 'Order Completed';
+            if ($isCylinderProduct && in_array($transactionType, ['exchange', 'new_cylinder'], true)) {
+                $notes = 'Order Completed (' . $transactionType . ')';
+            }
+
             StockMovement::create([
                 'inventory_id' => $inventory->id,
                 'full_in' => 0,
@@ -62,7 +67,7 @@ class OrderInventoryService
                 'empty_out' => 0,
                 'type' => 'sale',
                 'reference' => $order->order_number ?? ('ORD-' . $order->id),
-                'notes' => 'Order completed (' . $transactionType . ')',
+                'notes' => $notes,
                 'movement_date' => now(),
                 'created_by' => $userId,
             ]);

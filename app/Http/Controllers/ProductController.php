@@ -28,11 +28,20 @@ class ProductController extends Controller
         $category = $request->query('category');
         if ($category && $category !== 'all') {
             $catLower = strtolower(trim($category));
-            $query->where(function ($q) use ($catLower) {
-                $q->where('category', $catLower)
-                  ->orWhereHas('categoryModel', function ($sq) use ($catLower) {
-                      $sq->where('slug', $catLower)->orWhereRaw('LOWER(name) = ?', [$catLower]);
-                  });
+            $isTankFilter = in_array($catLower, ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'lpg-tanks', 'lpg-tank'], true);
+            $query->where(function ($q) use ($catLower, $isTankFilter) {
+                if ($isTankFilter) {
+                    $q->whereIn('category', ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'lpg-tanks'])
+                      ->orWhereHas('categoryModel', function ($sq) {
+                          $sq->whereIn('slug', ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'lpg-tanks'])
+                             ->orWhereRaw("LOWER(name) LIKE '%tank%' OR LOWER(name) LIKE '%cylinder%'");
+                      });
+                } else {
+                    $q->where('category', $catLower)
+                      ->orWhereHas('categoryModel', function ($sq) use ($catLower) {
+                          $sq->where('slug', $catLower)->orWhereRaw('LOWER(name) = ?', [$catLower]);
+                      });
+                }
             });
         }
 

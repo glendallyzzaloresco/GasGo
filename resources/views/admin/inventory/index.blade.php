@@ -676,7 +676,7 @@
                         @else
                             @if($tankInventories->count())
                                 <tr class="table-secondary">
-                                    <td colspan="6" class="fw-bold">{{ $industryNoun }} {{ $isWaterNiche ? 'Containers / Products' : ($isFoodNiche ? 'Items / Meals' : ($isApplianceNiche ? 'Units' : 'Products')) }}</td>
+                                    <td colspan="6" class="fw-bold">{{ $isWaterNiche ? 'Water Containers / Refills' : ($isFoodNiche ? 'Items / Meals' : ($isApplianceNiche ? 'Units' : 'Tank Products')) }}</td>
                                 </tr>
                                 @foreach($tankInventories as $inventory)
                                     @php
@@ -824,7 +824,7 @@
                                         <td><span class="badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
                                         <td class="text-muted small">{{ $freebie->updated_at ? $freebie->updated_at->format('M d, Y') : '—' }}</td>
                                         <td>
-                                            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#adjustStockModal" onclick="setAdjustFreebie({{ $freebie->id }}, '{{ addslashes($freebie->name) }}', '{{ (int)$freebie->stock }}')">
+                                            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#adjustStockModal" onclick="setAdjustFreebie({{ $freebie->id }}, '{{ addslashes($freebie->name) }}', '{{ (int)$freebie->stock }}', '{{ addslashes($freebie->supplier ?? '') }}')">
                                                 <i class="bi bi-plus-circle me-1"></i>Add Stock
                                             </button>
                                             <a href="{{ route('admin.products', ['tab' => 'freebies']) }}" class="btn btn-sm btn-outline-secondary ms-1" title="Edit details">
@@ -858,55 +858,63 @@
                 <div class="col-md-2">
                     <label for="movement_date_from" class="form-label small fw-semibold">From Date</label>
                     <input type="date" name="movement_date_from" id="movement_date_from" class="form-control" 
-                        value="{{ request('movement_date_from') }}">
+                           value="{{ request('movement_date_from') }}">
                 </div>
                 <div class="col-md-2">
                     <label for="movement_date_to" class="form-label small fw-semibold">To Date</label>
                     <input type="date" name="movement_date_to" id="movement_date_to" class="form-control" 
-                        value="{{ request('movement_date_to') }}">
+                           value="{{ request('movement_date_to') }}">
                 </div>
                 <div class="col-md-2">
                     <label for="movement_type" class="form-label small fw-semibold">Type</label>
                     <select name="movement_type" id="movement_type" class="form-select">
                         <option value="">All Types</option>
-                        <option value="purchase" {{ request('movement_type') === 'purchase' ? 'selected' : '' }}>Purchase</option>
+                        <option value="stock_in" {{ request('movement_type') === 'stock_in' ? 'selected' : '' }}>Stock In</option>
+                        <option value="stock_out" {{ request('movement_type') === 'stock_out' ? 'selected' : '' }}>Stock Out</option>
                         <option value="sale" {{ request('movement_type') === 'sale' ? 'selected' : '' }}>Sale</option>
-                        <option value="adjustment" {{ request('movement_type') === 'adjustment' ? 'selected' : '' }}>Adjustment</option>
+                        <option value="return" {{ request('movement_type') === 'return' ? 'selected' : '' }}>Customer Return</option>
                         <option value="damage" {{ request('movement_type') === 'damage' ? 'selected' : '' }}>Damage</option>
-                        <option value="return" {{ request('movement_type') === 'return' ? 'selected' : '' }}>Return</option>
+                        <option value="adjustment" {{ request('movement_type') === 'adjustment' ? 'selected' : '' }}>Adjustment</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label for="movement_product_id" class="form-label small fw-semibold">Product</label>
+                    <select name="movement_product_id" id="movement_product_id" class="form-select">
+                        <option value="">All Products</option>
+                        @foreach($allProductsForMovements as $prod)
+                            <option value="{{ $prod->id }}" {{ request('movement_product_id') == $prod->id ? 'selected' : '' }}>
+                                {{ $prod->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <label for="movement_search" class="form-label small fw-semibold">Search</label>
                     <input type="text" name="movement_search" id="movement_search" class="form-control" 
-                        placeholder="Search reference or remarks" value="{{ request('movement_search') }}">
+                           placeholder="Ref / Notes / Creator" value="{{ request('movement_search') }}">
                 </div>
-                <div class="col-md-3 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary flex-grow-1">
-                        <i class="fas fa-search me-1"></i> Filter
-                    </button>
-                    @if(request()->anyFilled(['movement_date_from', 'movement_date_to', 'movement_type', 'movement_search']))
-                        <a href="{{ route('admin.inventory.index') }}" class="btn btn-secondary">
-                            <i class="fas fa-times me-1"></i> Clear
-                        </a>
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-filter me-1"></i>Filter</button>
+                    @if(request()->hasAny(['movement_date_from', 'movement_date_to', 'movement_type', 'movement_product_id', 'movement_search']))
+                        <a href="{{ route('admin.inventory.index') }}" class="btn btn-outline-secondary" title="Reset Filters"><i class="bi bi-x-circle"></i></a>
                     @endif
                 </div>
             </form>
 
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table align-middle table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Date</th>
-                            <th>Reference No.</th>
-                            <th>Movement Type</th>
+                            <th>Date / Time</th>
+                            <th>Reference</th>
+                            <th>Type</th>
                             <th>Product</th>
                             <th>Full In</th>
                             <th>Full Out</th>
                             <th>Empty In</th>
                             <th>Empty Out</th>
-                            <th>User</th>
-                            <th>Remarks</th>
+                            <th>Performed By</th>
+                            <th>Notes</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -1095,12 +1103,13 @@ function setAdjustInventory(inventoryId, productName, isCylinder = false, suppli
     document.getElementById('adjustStockForm').setAttribute('action', `/admin/inventory/${inventoryId}/adjust`);
 }
 
-function setAdjustFreebie(freebieId, freebieName, currentStock) {
+function setAdjustFreebie(freebieId, freebieName, currentStock, supplier = '') {
     document.getElementById('adjustInventoryId').value = freebieId;
     document.getElementById('adjustProductName').innerHTML = `<span class="badge bg-warning text-dark me-2">Freebie</span> ${freebieName} <small class="text-muted">(Current: ${currentStock})</small>`;
     
+    document.getElementById('adjustSupplier').value = supplier || '';
     const supplierBox = document.getElementById('adjustSupplier')?.closest('.mb-3');
-    if (supplierBox) supplierBox.style.display = 'none';
+    if (supplierBox) supplierBox.style.display = 'block';
 
     const select = document.getElementById('adjustType');
     select.innerHTML = '';
@@ -1112,9 +1121,9 @@ function setAdjustFreebie(freebieId, freebieName, currentStock) {
 
     const options = [
         { value: 'stock_in', label: 'Stock In (Add Stock / Freebies Received)' },
-        { value: 'stock_out', label: 'Stock Out (Released / Given Out)' },
-        { value: 'return', label: 'Returned to Stock' },
-        { value: 'damage', label: 'Damaged / Expired / Lost' },
+        { value: 'stock_out', label: 'Stock Out (Manual Stock Out)' },
+        { value: 'return', label: 'Customer Return' },
+        { value: 'damage', label: 'Damage / Defective / Lost' },
         { value: 'adjustment', label: 'Direct Stock Count Adjustment' }
     ];
     options.forEach(opt => {

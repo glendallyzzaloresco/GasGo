@@ -392,7 +392,7 @@
             </div>
             
             <div style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid #e0e0e0;">
-                <a href="{{ route('admin.products') }}" class="btn btn-sm btn-outline-primary" style="border-radius:20px;font-weight:600;">
+                <a href="{{ route('admin.inventory.index') }}" class="btn btn-sm btn-outline-primary" style="border-radius:20px;font-weight:600;">
                     <i class="fas fa-external-link-alt me-1"></i>View full inventory
                 </a>
             </div>

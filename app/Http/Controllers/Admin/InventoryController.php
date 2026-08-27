@@ -621,13 +621,14 @@ class InventoryController extends Controller
     }
 
     /**
-     * Adjust stock for freebies (Stock In, Stock Out, Damage, Return, Adjustment)
+     * Adjust stock for freebies (Stock In, Stock Out, Damage, Return, Adjustment) with movement logging
      */
     public function adjustFreebie(Request $request, Freebie $freebie)
     {
         $validated = $request->validate([
             'quantity_change' => 'required|integer|min:1',
             'type' => 'required|in:stock_in,stock_out,return,damage,adjustment',
+            'supplier' => 'nullable|string|max:255',
             'reference' => 'required|string|max:100',
             'notes' => 'required|string|max:255',
         ]);
@@ -635,17 +636,72 @@ class InventoryController extends Controller
         $type = $validated['type'];
         $quantityChange = (int) $validated['quantity_change'];
         $oldStock = (int) ($freebie->stock ?? 0);
+        $fullIn = 0;
+        $fullOut = 0;
 
         if ($type === 'stock_in' || $type === 'return') {
             $freebie->increment('stock', $quantityChange);
+            $fullIn = $quantityChange;
         } elseif ($type === 'stock_out' || $type === 'damage') {
             if ($oldStock < $quantityChange) {
                 return back()->with('error', 'Insufficient freebie stock for this adjustment (Available: ' . $oldStock . ').');
             }
             $freebie->decrement('stock', $quantityChange);
+            $fullOut = $quantityChange;
         } elseif ($type === 'adjustment') {
+            $diff = $quantityChange - $oldStock;
+            if ($diff > 0) {
+                $fullIn = $diff;
+            } elseif ($diff < 0) {
+                $fullOut = abs($diff);
+            }
             $freebie->update(['stock' => $quantityChange]);
         }
+
+        $freebie->refresh();
+
+        // Ensure backing product and inventory record exist for stock movement tracking
+        $product = Product::firstOrCreate(
+            ['name' => $freebie->name, 'category' => 'freebie'],
+            [
+                'price' => 0,
+                'is_active' => true,
+                'image' => $freebie->image,
+                'description' => $freebie->description,
+            ]
+        );
+
+        $inventory = Inventory::firstOrCreate(
+            ['product_id' => $product->id],
+            [
+                'quantity_on_hand' => $freebie->stock,
+                'status' => 'active',
+                'reorder_level' => 5,
+            ]
+        );
+
+        $inventory->quantity_on_hand = $freebie->stock;
+        if (!empty($validated['supplier'])) {
+            $inventory->supplier = trim((string) $validated['supplier']);
+        }
+        if ($type === 'stock_in') {
+            $inventory->last_restocked = now();
+        }
+        $inventory->save();
+
+        // Record stock movement in ledger
+        StockMovement::create([
+            'inventory_id' => $inventory->id,
+            'full_in' => $fullIn,
+            'full_out' => $fullOut,
+            'empty_in' => 0,
+            'empty_out' => 0,
+            'type' => $type,
+            'reference' => $validated['reference'],
+            'notes' => $validated['notes'],
+            'movement_date' => now(),
+            'created_by' => Auth::id() ?? 1,
+        ]);
 
         \App\Services\ActivityLogger::log(
             'inventory',
@@ -654,6 +710,6 @@ class InventoryController extends Controller
             ['freebie_id' => $freebie->id, 'reference' => $validated['reference'], 'type' => $type]
         );
 
-        return back()->with('success', "Stock for freebie '{$freebie->name}' updated successfully.");
+        return back()->with('success', "Stock for freebie '{$freebie->name}' updated successfully and movement recorded.");
     }
 }
