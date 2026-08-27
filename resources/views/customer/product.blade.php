@@ -548,11 +548,18 @@ function applyFiltersAndSearch() {
     
     let visibleCount = 0;
     items.forEach(item => {
-        const itemCategory = item.getAttribute('data-category');
-        const itemName = item.getAttribute('data-name') || '';
-        
         // Check filter
-        const categoryMatch = (activeFilter === 'all' || itemCategory === activeFilter);
+        const isTankFilter = ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg-tanks', 'lpg'].includes((activeFilter || '').toLowerCase());
+        const isTankItem = ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg-tanks', 'lpg'].includes((itemCategory || '').toLowerCase());
+
+        let categoryMatch = false;
+        if (activeFilter === 'all') {
+            categoryMatch = true;
+        } else if (isTankFilter) {
+            categoryMatch = isTankItem;
+        } else {
+            categoryMatch = (itemCategory === activeFilter);
+        }
         
         // Check search
         const searchMatch = itemName.toLowerCase().includes(searchQuery.toLowerCase());

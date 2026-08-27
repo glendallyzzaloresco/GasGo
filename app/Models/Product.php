@@ -139,18 +139,20 @@ class Product extends Model
     /**
      * Whether this product is a cylinder product.
      */
-    public function getIsCylinderAttribute($value): bool
+    public function getIsCylinderAttribute($value = null): bool
     {
         $name = strtolower(trim((string) ($this->attributes['name'] ?? '')));
         $cat = strtolower(trim((string) $this->category));
 
-        // Exclude non-exchange items
-        if (in_array($cat, ['accessories', 'appliances', 'appliance', 'kitchen', 'parts', 'meals', 'snacks', 'beverages', 'bilao', 'dispensers', 'freebie'], true) && empty($this->attributes['requires_exchange'])) {
-            return false;
-        }
-
+        // Explicit exchange flag takes highest priority
         if (!empty($this->attributes['requires_exchange'])) {
             return true;
+        }
+
+        // Exclude non-exchange items: appliances, accessories, stoves, burners, regulators, hoses, etc.
+        if (in_array($cat, ['accessories', 'appliances', 'appliance', 'kitchen', 'parts', 'meals', 'snacks', 'beverages', 'bilao', 'dispensers', 'freebie'], true)
+            || str_contains($name, 'stove') || str_contains($name, 'burner') || str_contains($name, 'regulator') || str_contains($name, 'hose') || str_contains($name, 'clamp')) {
+            return false;
         }
 
         if (!empty($this->attributes['is_cylinder'])) {
@@ -161,7 +163,7 @@ class Product extends Model
             return true;
         }
 
-        if (str_contains($name, 'tank') || str_contains($name, 'cylinder') || str_contains($name, 'lpg') || str_contains($name, '5-gallon') || str_contains($name, 'refill gallon')) {
+        if (str_contains($name, 'tank') || str_contains($name, 'cylinder') || str_contains($name, '5-gallon') || str_contains($name, 'refill gallon')) {
             return true;
         }
 
