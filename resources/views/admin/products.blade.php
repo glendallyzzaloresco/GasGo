@@ -1193,17 +1193,12 @@
                         enctype="multipart/form-data">
                         @csrf
                         <input type="hidden" name="_method" id="freebieFormMethod" value="POST">
+                        <input type="hidden" name="category" id="freebieCategory" value="Promotional Gifts">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="mb-1">Freebie Name</label>
+                                <label class="mb-1">Freebie Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" name="name" id="freebieName"
                                     placeholder="e.g. Free Lighter" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="mb-1">Category</label>
-                                <select class="form-select" name="category" id="freebieCategory">
-                                    <option value="Promotional Gifts">Promotional Gifts</option>
-                                </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="mb-1">Reward Points Required</label>
