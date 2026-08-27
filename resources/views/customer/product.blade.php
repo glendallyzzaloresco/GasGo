@@ -514,10 +514,41 @@ function buyNow(productId) {
 let activeFilter = 'all';
 let searchQuery = '';
 
-function filterProducts(category, buttonElement) {
-    console.log('Filter clicked:', category);
+function isCategoryMatch(filter, itemCat, itemName) {
+    if (!filter || filter === 'all') return true;
     
-    // Update active filter
+    filter = (filter || '').toLowerCase().trim();
+    itemCat = (itemCat || '').toLowerCase().trim();
+    itemName = (itemName || '').toLowerCase().trim();
+    
+    if (['tank', 'tanks', 'cylinder', 'cylinders', 'lpg-tanks', 'lpg'].includes(filter)) {
+        return ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg-tanks', 'lpg'].includes(itemCat) 
+            || ((itemName.includes('tank') || itemName.includes('cylinder') || itemName.includes('lpg'))
+            && !itemName.includes('stove') && !itemName.includes('burner') && !itemName.includes('regulator') && !itemName.includes('hose') && !itemName.includes('clamp'));
+    }
+    
+    if (['appliances', 'appliance', 'stove', 'burner', 'burners', 'kitchen'].includes(filter)) {
+        return ['appliances', 'appliance', 'stove', 'burner', 'burners', 'kitchen'].includes(itemCat) 
+            || itemName.includes('stove') || itemName.includes('burner');
+    }
+    
+    if (['accessories', 'accessory', 'parts', 'tools'].includes(filter)) {
+        return ['accessories', 'accessory', 'parts', 'tools', 'hanger', 'hangers'].includes(itemCat) 
+            || itemName.includes('regulator') || itemName.includes('hose') || itemName.includes('clamp') || itemName.includes('hanger');
+    }
+    
+    if (filter === 'water') {
+        return itemCat === 'water' || itemName.includes('water') || itemName.includes('gallon');
+    }
+    
+    if (filter === 'dispensers') {
+        return itemCat === 'dispensers' || itemName.includes('dispenser') || itemName.includes('stand') || itemName.includes('rack');
+    }
+    
+    return itemCat === filter || itemCat.includes(filter) || filter.includes(itemCat);
+}
+
+function filterProducts(category, buttonElement) {
     activeFilter = category;
     
     // Update button states
@@ -531,57 +562,39 @@ function filterProducts(category, buttonElement) {
         buttonElement.classList.add('active');
     }
     
-    // Apply filter
-    console.log('Filtering by:', activeFilter);
     applyFiltersAndSearch();
 }
 
 function searchProducts(query) {
     searchQuery = query;
-    console.log('Search query:', query);
     applyFiltersAndSearch();
 }
 
 function applyFiltersAndSearch() {
     const items = document.querySelectorAll('.product-item');
-    console.log('Total items:', items.length, 'Active filter:', activeFilter, 'Search:', searchQuery);
+    const query = (searchQuery || '').toLowerCase().trim();
     
-    let visibleCount = 0;
     items.forEach(item => {
-        // Check filter
-        const isTankFilter = ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg-tanks', 'lpg'].includes((activeFilter || '').toLowerCase());
-        const isTankItem = ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg-tanks', 'lpg'].includes((itemCategory || '').toLowerCase());
-
-        let categoryMatch = false;
-        if (activeFilter === 'all') {
-            categoryMatch = true;
-        } else if (isTankFilter) {
-            categoryMatch = isTankItem;
-        } else {
-            categoryMatch = (itemCategory === activeFilter);
-        }
+        const itemCategory = (item.dataset.category || '').toLowerCase().trim();
+        const itemName = (item.dataset.name || '').toLowerCase().trim();
         
-        // Check search
-        const searchMatch = itemName.toLowerCase().includes(searchQuery.toLowerCase());
+        const categoryMatch = isCategoryMatch(activeFilter, itemCategory, itemName);
+        const searchMatch = !query || itemName.includes(query);
         
-        // Show or hide
         const shouldShow = categoryMatch && searchMatch;
         item.style.display = shouldShow ? '' : 'none';
-        
-        if (shouldShow) visibleCount++;
-        
-        console.log('  Item:', itemName, '| Category:', itemCategory, '| Match:', shouldShow);
     });
-    
-    console.log('Visible items:', visibleCount);
 }
 
-// Also try to initialize if DOM is already loaded
+// Initialize on load
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateProductDisplay);
+    document.addEventListener('DOMContentLoaded', () => {
+        applyFiltersAndSearch();
+        snapshotActionButtonState();
+    });
 } else {
-    updateProductDisplay();
+    applyFiltersAndSearch();
+    snapshotActionButtonState();
 }
-snapshotActionButtonState();
 </script>
 @endsection
