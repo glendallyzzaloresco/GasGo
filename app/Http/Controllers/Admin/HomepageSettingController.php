@@ -99,7 +99,7 @@ class HomepageSettingController extends Controller
             'why_choose_subtitle' => $validated['why_choose_subtitle'] ?? 'We make delivery convenient, safe, and rewarding',
         ];
 
-        $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+        $disk = (config('filesystems.default') === 's3' || config('filesystems.disks.s3.key') || env('AWS_ACCESS_KEY_ID')) ? 's3' : 'public';
 
         if ($request->boolean('remove_navbar_logo')) {
             $this->deletePublicFile($settings->navbar_logo_path, $disk);

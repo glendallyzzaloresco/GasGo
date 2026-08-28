@@ -298,11 +298,9 @@
                                 <button type="button" class="btn btn-sm btn-action" style="background:#28a745;color:#fff;" title="Approve Order" onclick="singleApproveOrder({{ $order->id }}, '{{ $order->order_number }}')">
                                     <i class="fas fa-check me-1"></i>Approve
                                 </button>
-                                <form action="{{ route('admin.orders.status', $order) }}" method="POST" class="cancel-order-form d-inline" data-order-id="{{ $order->id }}" data-confirm="Are you sure you want to cancel order #{{ $order->order_number }}?">
-                                    @csrf @method('PUT')
-                                    <input type="hidden" name="status" value="cancelled">
-                                    <button type="submit" class="btn btn-sm btn-action" style="background:#dc3545;color:#fff;" title="Cancel"><i class="fas fa-times me-1"></i>Cancel</button>
-                                </form>
+                                <button type="button" class="btn btn-sm btn-action" style="background:#dc3545;color:#fff;" title="Cancel" onclick="confirmCancelOrder({{ $order->id }}, '{{ $order->order_number }}', '{{ route('admin.orders.status', $order) }}')">
+                                    <i class="fas fa-times me-1"></i>Cancel
+                                </button>
                             @elseif($order->status === 'approved')
                                 <button type="button" class="btn btn-sm btn-action assign-btn" style="background:var(--gasgo-orange);color:#fff;" title="Assign Rider" onclick="openAssignModal({{ $order->id }}, '{{ $order->order_number }}')">
                                     <i class="fas fa-motorcycle me-1"></i>Assign
@@ -944,16 +942,11 @@
     }
 
     // Cancel Order Form Submission
-    async function submitCancelOrder(event) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        const form = event.target;
-        const orderId = form.dataset.orderId;
-        const confirmMsg = form.dataset.confirm || form.getAttribute('data-confirm') || 'Are you sure you want to cancel this order?';
-
+    // Cancel Order with SweetAlert / GasGo Confirmation
+    async function confirmCancelOrder(orderId, orderNumber, actionUrl) {
         const confirmed = await window.gasgoConfirm({
             title: 'Confirm Cancellation',
-            text: confirmMsg,
+            text: `Are you sure you want to cancel order #${orderNumber}?`,
             isDelete: true,
             confirmButtonColor: '#dc3545',
             confirmButtonText: '<i class="fas fa-ban me-1"></i>Yes, Cancel Order'
@@ -963,15 +956,17 @@
             return;
         }
 
-        const formData = new FormData(form);
         const row = document.querySelector(`.order-row[data-order-id="${orderId}"]`);
-        const submitBtn = form.querySelector('button[type="submit"]');
-
-        setButtonLoading(submitBtn, true, 'Cancelling...');
         if (row) row.classList.add('is-updating');
 
         try {
-            const response = await fetch(form.action, {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+            const formData = new FormData();
+            formData.append('_token', csrfToken);
+            formData.append('_method', 'PUT');
+            formData.append('status', 'cancelled');
+
+            const response = await fetch(actionUrl, {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
@@ -991,7 +986,6 @@
         } catch (error) {
             showOrderToast('Unable to cancel order. Try again.', true);
         } finally {
-            setButtonLoading(submitBtn, false);
             if (row) row.classList.remove('is-updating');
         }
     }
@@ -1000,10 +994,6 @@
         document.getElementById('bulkApproveForm')?.addEventListener('submit', submitBulkApprove);
         document.getElementById('assignRiderForm')?.addEventListener('submit', submitAssignRider);
         document.getElementById('bulkAssignRiderForm')?.addEventListener('submit', submitBulkAssignRider);
-
-        document.querySelectorAll('.cancel-order-form').forEach((form) => {
-            form.addEventListener('submit', submitCancelOrder);
-        });
 
         updateTabCounts();
         updateCheckboxColumnVisibility();
