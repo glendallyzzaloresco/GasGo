@@ -199,26 +199,28 @@ class CategoryService
      */
     public static function detectNicheKey(?string $industryNoun = null): string
     {
+        $brandText = '';
         if (! $industryNoun) {
             try {
                 $setting = HomepageSetting::first();
                 $industryNoun = $setting?->industry_noun ?? 'LPG Tanks';
+                $brandText = ($setting?->brand_name_primary ?? '') . ' ' . ($setting?->brand_name_accent ?? '') . ' ' . ($setting?->hero_title_highlight ?? '');
             } catch (\Throwable $e) {
                 $industryNoun = 'LPG Tanks';
             }
         }
 
-        $nounLower = strtolower(trim($industryNoun));
+        $combined = strtolower(trim($industryNoun . ' ' . $brandText));
 
-        if (str_contains($nounLower, 'water')) {
+        if (str_contains($combined, 'water') || str_contains($combined, 'aqua') || str_contains($combined, 'purified')) {
             return 'water';
         }
 
-        if (str_contains($nounLower, 'food') || str_contains($nounLower, 'meal')) {
+        if (str_contains($combined, 'food') || str_contains($combined, 'meal') || str_contains($combined, 'snack')) {
             return 'foods';
         }
 
-        if (str_contains($nounLower, 'appliance')) {
+        if (str_contains($combined, 'appliance') || str_contains($combined, 'stove') || str_contains($combined, 'burner') || str_contains($combined, 'hub')) {
             return 'appliances';
         }
 

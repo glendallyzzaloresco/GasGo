@@ -17,7 +17,8 @@ class ProductController extends Controller
     // Display all active products with optional category filter
     public function index(Request $request)
     {
-        $query = Product::with(['inventory', 'categoryModel'])
+        $query = Product::forNiche()
+            ->with(['inventory', 'categoryModel'])
             ->where('is_active', true)
             ->where('price', '>', 0);
 

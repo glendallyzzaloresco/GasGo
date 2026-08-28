@@ -20,6 +20,7 @@ class CustomerController extends Controller
     public function dashboard()
     {
         $products = Product::query()
+            ->forNiche()
             ->with('inventory')
             ->where('is_active', true)
             ->where('price', '>', 0)
