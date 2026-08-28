@@ -30,18 +30,37 @@ class ProductController extends Controller
         if ($category && $category !== 'all') {
             $catLower = strtolower(trim($category));
             $isTankFilter = in_array($catLower, ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'lpg-tanks', 'lpg-tank'], true);
-            $query->where(function ($q) use ($catLower, $isTankFilter) {
+            $hasCategoryCol = \Illuminate\Support\Facades\Schema::hasColumn('products', 'category');
+            $hasCategoryIdCol = \Illuminate\Support\Facades\Schema::hasColumn('products', 'category_id');
+
+            $targetCategoryIds = [];
+            if ($hasCategoryIdCol) {
                 if ($isTankFilter) {
-                    $q->whereIn('category', ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'lpg-tanks'])
-                      ->orWhereHas('categoryModel', function ($sq) {
-                          $sq->whereIn('slug', ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'lpg-tanks'])
-                             ->orWhereRaw("LOWER(name) LIKE '%tank%' OR LOWER(name) LIKE '%cylinder%'");
-                      });
+                    $targetCategoryIds = \App\Models\Category::whereIn('slug', ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'lpg-tanks'])
+                        ->orWhereRaw("LOWER(name) LIKE '%tank%' OR LOWER(name) LIKE '%cylinder%'")
+                        ->pluck('id')->all();
                 } else {
-                    $q->where('category', $catLower)
-                      ->orWhereHas('categoryModel', function ($sq) use ($catLower) {
-                          $sq->where('slug', $catLower)->orWhereRaw('LOWER(name) = ?', [$catLower]);
-                      });
+                    $targetCategoryIds = \App\Models\Category::where('slug', $catLower)
+                        ->orWhereRaw('LOWER(name) = ?', [$catLower])
+                        ->pluck('id')->all();
+                }
+            }
+
+            $query->where(function ($q) use ($catLower, $isTankFilter, $hasCategoryCol, $targetCategoryIds) {
+                if ($hasCategoryCol) {
+                    if ($isTankFilter) {
+                        $q->whereIn('category', ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'lpg-tanks']);
+                    } else {
+                        $q->where('category', $catLower);
+                    }
+                }
+
+                if (!empty($targetCategoryIds)) {
+                    $q->orWhereIn('category_id', $targetCategoryIds);
+                }
+
+                if ($isTankFilter) {
+                    $q->orWhereRaw("LOWER(name) LIKE '%tank%' OR LOWER(name) LIKE '%cylinder%'");
                 }
             });
         }
