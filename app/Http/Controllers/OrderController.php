@@ -444,7 +444,7 @@ class OrderController extends Controller
                         ]);
                     }
 
-                    $requiredQuantity = $freebieRequiresPoints ? $smallRewardCount : $freeRewardQuantity;
+                    $requiredQuantity = 1;
                     if ((int) $selectedFreebieInventory->quantity_on_hand < $requiredQuantity) {
                         throw ValidationException::withMessages([
                             'selected_freebie_id' => 'Selected freebie has insufficient stock for this checkout.',
@@ -463,7 +463,7 @@ class OrderController extends Controller
                         ]);
                     }
 
-                    $requiredQuantity = $freebieRequiresPoints ? $smallRewardCount : $freeRewardQuantity;
+                    $requiredQuantity = 1;
                     if ((int) $selectedFreebie->stock < $requiredQuantity) {
                         throw ValidationException::withMessages([
                             'selected_freebie_id' => 'Selected freebie has insufficient stock for this checkout.',
@@ -537,9 +537,7 @@ class OrderController extends Controller
                     'is_reward'    => false,
                 ];
 
-                // Add freebie: 
-                // - If no required points: quantity = total quantity ordered
-                // - If has required points: quantity = 1 (single reward item regardless of tank qty)
+                // Add freebie: 1 reward item per order
                 $isCylinderProduct = $product?->isCylinder();
                 $shouldAddFreebie = false;
                 $freebieQuantityToAdd = 0;
@@ -552,9 +550,9 @@ class OrderController extends Controller
                             $freebieQuantityToAdd = 1; // One freebie regardless of cylinder quantity ordered
                         }
                     } else {
-                        // No required points - add on first iteration with total quantity
+                        // No required points - add on first iteration with quantity 1
                         $shouldAddFreebie = true;
-                        $freebieQuantityToAdd = $freeRewardQuantity; // All ordered quantities
+                        $freebieQuantityToAdd = 1; // One freebie per order
                     }
                 }
                 
@@ -563,7 +561,7 @@ class OrderController extends Controller
                     $freebieImagePath = $selectedFreebie?->image ?? $selectedFreebieProduct?->image;
                     $freebieImageUrl = null;
                     
-                    if ($freebieImagePath) {
+                    if ($freebieImagePath && $freebieImagePath !== 'images/default-product.png') {
                         $normalized = ltrim($freebieImagePath, '/');
                         if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
                             $freebieImageUrl = $freebieImagePath;
@@ -594,9 +592,8 @@ class OrderController extends Controller
 
             // Deduct freebie stock based on quantity added to order
             if ($freebieAdded) {
-                // If requires points: deduct 1 (single reward)
-                // If no required points: deduct based on total quantity
-                $deductQuantity = $freebieRequiresPoints ? 1 : $freeRewardQuantity;
+                // 1 freebie item claimed
+                $deductQuantity = 1;
                 if ($selectedFreebie) {
                     $selectedFreebie->decrement('stock', $deductQuantity);
                 }

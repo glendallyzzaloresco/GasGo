@@ -32,12 +32,12 @@ class Freebie extends Model
      */
     public function getImageUrlAttribute()
     {
-        return $this->resolved_image ?? asset('images/default-product.png');
+        return $this->resolved_image;
     }
 
     public function getResolvedImageAttribute()
     {
-        if ($this->image) {
+        if ($this->image && $this->image !== 'images/default-product.png') {
             $path = $this->image;
             if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
                 $parsed = parse_url($path);
@@ -78,6 +78,6 @@ class Freebie extends Model
             return \Illuminate\Support\Facades\Storage::url($normalized);
         }
 
-        return asset('images/default-product.png');
+        return null;
     }
 }
