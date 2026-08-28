@@ -45,7 +45,7 @@
     .freebie-option {
         border: 2px solid #eee;
         border-radius: 14px;
-        padding: 14px;
+        padding: 16px;
         height: 100%;
         cursor: pointer;
         transition: all .25s;
@@ -61,8 +61,8 @@
     }
     .freebie-option input[type="radio"] {
         position: absolute;
-        top: 12px;
-        right: 12px;
+        top: 14px;
+        right: 14px;
     }
     .freebie-option input[type="radio"]:disabled {
         cursor: not-allowed;
@@ -71,9 +71,9 @@
         border-color: var(--gasgo-orange);
         background: var(--gasgo-orange-light);
     }
-    .freebie-image-wrapper { height: 220px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; background: #f8f9fa; border-radius: 10px; }
-    .freebie-image-wrapper img { max-width: 180px; max-height: 180px; object-fit: contain; }
-    .freebie-title { font-weight: 700; color: #333; font-size: .95rem; }
+    .freebie-image-wrapper { height: 160px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; background: #f8f9fa; border-radius: 10px; }
+    .freebie-image-wrapper img { max-width: 130px; max-height: 130px; object-fit: contain; }
+    .freebie-title { font-weight: 700; color: #333; font-size: .95rem; padding-right: 28px; }
     .freebie-desc { color: #666; font-size: .82rem; margin-bottom: 6px; }
     .freebie-stock { color: #1e7e34; font-size: .8rem; font-weight: 600; }
 
@@ -460,7 +460,10 @@
                             <div class="row g-3">
                                 @foreach ($freebieChoices as $freebie)
                                     @php
-                                        $freebieImageUrl = $resolveImageUrl($freebie->image);
+                                        $freebieImageUrl = $freebie->resolved_image ?? $resolveImageUrl($freebie->image);
+                                        if ($freebieImageUrl && str_contains($freebieImageUrl, 'default-product.png')) {
+                                            $freebieImageUrl = null;
+                                        }
                                         $pointsRequired = $freebie->reward_points_required ?? 0;
                                         $isUnlocked = $pointsRequired <= $totalCheckoutItems;
                                         $itemsNeeded = $pointsRequired - $totalCheckoutItems;
@@ -488,7 +491,7 @@
                                             >
                                             @if($freebieImageUrl)
                                                 <div class="freebie-image-wrapper">
-                                                    <img src="{{ $freebieImageUrl }}" alt="{{ $freebie->name }}" onerror="this.onerror=null;this.src='{{ asset('images/default-product.png') }}';">
+                                                    <img src="{{ $freebieImageUrl }}" alt="{{ $freebie->name }}">
                                                 </div>
                                             @endif
                                             <div class="freebie-title">{{ $freebie->name }}</div>
