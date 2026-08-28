@@ -248,10 +248,6 @@ class Product extends Model
             if ($niche === 'water') {
                 $q->where(function ($sub) {
                     $sub->whereIn('category', ['water', 'dispensers', 'accessories', 'pumps', 'bottles'])
-                        ->orWhereHas('categoryModel', function ($sq) {
-                            $sq->whereIn('slug', ['water', 'dispensers', 'accessories', 'pumps', 'bottles'])
-                               ->orWhereRaw("LOWER(name) LIKE '%water%' OR LOWER(name) LIKE '%dispenser%' OR LOWER(name) LIKE '%gallon%'");
-                        })
                         ->orWhereRaw("LOWER(name) LIKE '%water%' OR LOWER(name) LIKE '%gallon%' OR LOWER(name) LIKE '%dispenser%' OR LOWER(name) LIKE '%purified%'");
                 })->where(function ($sub) {
                     $sub->whereNotIn('category', ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'meals', 'snacks', 'beverages', 'bilao'])
@@ -260,10 +256,7 @@ class Product extends Model
             } elseif ($niche === 'foods') {
                 $q->where(function ($sub) {
                     $sub->whereIn('category', ['meals', 'snacks', 'beverages', 'bilao', 'food', 'drinks'])
-                        ->orWhereHas('categoryModel', function ($sq) {
-                            $sq->whereIn('slug', ['meals', 'snacks', 'beverages', 'bilao', 'food', 'drinks'])
-                               ->orWhereRaw("LOWER(name) LIKE '%meal%' OR LOWER(name) LIKE '%snack%' OR LOWER(name) LIKE '%drink%'");
-                        });
+                        ->orWhereRaw("LOWER(name) LIKE '%meal%' OR LOWER(name) LIKE '%snack%' OR LOWER(name) LIKE '%drink%' OR LOWER(name) LIKE '%rice%'");
                 })->where(function ($sub) {
                     $sub->whereNotIn('category', ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'water', 'dispensers'])
                         ->whereRaw("LOWER(name) NOT LIKE '%tank%' AND LOWER(name) NOT LIKE '%cylinder%' AND LOWER(name) NOT LIKE '%lpg%'");
@@ -271,9 +264,7 @@ class Product extends Model
             } elseif ($niche === 'appliances') {
                 $q->where(function ($sub) {
                     $sub->whereIn('category', ['appliances', 'kitchen', 'living', 'parts', 'stoves', 'burners'])
-                        ->orWhereHas('categoryModel', function ($sq) {
-                            $sq->whereIn('slug', ['appliances', 'kitchen', 'living', 'parts', 'stoves', 'burners']);
-                        });
+                        ->orWhereRaw("LOWER(name) LIKE '%stove%' OR LOWER(name) LIKE '%burner%' OR LOWER(name) LIKE '%appliance%'");
                 })->where(function ($sub) {
                     $sub->whereNotIn('category', ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'water', 'meals', 'snacks', 'beverages', 'bilao'])
                         ->whereRaw("LOWER(name) NOT LIKE '%tank%' AND LOWER(name) NOT LIKE '%cylinder%' AND LOWER(name) NOT LIKE '%lpg%'");
@@ -282,10 +273,6 @@ class Product extends Model
                 // LPG (default)
                 $q->where(function ($sub) {
                     $sub->whereIn('category', ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'accessories', 'appliances', 'stoves', 'burners', 'parts'])
-                        ->orWhereHas('categoryModel', function ($sq) {
-                            $sq->whereIn('slug', ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg', 'accessories', 'appliances', 'stoves', 'burners', 'parts'])
-                               ->orWhereRaw("LOWER(name) LIKE '%tank%' OR LOWER(name) LIKE '%cylinder%' OR LOWER(name) LIKE '%regulator%' OR LOWER(name) LIKE '%stove%'");
-                        })
                         ->orWhereRaw("LOWER(name) LIKE '%tank%' OR LOWER(name) LIKE '%cylinder%' OR LOWER(name) LIKE '%lpg%' OR LOWER(name) LIKE '%regulator%' OR LOWER(name) LIKE '%stove%'");
                 })->where(function ($sub) {
                     $sub->whereNotIn('category', ['water', 'dispensers', 'meals', 'snacks', 'beverages', 'bilao'])
