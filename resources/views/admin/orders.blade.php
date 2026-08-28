@@ -946,8 +946,23 @@
     // Cancel Order Form Submission
     async function submitCancelOrder(event) {
         event.preventDefault();
+        event.stopImmediatePropagation();
         const form = event.target;
         const orderId = form.dataset.orderId;
+        const confirmMsg = form.dataset.confirm || form.getAttribute('data-confirm') || 'Are you sure you want to cancel this order?';
+
+        const confirmed = await window.gasgoConfirm({
+            title: 'Confirm Cancellation',
+            text: confirmMsg,
+            isDelete: true,
+            confirmButtonColor: '#dc3545',
+            confirmButtonText: '<i class="fas fa-ban me-1"></i>Yes, Cancel Order'
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
         const formData = new FormData(form);
         const row = document.querySelector(`.order-row[data-order-id="${orderId}"]`);
         const submitBtn = form.querySelector('button[type="submit"]');
