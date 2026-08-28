@@ -59,8 +59,18 @@ class Freebie extends Model
                 $normalized = substr($normalized, 8);
             }
 
-            if (config('filesystems.default') === 's3') {
-                return \Illuminate\Support\Facades\Storage::disk('s3')->url($normalized);
+            // Prioritize Cloudflare R2 / S3 public URL when configured
+            $s3Url = config('filesystems.disks.s3.url') ?: env('AWS_URL');
+            if ($s3Url) {
+                return rtrim($s3Url, '/') . '/' . ltrim($normalized, '/');
+            }
+
+            if (config('filesystems.default') === 's3' || config('filesystems.disks.s3.key') || env('AWS_ACCESS_KEY_ID')) {
+                try {
+                    return \Illuminate\Support\Facades\Storage::disk('s3')->url($normalized);
+                } catch (\Throwable $e) {
+                    // fallback
+                }
             }
 
             if (file_exists(public_path('storage/' . $normalized))) {
