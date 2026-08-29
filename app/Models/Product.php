@@ -346,10 +346,23 @@ class Product extends Model
             if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'requires_exchange')) {
                 $q->where('requires_exchange', true);
             }
-            $q->orWhere('category_id', 1)
-              ->orWhere('name', 'LIKE', '%Tank%')
-              ->orWhere('name', 'LIKE', '%Cylinder%');
-        })->where(function ($q) {
+            $q->orWhereHas('categoryModel', function ($cq) {
+                $cq->whereIn('slug', ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg-tanks', 'water']);
+            })
+            ->orWhereIn('category', ['tank', 'tanks', 'cylinder', 'cylinders', 'lpg-tanks', 'water'])
+            ->orWhere('name', 'LIKE', '%Tank%')
+            ->orWhere('name', 'LIKE', '%Cylinder%');
+        })
+        ->where(function ($q) {
+            $q->where('price', '>', 0)
+              ->where(function ($sub) {
+                  $sub->whereNull('category')->orWhere('category', '!=', 'freebie');
+              });
+        })
+        ->whereDoesntHave('categoryModel', function ($cq) {
+            $cq->whereIn('slug', ['accessories', 'appliances', 'freebie']);
+        })
+        ->where(function ($q) {
             $q->where('name', 'NOT LIKE', '%Regulator%')
               ->where('name', 'NOT LIKE', '%Hose%')
               ->where('name', 'NOT LIKE', '%Clamp%')
