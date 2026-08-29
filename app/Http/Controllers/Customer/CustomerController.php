@@ -153,17 +153,9 @@ class CustomerController extends Controller
         $user->address = $validated['address'] ?? null;
 
         if (! empty($validated['password'])) {
-            // Use DB to directly update password, bypassing the hashed cast to set argon2id
-            DB::table('users')->where('id', $user->id)->update([
-                'password' => password_hash($validated['password'], PASSWORD_ARGON2ID, [
-                    'memory_cost' => 65536,
-                    'time_cost' => 4,
-                    'threads' => 1
-                ])
-            ]);
-        } else {
-            $user->save();
+            $user->password = Hash::make($validated['password']);
         }
+        $user->save();
 
         $message = 'Your account has been updated successfully.';
         \App\Services\ActivityLogger::log('auth', 'updated', "User {$user->name} updated profile information", ['user_id' => $user->id], $user);
@@ -223,20 +215,10 @@ class CustomerController extends Controller
 
         \App\Services\ActivityLogger::log('auth', 'login', "User {$user->name} logged in successfully (" . ucfirst($user->role ?? 'customer') . ")", ['role' => $user->role], $user);
 
-        // Auto-upgrade bcrypt passwords to argon2id on successful login
-        $isBcryptHash = strpos($user->password, '$2y$') === 0 || strpos($user->password, '$2a$') === 0;
-        if ($isBcryptHash) {
-            try {
-                // Hash with argon2id using native PHP function
-                $hashedPassword = password_hash($credentials['password'], PASSWORD_ARGON2ID, [
-                    'memory_cost' => 65536,
-                    'time_cost' => 4,
-                    'threads' => 1
-                ]);
-                DB::table('users')->where('id', $user->id)->update(['password' => $hashedPassword]);
-            } catch (\Exception $e) {
-                // Silently fail password upgrade, user is already logged in
-            }
+        // Rehash password if the hashing configuration has changed
+        if (Hash::needsRehash($user->password)) {
+            $user->password = Hash::make($credentials['password']);
+            $user->save();
         }
 
         $this->mergeSessionCartToDatabase($request, $user->id);
@@ -306,20 +288,13 @@ class CustomerController extends Controller
             'password' => ['required', 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
         ]);
 
-        // Hash password with argon2id
-        $hashedPassword = password_hash($validated['password'], PASSWORD_ARGON2ID, [
-            'memory_cost' => 65536,
-            'time_cost' => 4,
-            'threads' => 1
-        ]);
-
-        // Create user using DB to bypass hashed cast
+        // Create user
         $userId = DB::table('users')->insertGetId([
             'name' => $validated['name'],
             'email' => strtolower($validated['email']),
             'phone' => $validated['phone'],
             'address' => $validated['address'] ?? null,
-            'password' => $hashedPassword,
+            'password' => Hash::make($validated['password']),
             'role' => 'customer',
             'created_at' => now(),
             'updated_at' => now(),
