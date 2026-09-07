@@ -8,6 +8,7 @@
 
 // Global route store (to be set by views)
 window.gasgoRoutes = window.gasgoRoutes || {};
+const gasgoPendingAjaxRequests = new Map();
 
 // Initialize toast notification
 function showToast(message, type = 'info', duration = 3000) {
@@ -167,6 +168,14 @@ function injectToastStyles() {
 
 // Generic AJAX request handler
 async function ajaxRequest(url, method = 'GET', data = null, options = {}) {
+    const requestKey = method !== 'GET'
+        ? `${method}:${url}:${JSON.stringify(data || {})}`
+        : null;
+
+    if (requestKey && gasgoPendingAjaxRequests.has(requestKey)) {
+        return gasgoPendingAjaxRequests.get(requestKey);
+    }
+
     const defaultOptions = {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -189,7 +198,7 @@ async function ajaxRequest(url, method = 'GET', data = null, options = {}) {
         config.body = JSON.stringify(data);
     }
     
-    try {
+    const requestPromise = (async () => {
         const response = await fetch(url, config);
         const json = await response.json();
         
@@ -202,6 +211,14 @@ async function ajaxRequest(url, method = 'GET', data = null, options = {}) {
         }
         
         return json;
+    })();
+
+    if (requestKey) {
+        gasgoPendingAjaxRequests.set(requestKey, requestPromise);
+    }
+
+    try {
+        return await requestPromise;
     } catch (error) {
         if (error.message) {
             throw error;
@@ -211,6 +228,10 @@ async function ajaxRequest(url, method = 'GET', data = null, options = {}) {
             message: error.message || 'Network error',
             errors: error.errors || {}
         };
+    } finally {
+        if (requestKey) {
+            gasgoPendingAjaxRequests.delete(requestKey);
+        }
     }
 }
 
@@ -343,7 +364,7 @@ async function syncCartAjax(items) {
 // Login AJAX
 async function loginAjax(email, password, remember = false) {
     try {
-        const response = await ajaxRequest(window.gasgoRoutes.authenticate || '/customer/authenticate', 'POST', {
+        const response = await ajaxRequest(window.gasgoRoutes.authenticate || '/customer/login', 'POST', {
             email,
             password,
             remember: remember ? 1 : 0

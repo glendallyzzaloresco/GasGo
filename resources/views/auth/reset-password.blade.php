@@ -218,7 +218,7 @@
 
             <div class="resend-box">
                 Didn't receive the code?
-                <button type="button" class="resend-btn" onclick="document.getElementById('resendCodeForm').submit()">
+                <button type="button" class="resend-btn" onclick="const form = document.getElementById('resendCodeForm'); if (form && window.gasgoLockForm?.(form) !== false) { this.disabled = true; form.submit(); }">
                     Resend Code
                 </button>
             </div>
