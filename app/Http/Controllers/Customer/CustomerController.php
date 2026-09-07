@@ -19,12 +19,26 @@ class CustomerController extends Controller
 
     public function dashboard()
     {
-        $products = Product::query()
-            ->forNiche()
-            ->with('inventory')
-            ->where('is_active', true)
-            ->where('price', '>', 0)
-            ->get()
+        try {
+            $products = Product::query()
+                ->forNiche()
+                ->with(['inventory', 'categoryModel'])
+                ->where('is_active', true)
+                ->where('price', '>', 0)
+                ->get();
+        } catch (\Illuminate\Database\QueryException $e) {
+            if (! str_contains($e->getMessage(), "Unknown column 'category'")) {
+                throw $e;
+            }
+
+            $products = Product::query()
+                ->with(['inventory', 'categoryModel'])
+                ->where('is_active', true)
+                ->where('price', '>', 0)
+                ->get();
+        }
+
+        $products = $products
             ->sortByDesc('created_at')
             ->values();
 

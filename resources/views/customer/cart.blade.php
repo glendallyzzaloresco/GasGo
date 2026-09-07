@@ -630,7 +630,9 @@ function proceedCheckout(event) {
     });
     
     document.body.appendChild(form);
-    form.submit();
+    if (window.gasgoLockForm?.(form) !== false) {
+        form.submit();
+    }
 }
 
 // Toggle all checkboxes

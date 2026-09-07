@@ -956,6 +956,7 @@
             }
         }
     </script>
+    <script src="{{ asset('js/double-submit-guard.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.mjs" type="module"></script>
     <script>
@@ -1044,7 +1045,10 @@
             });
             if (confirmed) {
                 const form = document.getElementById(formId);
-                if (form) form.submit();
+                if (form) {
+                    window.gasgoLockForm?.(form);
+                    form.submit();
+                }
             }
         };
 
@@ -1063,6 +1067,7 @@
                 }).then(confirmed => {
                     if (confirmed) {
                         form.dataset.confirmed = 'true';
+                        window.gasgoLockForm?.(form);
                         form.submit();
                     }
                 });
