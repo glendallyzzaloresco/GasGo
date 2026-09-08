@@ -661,10 +661,6 @@
             <li><a href="{{ url('/admin/products') }}" class="@yield('nav-products')"><i class="{{ $productMenuIcon }}"></i>Products</a></li>
             <li><a href="{{ route('admin.inventory.index') }}" class="@yield('nav-inventory')"><i class="{{ $inventoryMenuIcon }}"></i>Inventory</a></li>
         </ul>
-        <div class="sidebar-section">Delivery</div>
-        <ul class="sidebar-menu">
-            <li><a href="{{ url('/admin/deliveries') }}" class="@yield('nav-deliveries')"><i class="fas fa-truck"></i>Deliveries</a></li>
-        </ul>
         <div class="sidebar-section">Marketing</div>
         <ul class="sidebar-menu">
             <li><a href="{{ url('/admin/rewards') }}" class="@yield('nav-rewards')"><i class="fas fa-gift"></i>Rewards</a></li>
@@ -757,9 +753,9 @@
             <i class="fas fa-fire"></i>
             <span>Products</span>
         </a>
-        <a href="{{ url('/admin/deliveries') }}" class="mobile-nav-item @yield('nav-deliveries')">
-            <i class="fas fa-truck"></i>
-            <span>Deliveries</span>
+        <a href="{{ route('admin.inventory.index') }}" class="mobile-nav-item @yield('nav-inventory')">
+            <i class="fas fa-warehouse"></i>
+            <span>Inventory</span>
         </a>
         <button type="button" class="mobile-nav-item" id="mobileNavMenuBtn">
             <i class="fas fa-bars"></i>

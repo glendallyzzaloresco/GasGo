@@ -350,6 +350,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
 // ===== RIDER ROUTES =====
 Route::prefix('rider')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [RiderController::class, 'dashboard'])->name('rider.dashboard');
+    Route::get('/notifications', [RiderController::class, 'notifications'])->name('rider.notifications');
     Route::get('/profile', [RiderController::class, 'profile'])->name('rider.profile');
     Route::put('/profile', [RiderController::class, 'updateProfile'])->name('rider.profile.update');
     Route::get('/history', [DeliveryController::class, 'riderHistory'])->name('rider.history');

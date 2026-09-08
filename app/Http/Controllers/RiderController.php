@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Delivery;
+use App\Models\Order;
 use App\Models\Rider;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +36,150 @@ class RiderController extends Controller
             ->count();
 
         return view('rider.dashboard', compact('activeDeliveries', 'completedCount', 'rider'));
+    }
+
+    /**
+     * Rider: notifications list for topbar notification bell
+     */
+    public function notifications(Request $request)
+    {
+        $riderId = Auth::id();
+        $rider = Rider::firstOrCreate(
+            ['user_id' => $riderId],
+            ['availability' => 'available']
+        );
+
+        $items = [];
+
+        // 1. Active assigned deliveries
+        $activeDeliveries = Delivery::with('order.user')
+            ->where('rider_id', $riderId)
+            ->whereIn('status', ['assigned', 'picked_up', 'out_for_delivery'])
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        foreach ($activeDeliveries as $delivery) {
+            $order = $delivery->order;
+            $orderNumber = $order->order_number ?? ('#' . $delivery->order_id);
+            $customerName = $order?->customer_name ?: ($order?->user?->name ?: 'Customer');
+            $isUrgent = !empty($order?->is_urgent);
+
+            $statusText = match ($delivery->status) {
+                'assigned' => 'Assigned & ready for pickup',
+                'picked_up' => 'Picked up from store',
+                'out_for_delivery' => 'Out for delivery',
+                default => ucfirst(str_replace('_', ' ', (string) $delivery->status)),
+            };
+
+            $items[] = [
+                'id' => 'delivery-' . $delivery->id,
+                'level' => $isUrgent ? 'danger' : ($delivery->status === 'out_for_delivery' ? 'warning' : 'info'),
+                'icon' => $isUrgent ? 'fa-triangle-exclamation' : ($delivery->status === 'out_for_delivery' ? 'fa-truck-fast' : 'fa-box'),
+                'title' => ($isUrgent ? '⚡ URGENT: ' : '') . "Order {$orderNumber}",
+                'message' => "{$statusText} · {$customerName}",
+                'url' => route('rider.delivery', $delivery->id),
+                'timestamp' => $delivery->updated_at ?? $delivery->created_at,
+            ];
+        }
+
+        // 2. Available approved orders waiting for delivery
+        $availableOrdersCount = Order::where('status', 'approved')
+            ->whereDoesntHave('delivery')
+            ->count();
+        $availableOrdersAt = Order::where('status', 'approved')
+            ->whereDoesntHave('delivery')
+            ->max('updated_at');
+
+        if ($availableOrdersCount > 0) {
+            $items[] = [
+                'id' => 'available-orders',
+                'level' => 'warning',
+                'icon' => 'fa-clipboard-list',
+                'title' => 'New Orders Waiting',
+                'message' => "{$availableOrdersCount} approved order" . ($availableOrdersCount > 1 ? 's are' : ' is') . " waiting for rider pickup.",
+                'url' => route('rider.dashboard'),
+                'timestamp' => $availableOrdersAt,
+            ];
+        }
+
+        // 3. Recently completed deliveries (past 24 hours)
+        $recentCompleted = Delivery::with('order.user')
+            ->where('rider_id', $riderId)
+            ->where('status', 'delivered')
+            ->where('delivered_at', '>=', now()->subHours(24))
+            ->orderBy('delivered_at', 'desc')
+            ->take(5)
+            ->get();
+
+        foreach ($recentCompleted as $delivery) {
+            $order = $delivery->order;
+            $orderNumber = $order->order_number ?? ('#' . $delivery->order_id);
+            $customerName = $order?->customer_name ?: ($order?->user?->name ?: 'Customer');
+
+            $items[] = [
+                'id' => 'completed-' . $delivery->id,
+                'level' => 'success',
+                'icon' => 'fa-circle-check',
+                'title' => "Delivered: Order {$orderNumber}",
+                'message' => "Completed delivery successfully to {$customerName}.",
+                'url' => route('rider.history'),
+                'timestamp' => $delivery->delivered_at ?? $delivery->updated_at,
+            ];
+        }
+
+        // 4. Status reminder if returning or offline
+        if ($rider->availability === 'returning') {
+            $items[] = [
+                'id' => 'status-returning',
+                'level' => 'info',
+                'icon' => 'fa-store',
+                'title' => 'Returning to Store',
+                'message' => 'Status set to Returning. Switch to Available once arrived.',
+                'url' => route('rider.dashboard'),
+                'timestamp' => $rider->updated_at,
+            ];
+        } elseif ($rider->availability === 'offline') {
+            $items[] = [
+                'id' => 'status-offline',
+                'level' => 'secondary',
+                'icon' => 'fa-moon',
+                'title' => 'You are Offline',
+                'message' => 'Switch status to Available to start receiving deliveries.',
+                'url' => route('rider.dashboard'),
+                'timestamp' => $rider->updated_at,
+            ];
+        }
+
+        $notifications = collect($items)
+            ->map(function ($item) {
+                $timestamp = !empty($item['timestamp']) ? Carbon::parse($item['timestamp']) : null;
+
+                return [
+                    'id' => $item['id'] ?? null,
+                    'level' => $item['level'],
+                    'icon' => $item['icon'],
+                    'title' => $item['title'],
+                    'message' => $item['message'],
+                    'url' => $item['url'],
+                    'time' => $timestamp ? $timestamp->toIso8601String() : null,
+                    'time_human' => $timestamp ? $timestamp->diffForHumans() : 'just now',
+                    'sort_time' => $timestamp ? $timestamp->timestamp : 0,
+                ];
+            })
+            ->sortByDesc('sort_time')
+            ->values()
+            ->take(10)
+            ->map(function ($item) {
+                unset($item['sort_time']);
+                return $item;
+            });
+
+        $unreadCount = $activeDeliveries->count() + ($availableOrdersCount > 0 ? 1 : 0);
+
+        return response()->json([
+            'count' => $unreadCount,
+            'items' => $notifications,
+        ]);
     }
 
     // Rider: accept an available order

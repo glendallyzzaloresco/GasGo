@@ -120,20 +120,145 @@
         }
         .rider-topbar .page-title { font-weight: 700; font-size: 1.1rem; color: var(--gasgo-blue); }
         .rider-topbar .topbar-right { display: flex; align-items: center; gap: 18px; }
+        .rider-topbar .topbar-right .notif-wrap {
+            position: relative;
+        }
         .rider-topbar .topbar-right .notif-btn {
             background: none; border: none; font-size: 1.2rem; color: #666; position: relative; cursor: pointer;
-            width: 36px;
-            height: 36px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             transition: background .2s ease, color .2s ease;
         }
-        .rider-topbar .topbar-right .notif-btn:hover {
+        .rider-topbar .topbar-right .notif-btn:hover,
+        .rider-topbar .topbar-right .notif-btn[aria-expanded='true'] {
             background: #eef5ff;
             color: var(--gasgo-blue);
         }
         .rider-topbar .topbar-right .notif-btn .badge-dot {
-            position: absolute; top: 0; right: 0; width: 8px; height: 8px;
+            position: absolute; top: 4px; right: 4px; width: 9px; height: 9px;
             background: var(--gasgo-orange); border-radius: 50%;
+            box-shadow: 0 0 0 2px #fff;
+        }
+        .notif-panel {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: -10px;
+            width: min(360px, calc(100vw - 28px));
+            background: #fff;
+            border: 1px solid var(--admin-border);
+            border-radius: 16px;
+            box-shadow: 0 20px 38px rgba(15,23,42,.15);
+            overflow: hidden;
+            z-index: 1050;
+            opacity: 0;
+            transform: translateY(6px);
+            pointer-events: none;
+            transition: opacity .2s ease, transform .2s ease;
+        }
+        .notif-panel.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .notif-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid #eef2f7;
+            background: #f8fbff;
+        }
+        .notif-panel-header h6 {
+            margin: 0;
+            font-weight: 700;
+            font-size: .92rem;
+            color: var(--gasgo-blue);
+        }
+        .notif-panel-header button {
+            border: none;
+            background: transparent;
+            color: #64748b;
+            font-size: .8rem;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all .2s ease;
+        }
+        .notif-panel-header button:hover {
+            background: #eaf2ff;
+            color: var(--gasgo-blue);
+        }
+        .notif-list {
+            max-height: 360px;
+            overflow-y: auto;
+        }
+        .notif-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 14px;
+            text-decoration: none;
+            color: inherit;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background .15s ease;
+        }
+        .notif-item:last-child {
+            border-bottom: none;
+        }
+        .notif-item:hover {
+            background: #f8fbff;
+        }
+        .notif-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: .9rem;
+        }
+        .notif-warning .notif-icon { background: #fff4db; color: #b7791f; }
+        .notif-info .notif-icon { background: #e8f4fc; color: #1a6db0; }
+        .notif-success .notif-icon { background: #e7f8ef; color: #1f8a52; }
+        .notif-danger .notif-icon { background: #fdecec; color: #b4232f; }
+        .notif-secondary .notif-icon { background: #f1f5f9; color: #64748b; }
+        .notif-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .notif-content .title {
+            font-size: .85rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 2px;
+            word-break: break-word;
+        }
+        .notif-content .msg {
+            font-size: .8rem;
+            color: #64748b;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+        .notif-content .meta {
+            font-size: .74rem;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+        .notif-empty,
+        .notif-loading {
+            padding: 24px 16px;
+            text-align: center;
+            color: #64748b;
+            font-size: .85rem;
+        }
+        .notif-dot-hidden {
+            display: none !important;
         }
         .rider-avatar {
             width: 36px; height: 36px; border-radius: 50%; background: var(--gasgo-blue);
@@ -377,7 +502,21 @@
             <span class="page-title">@yield('page-title', 'Dashboard')</span>
         </div>
         <div class="topbar-right">
-            <button class="notif-btn"><i class="fas fa-bell"></i><span class="badge-dot"></span></button>
+            <div class="notif-wrap" id="riderNotifWrap" data-endpoint="{{ route('rider.notifications') }}">
+                <button class="notif-btn" id="riderNotifBtn" aria-expanded="false" aria-label="Notifications" type="button">
+                    <i class="fas fa-bell"></i>
+                    <span class="badge-dot notif-dot-hidden" id="riderNotifDot"></span>
+                </button>
+                <div class="notif-panel" id="riderNotifPanel" role="dialog" aria-label="Rider Notifications">
+                    <div class="notif-panel-header">
+                        <h6>Notifications</h6>
+                        <button type="button" id="riderNotifRefresh" title="Refresh"><i class="fas fa-rotate me-1"></i>Refresh</button>
+                    </div>
+                    <div class="notif-list" id="riderNotifList">
+                        <div class="notif-loading"><i class="fas fa-circle-notch fa-spin me-2"></i>Loading notifications...</div>
+                    </div>
+                </div>
+            </div>
             <div class="dropdown">
                 <button class="rider-avatar" type="button" id="riderDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="cursor:pointer;">
                     {{ strtoupper(substr(Auth::user()->name ?? 'R', 0, 1)) }}
@@ -463,6 +602,139 @@
                 link.classList.add('active');
             }
         });
+
+        // ===== RIDER NOTIFICATIONS SCRIPT =====
+        const riderNotifWrap = document.getElementById('riderNotifWrap');
+        const riderNotifBtn = document.getElementById('riderNotifBtn');
+        const riderNotifPanel = document.getElementById('riderNotifPanel');
+        const riderNotifList = document.getElementById('riderNotifList');
+        const riderNotifDot = document.getElementById('riderNotifDot');
+        const riderNotifRefresh = document.getElementById('riderNotifRefresh');
+
+        let isRiderNotifOpen = false;
+
+        function setRiderNotifOpen(open) {
+            isRiderNotifOpen = open;
+            if (!riderNotifBtn || !riderNotifPanel) return;
+            riderNotifBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            riderNotifPanel.classList.toggle('show', open);
+
+            if (open && riderNotifDot) {
+                // Dim unread indicator when viewed
+                riderNotifDot.classList.add('notif-dot-hidden');
+            }
+        }
+
+        function renderRiderNotifs(items) {
+            if (!riderNotifList) return;
+            if (!items || !items.length) {
+                riderNotifList.innerHTML = '<div class="notif-empty"><i class="fas fa-check-circle me-2 text-success"></i>No new notifications. You are all caught up!</div>';
+                return;
+            }
+
+            riderNotifList.innerHTML = items.map((item) => {
+                const level = item.level || 'info';
+                const icon = item.icon || 'fa-bell';
+                const title = item.title || 'Notification';
+                const message = item.message || '';
+                const timeHuman = item.time_human || '';
+                const url = item.url || '#';
+
+                return `<a href="${url}" class="notif-item notif-${level}">
+                            <div class="notif-icon"><i class="fas ${icon}"></i></div>
+                            <div class="notif-content">
+                                <div class="title">${title}</div>
+                                <div class="msg">${message}</div>
+                                <div class="meta">${timeHuman}</div>
+                            </div>
+                        </a>`;
+            }).join('');
+        }
+
+        async function loadRiderNotifications(isSilent = false) {
+            if (!riderNotifWrap || !riderNotifList) return;
+            const endpoint = riderNotifWrap.dataset.endpoint;
+            if (!endpoint) return;
+
+            if (!isSilent && !isRiderNotifOpen) {
+                riderNotifList.innerHTML = '<div class="notif-loading"><i class="fas fa-circle-notch fa-spin me-2"></i>Loading notifications...</div>';
+            }
+
+            try {
+                const response = await fetch(endpoint, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch rider notifications');
+                }
+
+                const data = await response.json();
+                const count = Number(data.count || 0);
+
+                renderRiderNotifs(data.items || []);
+
+                if (riderNotifDot) {
+                    if (count > 0 && !isRiderNotifOpen) {
+                        riderNotifDot.classList.remove('notif-dot-hidden');
+                    } else if (count <= 0) {
+                        riderNotifDot.classList.add('notif-dot-hidden');
+                    }
+                }
+            } catch (err) {
+                console.error('Rider notif fetch error:', err);
+                if (!isSilent) {
+                    riderNotifList.innerHTML = '<div class="notif-empty text-danger"><i class="fas fa-triangle-exclamation me-2"></i>Unable to load notifications right now.</div>';
+                }
+            }
+        }
+
+        if (riderNotifBtn) {
+            riderNotifBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const nextState = !isRiderNotifOpen;
+                setRiderNotifOpen(nextState);
+                if (nextState) {
+                    loadRiderNotifications();
+                }
+            });
+        }
+
+        if (riderNotifRefresh) {
+            riderNotifRefresh.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const spinIcon = riderNotifRefresh.querySelector('i');
+                if (spinIcon) spinIcon.classList.add('fa-spin');
+                loadRiderNotifications().finally(() => {
+                    setTimeout(() => {
+                        if (spinIcon) spinIcon.classList.remove('fa-spin');
+                    }, 400);
+                });
+            });
+        }
+
+        // Close on click outside
+        document.addEventListener('click', (e) => {
+            if (isRiderNotifOpen && !riderNotifWrap?.contains(e.target)) {
+                setRiderNotifOpen(false);
+            }
+        });
+
+        // Close on ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isRiderNotifOpen) {
+                setRiderNotifOpen(false);
+            }
+        });
+
+        // Initial fetch on page load & polling every 30s
+        loadRiderNotifications(true);
+        setInterval(() => {
+            loadRiderNotifications(true);
+        }, 30000);
     </script>
     <script src="{{ asset('js/double-submit-guard.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
