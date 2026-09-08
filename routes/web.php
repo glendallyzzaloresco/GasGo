@@ -24,6 +24,15 @@ use App\Http\Controllers\GeocodingController;
 use App\Http\Controllers\InventoryMovementController;
 use App\Http\Controllers\RestockController;
 
+Route::get('/wipe-render-data', function () {
+    \Illuminate\Support\Facades\Artisan::call('migrate:fresh', [
+        '--force' => true,
+        '--seed' => true,
+    ]);
+    $output = \Illuminate\Support\Facades\Artisan::output();
+    return response("<pre style='background:#111;color:#0f0;padding:20px;font-size:16px;border-radius:8px;'>Database wiped and reseeded successfully!\n\n" . htmlspecialchars($output) . "</pre>");
+});
+
 Route::get('/geocode/search', [GeocodingController::class, 'search'])->name('geocode.search');
 Route::get('/geocode/reverse', [GeocodingController::class, 'reverse'])->name('geocode.reverse');
 
