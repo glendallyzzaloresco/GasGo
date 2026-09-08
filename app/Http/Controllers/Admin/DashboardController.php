@@ -569,7 +569,7 @@ class DashboardController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')],
-            'password' => ['required', 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
+            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
         ]);
 
         $newAdmin = User::create([
@@ -577,6 +577,7 @@ class DashboardController extends Controller
             'email' => strtolower($validated['email']),
             'password' => $validated['password'],
             'role' => 'admin',
+            'email_verified_at' => now(),
         ]);
 
         \App\Services\ActivityLogger::log('auth', 'register', "Admin created new admin user account: {$newAdmin->name} ({$newAdmin->email})", ['email' => $newAdmin->email]);

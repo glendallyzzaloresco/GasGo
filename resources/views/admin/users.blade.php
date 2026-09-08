@@ -72,6 +72,20 @@
 @endsection
 
 @section('content')
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert" style="border-radius:12px;">
+        <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius:12px;">
+        <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
 <!-- Overview Stats -->
 <div class="row g-4 mb-4">
     <div class="col-lg-3 col-md-6">
@@ -509,6 +523,9 @@
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
+                            @error('password_confirmation')
+                                <small class="text-danger">{{ $message }}</small>
+                            @enderror
                         </div>
                     </div>
                 </div>
@@ -641,5 +658,44 @@
             alertDiv.remove();
         }, 4000);
     }
+
+    // Auto-open modal and select tab if validation errors occur
+    @if($errors->any())
+        @if($errors->has('vehicle_type') || $errors->has('plate_number') || old('vehicle_type') || old('phone'))
+            const ridersTab = document.getElementById('riders-tab');
+            if (ridersTab) {
+                bootstrap.Tab.getOrCreateInstance(ridersTab).show();
+            }
+            const riderModal = document.getElementById('riderModal');
+            if (riderModal) {
+                bootstrap.Modal.getOrCreateInstance(riderModal).show();
+            }
+        @else
+            const adminsTab = document.getElementById('admins-tab');
+            if (adminsTab) {
+                bootstrap.Tab.getOrCreateInstance(adminsTab).show();
+            }
+            const adminModal = document.getElementById('adminModal');
+            if (adminModal) {
+                bootstrap.Modal.getOrCreateInstance(adminModal).show();
+            }
+        @endif
+    @else
+        // Restore active tab from localStorage if saved
+        const savedTab = localStorage.getItem('admin_users_active_tab');
+        if (savedTab) {
+            const tabBtn = document.getElementById(savedTab);
+            if (tabBtn) {
+                bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+            }
+        }
+    @endif
+
+    // Save active tab on click
+    document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(btn => {
+        btn.addEventListener('shown.bs.tab', (e) => {
+            localStorage.setItem('admin_users_active_tab', e.target.id);
+        });
+    });
 </script>
 @endsection
