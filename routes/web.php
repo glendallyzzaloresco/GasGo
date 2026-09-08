@@ -24,36 +24,6 @@ use App\Http\Controllers\GeocodingController;
 use App\Http\Controllers\InventoryMovementController;
 use App\Http\Controllers\RestockController;
 
-Route::get('/wipe-render-data', function () {
-    ini_set('max_execution_time', 300);
-    set_time_limit(300);
-    
-    $log = [];
-    try {
-        \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
-        $log[] = "Foreign key constraints disabled.";
-
-        $exitCode = \Illuminate\Support\Facades\Artisan::call('migrate:fresh', [
-            '--force' => true,
-            '--seed' => true,
-        ]);
-        $artisanOutput = \Illuminate\Support\Facades\Artisan::output();
-        $log[] = "Artisan Exit Code: $exitCode";
-        $log[] = "Artisan Output:\n" . $artisanOutput;
-
-        \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
-        $log[] = "Foreign key constraints re-enabled.";
-
-        return response("<pre style='background:#111;color:#0f0;padding:20px;font-size:15px;line-height:1.5;border-radius:8px;'><b>SUCCESS: Database wiped and reseeded!</b>\n\n" . htmlspecialchars(implode("\n\n", $log)) . "</pre>", 200);
-    } catch (\Throwable $e) {
-        try {
-            \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
-        } catch (\Throwable $ignored) {}
-
-        return response("<pre style='background:#111;color:#f55;padding:20px;font-size:15px;line-height:1.5;border-radius:8px;'><b>FAILED WITH EXCEPTION:</b>\n" . htmlspecialchars($e->getMessage()) . "\n\n<b>File:</b> " . htmlspecialchars($e->getFile() . ':' . $e->getLine()) . "\n\n<b>Artisan Output So Far:</b>\n" . htmlspecialchars(\Illuminate\Support\Facades\Artisan::output()) . "\n\n<b>Trace:</b>\n" . htmlspecialchars($e->getTraceAsString()) . "</pre>", 200);
-    }
-});
-
 Route::get('/geocode/search', [GeocodingController::class, 'search'])->name('geocode.search');
 Route::get('/geocode/reverse', [GeocodingController::class, 'reverse'])->name('geocode.reverse');
 
