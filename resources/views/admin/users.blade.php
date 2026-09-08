@@ -86,6 +86,22 @@
     </div>
 @endif
 
+<!-- Action Header -->
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+        <h4 class="fw-bold mb-1" style="color:var(--gasgo-blue);"><i class="fas fa-users-gear me-2"></i>User & Staff Management</h4>
+        <p class="text-muted mb-0" style="font-size:0.88rem;">Manage administrator accounts, delivery riders, and customer records</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-sm shadow-sm" style="background:var(--gasgo-blue);color:#fff;border-radius:10px;padding:9px 18px;font-weight:600;" data-bs-toggle="modal" data-bs-target="#adminModal">
+            <i class="fas fa-user-shield me-1"></i>Add Admin Account
+        </button>
+        <button class="btn btn-sm shadow-sm" style="background:var(--gasgo-orange);color:#fff;border-radius:10px;padding:9px 18px;font-weight:600;" data-bs-toggle="modal" data-bs-target="#riderModal">
+            <i class="fas fa-motorcycle me-1"></i>Add Rider
+        </button>
+    </div>
+</div>
+
 <!-- Overview Stats -->
 <div class="row g-4 mb-4">
     <div class="col-lg-3 col-md-6">
@@ -307,6 +323,7 @@
                         <tr>
                             <th>Name</th>
                             <th>Email</th>
+                            <th>Phone</th>
                             <th>Role</th>
                             <th>Joined</th>
                         </tr>
@@ -328,12 +345,13 @@
                                     </div>
                                 </td>
                                 <td>{{ $admin->email }}</td>
+                                <td>{{ $admin->phone ?? '—' }}</td>
                                 <td><span class="status-badge" style="background:#f3e8ff;color:#7e22ce;"><i class="fas fa-shield-alt me-1"></i>Administrator</span></td>
                                 <td>{{ $admin->created_at->format('M d, Y') }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="text-center py-4 text-muted">No admin accounts found</td>
+                                <td colspan="5" class="text-center py-4 text-muted">No admin accounts found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -489,24 +507,31 @@
                 </div>
                 <div class="modal-body" style="padding:24px;">
                     <div class="row g-3">
-                        <div class="col-md-12">
+                        <div class="col-md-6">
                             <label class="form-label fw-bold" style="font-size:.88rem;">Full Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" style="border-radius:10px;" placeholder="Full name" value="{{ old('name') }}" required>
+                            <input type="text" name="name" class="form-control" style="border-radius:10px;" placeholder="e.g. John Doe" value="{{ old('name') }}" required>
                             @error('name')
                                 <small class="text-danger">{{ $message }}</small>
                             @enderror
                         </div>
-                        <div class="col-md-12">
+                        <div class="col-md-6">
                             <label class="form-label fw-bold" style="font-size:.88rem;">Email Address <span class="text-danger">*</span></label>
-                            <input type="email" name="email" class="form-control" style="border-radius:10px;" placeholder="Email address" value="{{ old('email') }}" required>
+                            <input type="email" name="email" class="form-control" style="border-radius:10px;" placeholder="admin@example.com" value="{{ old('email') }}" required>
                             @error('email')
+                                <small class="text-danger">{{ $message }}</small>
+                            @enderror
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold" style="font-size:.88rem;">Phone Number <small class="text-muted">(Optional)</small></label>
+                            <input type="text" name="phone" class="form-control" style="border-radius:10px;" placeholder="09XXXXXXXXX" value="{{ old('phone') }}">
+                            @error('phone')
                                 <small class="text-danger">{{ $message }}</small>
                             @enderror
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold" style="font-size:.88rem;">Password <span class="text-danger">*</span></label>
                             <div class="input-group" style="border-radius:10px;overflow:hidden;">
-                                <input type="password" name="password" id="adminPassword" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Min 8 chars, letters & numbers" minlength="8" pattern="(?=.*[A-Za-z])(?=.*\d).{8,}" title="Password must be at least 8 characters and contain both letters and numbers." required>
+                                <input type="password" name="password" id="adminPassword" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Min 6 characters" minlength="6" required>
                                 <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this, 'adminPassword')" style="border-radius:0 10px 10px 0;">
                                     <i class="fas fa-eye"></i>
                                 </button>
@@ -518,7 +543,7 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold" style="font-size:.88rem;">Confirm Password <span class="text-danger">*</span></label>
                             <div class="input-group" style="border-radius:10px;overflow:hidden;">
-                                <input type="password" name="password_confirmation" id="adminPasswordConfirm" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Confirm password" minlength="8" required>
+                                <input type="password" name="password_confirmation" id="adminPasswordConfirm" class="form-control" style="border-radius:10px 0 0 10px;" placeholder="Confirm password" minlength="6" required>
                                 <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this, 'adminPasswordConfirm')" style="border-radius:0 10px 10px 0;">
                                     <i class="fas fa-eye"></i>
                                 </button>
@@ -532,7 +557,7 @@
                 <div class="modal-footer" style="border-top:none;padding:0 24px 24px;">
                     <button type="button" class="btn" data-bs-dismiss="modal" style="border-radius:10px;">Cancel</button>
                     <button type="submit" class="btn" style="background:var(--gasgo-blue);color:#fff;border-radius:10px;font-weight:600;padding:10px 28px;">
-                        <i class="fas fa-user-plus me-1"></i>Create Admin
+                        <i class="fas fa-user-plus me-1"></i>Create Admin Account
                     </button>
                 </div>
             </form>

@@ -362,7 +362,7 @@
             <button class="btn"
                 style="background:var(--gasgo-orange);color:#fff;border-radius:12px;font-weight:600;padding:10px 22px;"
                 data-bs-toggle="modal" data-bs-target="#productModal" onclick="openAddProduct()">
-                <i class="fas fa-plus me-2"></i>Add {{ $nicheItemNoun }}
+                <i class="fas fa-plus me-2"></i>Add New Product
             </button>
         </div>
 
@@ -996,11 +996,8 @@
                         <div>
                             <div class="d-flex align-items-center gap-2">
                                 <h5 class="modal-title fw-bold mb-0 text-dark" id="productModalTitle">
-                                    <span id="productModalAction">Add New</span> <span id="productModalNicheNoun">{{ $nicheItemNoun }}</span>
+                                    <span id="productModalAction">Add New Product</span>
                                 </h5>
-                                <span class="badge rounded-pill bg-light text-primary border px-2 py-1" style="font-size:0.75rem;font-weight:600;">
-                                    <i class="{{ $nicheIcon }} me-1"></i>{{ $nicheName }}
-                                </span>
                             </div>
                             <small class="text-muted" id="productModalSub" style="font-size:0.85rem;">Configure product specifications, pricing, and stock inventory.</small>
                         </div>
@@ -1172,7 +1169,7 @@
                     <button type="submit" form="productForm" id="productSubmitBtn" class="btn shadow-sm"
                         style="background:var(--gasgo-orange);color:#fff;border-radius:10px;font-weight:600;padding:10px 28px;">
                         <span id="productSubmitSpinner" class="spinner-border spinner-border-sm me-1 d-none" role="status" aria-hidden="true"></span>
-                        <span id="productSubmitText">Save {{ $nicheItemNoun }}</span>
+                        <span id="productSubmitText">Save Product</span>
                     </button>
                 </div>
             </div>
@@ -1617,11 +1614,12 @@
 
         function openAddProduct() {
             const actionSpan = document.getElementById('productModalAction');
-            if (actionSpan) actionSpan.textContent = 'Add New';
+            if (actionSpan) actionSpan.textContent = 'Add New Product';
             
-            document.getElementById('productModalNicheNoun').textContent = currentActiveNicheNoun;
-            document.getElementById('productModalSub').textContent = `Configure ${currentActiveNicheNoun.toLowerCase()} specifications, pricing, and stock inventory.`;
-            document.getElementById('productModalHeaderIcon').className = currentActiveNicheIcon;
+            const nicheNounSpan = document.getElementById('productModalNicheNoun');
+            if (nicheNounSpan) nicheNounSpan.textContent = '';
+            document.getElementById('productModalSub').textContent = 'Configure product specifications, pricing, and stock inventory.';
+            document.getElementById('productModalHeaderIcon').className = 'fas fa-box';
             document.getElementById('productForm').action = "{{ route('admin.products.store') }}";
             document.getElementById('productFormMethod').value = 'POST';
             document.getElementById('productModalAlerts').innerHTML = '';
@@ -1641,7 +1639,7 @@
             document.getElementById('prodActive').checked = true;
             
             const submitText = document.getElementById('productSubmitText');
-            if (submitText) submitText.textContent = `Save ${currentActiveNicheNoun}`;
+            if (submitText) submitText.textContent = 'Save Product';
 
             clearProductImagePreview();
             handleProductCategoryChange(false);
@@ -1649,10 +1647,11 @@
 
         function openEditProduct(button) {
             const actionSpan = document.getElementById('productModalAction');
-            if (actionSpan) actionSpan.textContent = 'Edit';
+            if (actionSpan) actionSpan.textContent = 'Edit Product';
 
-            document.getElementById('productModalNicheNoun').textContent = currentActiveNicheNoun;
-            document.getElementById('productModalSub').textContent = `Update ${currentActiveNicheNoun.toLowerCase()} details, pricing, and stock inventory.`;
+            const nicheNounSpan = document.getElementById('productModalNicheNoun');
+            if (nicheNounSpan) nicheNounSpan.textContent = '';
+            document.getElementById('productModalSub').textContent = 'Update product details, pricing, and stock inventory.';
             document.getElementById('productModalHeaderIcon').className = 'fas fa-pen-to-square';
             document.getElementById('productForm').action = button.dataset.updateUrl;
             document.getElementById('productFormMethod').value = 'PUT';
@@ -1670,7 +1669,7 @@
             document.getElementById('prodActive').checked = (button.dataset.isActive === '1');
 
             const submitText = document.getElementById('productSubmitText');
-            if (submitText) submitText.textContent = 'Save Changes';
+            if (submitText) submitText.textContent = 'Save Product';
 
             // Handle image preview
             const imageUrl = button.dataset.imageUrl;
@@ -1815,7 +1814,7 @@
                 if (submitButton) {
                     submitButton.disabled = true;
                     if (spinner) spinner.classList.remove('d-none');
-                    if (textSpan) textSpan.textContent = isUpdate ? 'Saving Changes...' : 'Creating Product...';
+                    if (textSpan) textSpan.textContent = 'Saving Product...';
                 }
 
                 const response = await fetch(form.action, {
