@@ -13,7 +13,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -207,44 +209,137 @@ class CustomerController extends Controller
         return view('customer.login', compact('activeTab'));
     }
 
+    public const MAX_LOGIN_ATTEMPTS = 5;
+    public const LOCKOUT_SECONDS = 60;
+    public const MAX_IP_ATTEMPTS = 20;
+    public const IP_LOCKOUT_SECONDS = 300;
+
+    /**
+     * Generate standard throttle key for user login (email + IP).
+     */
+    protected function throttleKey(Request $request, string $email): string
+    {
+        return Str::transliterate(strtolower(trim($email)) . '|' . $request->ip());
+    }
+
+    /**
+     * Generate IP-wide throttle key to defend against credential stuffing.
+     */
+    protected function ipThrottleKey(Request $request): string
+    {
+        return 'login-ip|' . $request->ip();
+    }
+
     public function authenticate(Request $request)
     {
         $credentials = $request->validate([
             'email' => 'required|email',
-            'password' => 'required',
+            'password' => 'required|string',
         ]);
 
-        // Find user by email
-        $user = User::where('email', $credentials['email'])->first();
+        $normalizedEmail = strtolower(trim($credentials['email']));
+        $throttleKey = $this->throttleKey($request, $normalizedEmail);
+        $ipThrottleKey = $this->ipThrottleKey($request);
 
-        if (! $user) {
-            $message = 'The provided credentials do not match our records.';
+        // 1. Check if account or IP is currently locked out
+        $isAccountLocked = RateLimiter::tooManyAttempts($throttleKey, self::MAX_LOGIN_ATTEMPTS);
+        $isIpLocked = RateLimiter::tooManyAttempts($ipThrottleKey, self::MAX_IP_ATTEMPTS);
+
+        if ($isAccountLocked || $isIpLocked) {
+            $seconds = max(
+                $isAccountLocked ? RateLimiter::availableIn($throttleKey) : 0,
+                $isIpLocked ? RateLimiter::availableIn($ipThrottleKey) : 0
+            );
+
+            ActivityLogger::log('auth', 'lockout', "Blocked login attempt during lockout for {$normalizedEmail} from IP {$request->ip()} ({$seconds}s remaining)", [
+                'email' => $normalizedEmail,
+                'ip' => $request->ip(),
+                'lockout_seconds' => $seconds,
+            ]);
+
+            $message = "Too many login attempts. Your account has been temporarily locked for security. Please try again in {$seconds} second" . ($seconds === 1 ? '' : 's') . '.';
+
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
                     'message' => $message,
+                    'lockout_seconds' => $seconds,
+                ], 429)->header('Retry-After', (string) $seconds);
+            }
+
+            return back()
+                ->withInput($request->only('email'))
+                ->with('error', $message)
+                ->with('lockout_seconds', $seconds);
+        }
+
+        // 2. Find user by normalized email
+        $user = User::where('email', $normalizedEmail)->first();
+
+        // Mitigation against timing attacks and account enumeration:
+        // Always run password verification using a dummy hash if user doesn't exist.
+        $dummyHash = '$2y$12$e0MYzXyjpJS7Pd0RVvHwHeFj7bK2Q1h4w9a2Q7UfHlAomjSre5bKW';
+        $userPasswordHash = $user ? $user->password : $dummyHash;
+        $passwordMatches = password_verify($credentials['password'], $userPasswordHash);
+
+        if (! $user || ! $passwordMatches) {
+            // Record failed attempt in both account and IP throttles
+            RateLimiter::hit($throttleKey, self::LOCKOUT_SECONDS);
+            RateLimiter::hit($ipThrottleKey, self::IP_LOCKOUT_SECONDS);
+
+            $attemptsLeft = RateLimiter::remaining($throttleKey, self::MAX_LOGIN_ATTEMPTS);
+
+            if ($attemptsLeft <= 0) {
+                $seconds = RateLimiter::availableIn($throttleKey);
+
+                ActivityLogger::log('auth', 'lockout', "Account temporarily locked after 5 failed login attempts for {$normalizedEmail}", [
+                    'email' => $normalizedEmail,
+                    'ip' => $request->ip(),
+                    'lockout_seconds' => $seconds,
+                ], $user);
+
+                $message = "Too many login attempts. Your account has been temporarily locked for security. Please try again in {$seconds} second" . ($seconds === 1 ? '' : 's') . '.';
+
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $message,
+                        'lockout_seconds' => $seconds,
+                    ], 429)->header('Retry-After', (string) $seconds);
+                }
+
+                return back()
+                    ->withInput($request->only('email'))
+                    ->with('error', $message)
+                    ->with('lockout_seconds', $seconds);
+            }
+
+            ActivityLogger::log('auth', 'failed_login', "Failed login attempt for {$normalizedEmail} ({$attemptsLeft} attempt" . ($attemptsLeft === 1 ? '' : 's') . " remaining)", [
+                'email' => $normalizedEmail,
+                'ip' => $request->ip(),
+                'attempts_remaining' => $attemptsLeft,
+            ], $user);
+
+            $attemptWord = $attemptsLeft === 1 ? 'attempt' : 'attempts';
+            $message = "The provided credentials do not match our records. You have {$attemptsLeft} {$attemptWord} remaining before your account is temporarily locked.";
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                    'attempts_remaining' => $attemptsLeft,
                 ], 401);
             }
 
             return back()
                 ->withInput($request->only('email'))
-                ->with('error', $message);
+                ->with('error', $message)
+                ->with('attempts_remaining', $attemptsLeft);
         }
 
-        // Verify password using native PHP password_verify (supports all algorithms)
-        if (! password_verify($credentials['password'], $user->password)) {
-            $message = 'The provided credentials do not match our records.';
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $message,
-                ], 401);
-            }
-
-            return back()
-                ->withInput($request->only('email'))
-                ->with('error', $message);
-        }
+        // 3. Password is valid: clear all rate limiting counters
+        RateLimiter::clear($throttleKey);
+        RateLimiter::clear($ipThrottleKey);
 
         // A successful password login proves a legacy Google user knows their password.
         if ($user->requiresPasswordSetup()) {
@@ -332,6 +427,25 @@ class CustomerController extends Controller
 
     public function register(Request $request)
     {
+        // Rate limit registration requests per IP (max 5 registrations per 15 minutes)
+        $regThrottleKey = 'register-ip|' . $request->ip();
+        if (RateLimiter::tooManyAttempts($regThrottleKey, 5)) {
+            $seconds = RateLimiter::availableIn($regThrottleKey);
+            $minutes = ceil($seconds / 60);
+            $message = "Too many account registrations from this network. Please try again in {$minutes} minute" . ($minutes === 1 ? '' : 's') . '.';
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                ], 429)->header('Retry-After', (string) $seconds);
+            }
+
+            return back()
+                ->withInput($request->except('password', 'password_confirmation'))
+                ->with('error', $message);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
@@ -339,6 +453,8 @@ class CustomerController extends Controller
             'address' => 'nullable|string|max:500',
             'password' => ['required', 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
         ]);
+
+        RateLimiter::hit($regThrottleKey, 900);
 
         // Create user
         $userId = DB::table('users')->insertGetId([
