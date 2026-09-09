@@ -153,8 +153,11 @@ class InventoryController extends Controller
         $today = Carbon::now()->startOfDay();
         $todayEnd = Carbon::now()->endOfDay();
 
-        // Today's stock received (include historical purchase aliases; fallback to created_at if movement_date is missing)
+        // Today's stock received for tank cylinders (fallback to created_at if movement_date is missing)
         $stockReceived = StockMovement::whereIn('type', ['stock_in', 'purchase'])
+            ->whereHas('inventory.product', function ($query) {
+                $query->where('is_active', true)->cylinders();
+            })
             ->whereBetween(
                 \Illuminate\Support\Facades\DB::raw('COALESCE(movement_date, created_at)'),
                 [$today, $todayEnd]
@@ -163,12 +166,12 @@ class InventoryController extends Controller
             ->orderByRaw('COALESCE(movement_date, created_at) DESC')
             ->get();
 
-        // Today's total stock received
+        // Today's total stock received (tank cylinders only)
         $totalStockReceived = $stockReceived->sum('full_in');
 
         $tankMovementQuery = StockMovement::query()
             ->whereHas('inventory.product', function ($query) {
-                $query->cylinders();
+                $query->where('is_active', true)->cylinders();
             })
             ->whereBetween(DB::raw('COALESCE(movement_date, created_at)'), [$today, $todayEnd]);
 

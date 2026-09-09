@@ -109,4 +109,19 @@ class SignupCompletionTest extends TestCase
         $this->assertDatabaseHas('users', ['email' => 'retry@example.com', 'email_verified_at' => null]);
         $this->get(route('verification.notice'))->assertOk()->assertSee('could not be sent');
     }
+
+    public function test_profile_email_change_sends_verification_and_saves_password(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create(['role' => 'customer']);
+        $this->actingAs($user)->put(route('customer.profile.update'), [
+            'name' => $user->name, 'email' => 'changed@example.com', 'phone' => '09123456789',
+            'password' => 'ChangedPass123!', 'password_confirmation' => 'ChangedPass123!',
+        ])->assertRedirect();
+        $user->refresh();
+        $this->assertSame('changed@example.com', $user->email);
+        $this->assertFalse($user->hasVerifiedEmail());
+        $this->assertTrue(password_verify('ChangedPass123!', $user->password));
+        Notification::assertSentTo($user, VerifyEmail::class);
+    }
 }

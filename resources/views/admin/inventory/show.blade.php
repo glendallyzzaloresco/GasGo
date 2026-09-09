@@ -597,14 +597,33 @@
                                                     $orderTransactionIsNew = (($order->transaction_type ?? '') === 'new_cylinder');
                                                 }
 
-                                                $showMarkReturned = $isSaleType && $isCylinderProduct && ($notesIndicateNew || $orderTransactionIsNew);
+                                                // Check if this movement has already been marked returned
+                                                $alreadyReturned = false;
+                                                if ($movement->reference && $movement->inventory_id) {
+                                                    $alreadyReturned = \App\Models\StockMovement::query()
+                                                        ->where('inventory_id', $movement->inventory_id)
+                                                        ->where(function ($q) use ($movement) {
+                                                            $q->where('reference', $movement->reference)
+                                                                ->orWhere('notes', 'like', '%returned for ' . $movement->reference . '%');
+                                                        })
+                                                        ->where('empty_in', '>', 0)
+                                                        ->exists();
+                                                }
+
+                                                $showMarkReturned = $isSaleType && $isCylinderProduct && ($notesIndicateNew || $orderTransactionIsNew) && !$alreadyReturned;
                                             @endphp
                                             @if($showMarkReturned)
                                                 <div class="mt-2">
-                                                    <form method="POST" action="{{ route('admin.inventory.movement.mark-returned', $movement) }}">
+                                                    <form method="POST" action="{{ route('admin.inventory.movement.mark-returned', $movement) }}" onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').innerHTML = '<span class=\'spinner-border spinner-border-sm me-1\'></span>Saving...';">
                                                         @csrf
                                                         <button type="submit" class="btn btn-sm btn-outline-primary">Mark Returned</button>
                                                     </form>
+                                                </div>
+                                            @elseif($isSaleType && $isCylinderProduct && ($notesIndicateNew || $orderTransactionIsNew) && $alreadyReturned)
+                                                <div class="mt-2">
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2">
+                                                        <i class="bi bi-check-circle me-1"></i>Returned
+                                                    </span>
                                                 </div>
                                             @endif
                                         </td>

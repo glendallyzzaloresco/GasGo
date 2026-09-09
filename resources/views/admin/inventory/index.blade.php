@@ -764,7 +764,7 @@
                                         <td class="text-muted small">{{ $inventory->updated_at ? $inventory->updated_at->format('M d, Y') : '—' }}</td>
                                         <td>
                                             <div class="inventory-card-actions">
-                                                <button type="button" class="btn btn-sm btn-success" onclick="setAdjustInventory('{{ $inventory->id }}', '{{ addslashes($inventory->product->name) }}', {{ $isExchangeable ? 'true' : 'false' }}, '{{ addslashes($inventory->supplier ?? '') }}')" data-bs-toggle="modal" data-bs-target="#adjustStockModal">
+                                                <button type="button" class="btn btn-sm btn-success" onclick="setAdjustInventory('{{ $inventory->id }}', '{{ addslashes($inventory->product->name) }}', '{{ (int) $inventory->quantity_on_hand }}', {{ $isExchangeable ? 'true' : 'false' }}, '{{ addslashes($inventory->supplier ?? '') }}')" data-bs-toggle="modal" data-bs-target="#adjustStockModal">
                                                     <i class="bi bi-plus-circle me-1"></i>Add Stock
                                                 </button>
                                                 <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-outline-primary">
@@ -964,14 +964,31 @@
                                             }
                                         }
 
-                                        $showMarkReturned = $isSaleType && $isCylinderProduct && ($notesIndicateNew || $orderTransactionIsNew);
+                                        // Check if this movement has already been marked returned
+                                        $alreadyReturned = false;
+                                        if ($movement->reference && $movement->inventory_id) {
+                                            $alreadyReturned = \App\Models\StockMovement::query()
+                                                ->where('inventory_id', $movement->inventory_id)
+                                                ->where(function ($q) use ($movement) {
+                                                    $q->where('reference', $movement->reference)
+                                                        ->orWhere('notes', 'like', '%returned for ' . $movement->reference . '%');
+                                                })
+                                                ->where('empty_in', '>', 0)
+                                                ->exists();
+                                        }
+
+                                        $showMarkReturned = $isSaleType && $isCylinderProduct && ($notesIndicateNew || $orderTransactionIsNew) && !$alreadyReturned;
                                     @endphp
 
                                     @if($showMarkReturned)
-                                        <form method="POST" action="{{ route('admin.inventory.movement.mark-returned', $movement) }}">
+                                        <form method="POST" action="{{ route('admin.inventory.movement.mark-returned', $movement) }}" onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').innerHTML = '<span class=\'spinner-border spinner-border-sm me-1\'></span>Saving...';">
                                             @csrf
                                             <button type="submit" class="btn btn-sm btn-outline-primary">Mark Returned</button>
                                         </form>
+                                    @elseif($isSaleType && $isCylinderProduct && ($notesIndicateNew || $orderTransactionIsNew) && $alreadyReturned)
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2">
+                                            <i class="bi bi-check-circle me-1"></i>Returned
+                                        </span>
                                     @endif
                                 </td>
                             </tr>
@@ -1042,9 +1059,12 @@
 </div>
 
 <script>
-function setAdjustInventory(inventoryId, productName, isCylinder = false, supplier = '') {
+function setAdjustInventory(inventoryId, productName, currentStock, isCylinder = false, supplier = '') {
     document.getElementById('adjustInventoryId').value = inventoryId;
-    document.getElementById('adjustProductName').textContent = productName;
+    const badgeHtml = isCylinder 
+        ? '<span class="badge bg-primary me-2">Tank</span>' 
+        : '<span class="badge bg-secondary me-2">Product</span>';
+    document.getElementById('adjustProductName').innerHTML = `${badgeHtml} ${productName} <small class="text-muted">(Current: ${currentStock})</small>`;
     document.getElementById('adjustSupplier').value = supplier || '';
     
     const supplierBox = document.getElementById('adjustSupplier')?.closest('.mb-3');
@@ -1089,8 +1109,8 @@ function setAdjustInventory(inventoryId, productName, isCylinder = false, suppli
         });
     }
 
-    select.value = '';
-    document.getElementById('adjustReference').value = '';
+    select.value = 'stock_in';
+    document.getElementById('adjustReference').value = 'STK-' + Date.now().toString().slice(-6);
     document.getElementById('adjustQuantity').value = '';
     document.getElementById('adjustNotes').value = '';
     document.getElementById('adjustStockForm').setAttribute('action', `/admin/inventory/${inventoryId}/adjust`);

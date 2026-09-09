@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -445,11 +446,7 @@ class RiderController extends Controller
 
         // Update password if provided
         if (!empty($validated['password'])) {
-            $updateData['password'] = password_hash($validated['password'], PASSWORD_ARGON2ID, [
-                'memory_cost' => 65536,
-                'time_cost' => 4,
-                'threads' => 1,
-            ]);
+            $updateData['password'] = Hash::make($validated['password']);
         }
 
         // Use DB::table to bypass Eloquent's hashed cast
