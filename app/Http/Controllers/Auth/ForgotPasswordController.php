@@ -129,6 +129,7 @@ class ForgotPasswordController extends Controller
         $user->forceFill([
             'password' => Hash::make($request->password),
             'remember_token' => Str::random(60),
+            'password_set_at' => now(),
         ])->save();
 
         // Delete the used token

@@ -5,11 +5,15 @@ namespace App\Http\Controllers\Customer;
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\Product;
+use App\Models\ServiceReview;
 use App\Models\User;
+use App\Services\ActivityLogger;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -26,7 +30,7 @@ class CustomerController extends Controller
                 ->where('is_active', true)
                 ->where('price', '>', 0)
                 ->get();
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             if (! str_contains($e->getMessage(), "Unknown column 'category'")) {
                 throw $e;
             }
@@ -47,35 +51,42 @@ class CustomerController extends Controller
             // Normalize categories to handle case variations
             $categoryMap = $products->mapToGroups(function ($item) {
                 $normalized = strtolower(trim($item->category ?? 'uncategorized'));
+
                 return [$normalized => $item];
             });
-            
+
             $featuredByCategory = [];
-            
+
             // Get exactly 1 product from each category first (up to 3 total)
             foreach ($categoryMap as $normalizedCategory => $categoryProducts) {
-                if (count($featuredByCategory) >= 3) break;
+                if (count($featuredByCategory) >= 3) {
+                    break;
+                }
                 $first = $categoryProducts->first();
                 if ($first) {
                     $featuredByCategory[] = $first;
                 }
             }
-            
+
             // Get 1 more product from any category to reach 4 total
             if (count($featuredByCategory) < 4) {
                 foreach ($categoryMap as $normalizedCategory => $categoryProducts) {
-                    if (count($featuredByCategory) >= 4) break;
+                    if (count($featuredByCategory) >= 4) {
+                        break;
+                    }
                     // Skip first product we already took
                     $remaining = $categoryProducts->skip(1);
                     foreach ($remaining as $product) {
-                        if (count($featuredByCategory) >= 4) break;
-                        if (!in_array($product->id, array_column($featuredByCategory, 'id'))) {
+                        if (count($featuredByCategory) >= 4) {
+                            break;
+                        }
+                        if (! in_array($product->id, array_column($featuredByCategory, 'id'))) {
                             $featuredByCategory[] = $product;
                         }
                     }
                 }
             }
-            
+
             $products = collect($featuredByCategory)->take(4);
         }
 
@@ -84,16 +95,16 @@ class CustomerController extends Controller
         $totalReviewCount = 0;
 
         try {
-            if (\Illuminate\Support\Facades\Schema::hasTable('service_reviews')) {
-                $serviceReviews = \App\Models\ServiceReview::with(['user', 'order'])
+            if (Schema::hasTable('service_reviews')) {
+                $serviceReviews = ServiceReview::with(['user', 'order'])
                     ->where('is_approved', true)
                     ->where('rating', 5)
                     ->latest()
                     ->take(6)
                     ->get();
 
-                $averageRating = \App\Models\ServiceReview::where('is_approved', true)->avg('rating') ?: 5.0;
-                $totalReviewCount = \App\Models\ServiceReview::where('is_approved', true)->count();
+                $averageRating = ServiceReview::where('is_approved', true)->avg('rating') ?: 5.0;
+                $totalReviewCount = ServiceReview::where('is_approved', true)->count();
             }
         } catch (\Throwable $e) {
             // Graceful fallback if table doesn't exist yet on production
@@ -148,6 +159,7 @@ class CustomerController extends Controller
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'message' => $message], 401);
             }
+
             return redirect()->route('customer.login')->with('error', $message);
         }
 
@@ -163,8 +175,14 @@ class CustomerController extends Controller
 
         $user->name = $validated['name'];
         $user->email = strtolower($validated['email']);
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+            $user->google_id = null;
+        }
         $user->phone = $validated['phone'];
         $user->address = $validated['address'] ?? null;
+
+        $user->save();
 
         if (! empty($validated['password'])) {
             // Use DB to directly update password, bypassing the hashed cast to set argon2id
@@ -172,25 +190,30 @@ class CustomerController extends Controller
                 'password' => password_hash($validated['password'], PASSWORD_ARGON2ID, [
                     'memory_cost' => 65536,
                     'time_cost' => 4,
-                    'threads' => 1
-                ])
+                    'threads' => 1,
+                ]),
             ]);
         } else {
             $user->save();
         }
 
+        if ($user->wasChanged('email')) {
+            $user->sendSignupVerification();
+        }
         $message = 'Your account has been updated successfully.';
-        \App\Services\ActivityLogger::log('auth', 'updated', "User {$user->name} updated profile information", ['user_id' => $user->id], $user);
+        ActivityLogger::log('auth', 'updated', "User {$user->name} updated profile information", ['user_id' => $user->id], $user);
 
         if ($request->expectsJson()) {
             return response()->json(['success' => true, 'message' => $message], 200);
         }
+
         return back()->with('success', $message);
     }
 
     public function login(Request $request)
     {
         $activeTab = $request->input('tab') ?? old('auth_tab', 'login');
+
         return view('customer.login', compact('activeTab'));
     }
 
@@ -204,38 +227,45 @@ class CustomerController extends Controller
         // Find user by email
         $user = User::where('email', $credentials['email'])->first();
 
-        if (!$user) {
+        if (! $user) {
             $message = 'The provided credentials do not match our records.';
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $message
+                    'message' => $message,
                 ], 401);
             }
+
             return back()
                 ->withInput($request->only('email'))
                 ->with('error', $message);
         }
 
         // Verify password using native PHP password_verify (supports all algorithms)
-        if (!password_verify($credentials['password'], $user->password)) {
+        if (! password_verify($credentials['password'], $user->password)) {
             $message = 'The provided credentials do not match our records.';
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $message
+                    'message' => $message,
                 ], 401);
             }
+
             return back()
                 ->withInput($request->only('email'))
                 ->with('error', $message);
+        }
+
+        // A successful password login proves a legacy Google user knows their password.
+        if ($user->requiresPasswordSetup()) {
+            $user->forceFill(['password_set_at' => now()])->save();
         }
 
         // Password is valid - log the user in
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
-        \App\Services\ActivityLogger::log('auth', 'login', "User {$user->name} logged in successfully (" . ucfirst($user->role ?? 'customer') . ")", ['role' => $user->role], $user);
+        ActivityLogger::log('auth', 'login', "User {$user->name} logged in successfully (".ucfirst($user->role ?? 'customer').')', ['role' => $user->role], $user);
 
         // Auto-upgrade bcrypt passwords to argon2id on successful login
         $isBcryptHash = strpos($user->password, '$2y$') === 0 || strpos($user->password, '$2a$') === 0;
@@ -245,7 +275,7 @@ class CustomerController extends Controller
                 $hashedPassword = password_hash($credentials['password'], PASSWORD_ARGON2ID, [
                     'memory_cost' => 65536,
                     'time_cost' => 4,
-                    'threads' => 1
+                    'threads' => 1,
                 ]);
                 DB::table('users')->where('id', $user->id)->update(['password' => $hashedPassword]);
             } catch (\Exception $e) {
@@ -269,11 +299,16 @@ class CustomerController extends Controller
             $message = 'Welcome back, Rider!';
         }
 
+        if ($user->isCustomer() && ! $user->hasVerifiedEmail()) {
+            $request->session()->put('url.intended', $request->session()->get('url.intended', $redirectPath));
+            $redirectPath = route('verification.notice');
+        }
+
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => $message,
-                'redirect' => $redirectPath
+                'redirect' => $redirectPath,
             ], 200);
         }
 
@@ -287,7 +322,7 @@ class CustomerController extends Controller
         $role = $user?->role ?? 'customer';
 
         if ($user) {
-            \App\Services\ActivityLogger::log('auth', 'logout', "User {$user->name} logged out", ['role' => $role], $user);
+            ActivityLogger::log('auth', 'logout', "User {$user->name} logged out", ['role' => $role], $user);
         }
 
         Auth::logout();
@@ -299,11 +334,16 @@ class CustomerController extends Controller
             ? route('customer.login')
             : route('customer.dashboard');
 
+        if ($user->isCustomer() && ! $user->hasVerifiedEmail()) {
+            $request->session()->put('url.intended', $request->session()->get('url.intended', $redirectPath));
+            $redirectPath = route('verification.notice');
+        }
+
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => $message,
-                'redirect' => $redirectPath
+                'redirect' => $redirectPath,
             ], 200);
         }
 
@@ -324,7 +364,7 @@ class CustomerController extends Controller
         $hashedPassword = password_hash($validated['password'], PASSWORD_ARGON2ID, [
             'memory_cost' => 65536,
             'time_cost' => 4,
-            'threads' => 1
+            'threads' => 1,
         ]);
 
         // Create user using DB to bypass hashed cast
@@ -344,32 +384,38 @@ class CustomerController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        \App\Services\ActivityLogger::log('auth', 'register', "New customer registered: {$user->name} ({$user->email})", ['role' => 'customer'], $user);
+        ActivityLogger::log('auth', 'register', "New customer registered: {$user->name} ({$user->email})", ['role' => 'customer'], $user);
 
         $this->mergeSessionCartToDatabase($request, $user->id);
 
-        $message = 'Your customer account has been created successfully.';
+        $sent = $user->sendSignupVerification();
+        $message = $sent ? 'Check your email to verify your account.' : 'Your account was created, but the verification email could not be sent. Please retry from the verification page.';
         $redirectPath = route('customer.dashboard');
-        
+
         // Check if redirect parameter is set (e.g., redirect=checkout)
         if ($request->query('redirect') === 'checkout') {
             $redirectPath = route('customer.checkout');
+        }
+
+        if ($user->isCustomer() && ! $user->hasVerifiedEmail()) {
+            $request->session()->put('url.intended', $request->session()->get('url.intended', $redirectPath));
+            $redirectPath = route('verification.notice');
         }
 
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => $message,
-                'redirect' => $redirectPath
+                'redirect' => $redirectPath,
             ], 200);
         }
 
         return redirect()
-            ->intended($redirectPath)
+            ->to($redirectPath)
             ->with('success', $message);
     }
 
-    private function mergeSessionCartToDatabase(Request $request, int $userId): void
+    public function mergeSessionCartToDatabase(Request $request, int $userId): void
     {
         $sessionCart = $request->session()->get(self::SESSION_CART_KEY, []);
 

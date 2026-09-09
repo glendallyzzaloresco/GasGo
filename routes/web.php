@@ -368,3 +368,11 @@ Route::prefix('rider')->middleware(['auth', 'verified'])->group(function () {
     Route::put('/delivery/{delivery}/location', [DeliveryController::class, 'updateLocation'])->name('rider.delivery.location.update');
     Route::post('/delivery/{delivery}/proof', [DeliveryController::class, 'uploadProof'])->name('rider.delivery.proof');
 });
+
+Route::middleware('auth')->group(function () {
+    Route::get('/email/verify', [\App\Http\Controllers\Auth\SignupController::class, 'notice'])->name('verification.notice');
+    Route::get('/email/verify/{id}/{hash}', [\App\Http\Controllers\Auth\SignupController::class, 'verify'])->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
+    Route::post('/email/verification-notification', [\App\Http\Controllers\Auth\SignupController::class, 'resend'])->middleware('throttle:1,1')->name('verification.send');
+    Route::get('/signup/password', [\App\Http\Controllers\Auth\SignupController::class, 'password'])->name('signup.password');
+    Route::post('/signup/password', [\App\Http\Controllers\Auth\SignupController::class, 'storePassword'])->middleware('throttle:6,1')->name('signup.password.store');
+});

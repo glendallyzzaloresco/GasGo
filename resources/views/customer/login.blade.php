@@ -373,7 +373,7 @@
                             <button type="submit" class="btn-auth"><i class="fas fa-sign-in-alt me-2"></i>Login</button>
                         </form>
                         <div class="divider">or</div>
-                        <a href="{{ route('auth.google') }}" class="btn-otp" style="display: inline-block; width: 100%; text-align: center; text-decoration: none; color: inherit;"><i class="fab fa-google me-2"></i>Continue with Google</a>
+                        <a href="{{ route('auth.google', request('redirect') === 'checkout' ? ['redirect' => 'checkout'] : []) }}" class="btn-otp" style="display: inline-block; width: 100%; text-align: center; text-decoration: none; color: inherit;"><i class="fab fa-google me-2"></i>Continue with Google</a>
                     </div>
 
                     <!-- Register Form -->
