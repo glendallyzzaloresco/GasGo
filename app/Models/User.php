@@ -2,14 +2,16 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Notifications\CustomResetPasswordNotification;
+use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     /**
@@ -49,12 +51,31 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'password_set_at' => 'datetime',
             'phone_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
 
     // ── Relationships ──
+
+    public function requiresPasswordSetup(): bool
+    {
+        return $this->google_id && ! $this->password_set_at;
+    }
+
+    public function sendSignupVerification(): bool
+    {
+        try {
+            $this->sendEmailVerificationNotification();
+
+            return true;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return false;
+        }
+    }
 
     public function carts()
     {
@@ -100,6 +121,6 @@ class User extends Authenticatable
 
     public function sendPasswordResetNotification($token): void
     {
-        $this->notify(new \App\Notifications\CustomResetPasswordNotification($token));
+        $this->notify(new CustomResetPasswordNotification($token));
     }
 }
