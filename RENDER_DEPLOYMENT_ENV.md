@@ -10,10 +10,10 @@ APP_ENV=production
 APP_KEY=base64:8IARXbbOx76MzsVvNaTKHrcqYcWidu5WdKyGodpcUkw=
 APP_DEBUG=false
 
-# Resend Email Configuration (Uses HTTPS Port 443 - Works on Render Free Tier)
-MAIL_MAILER=resend
-RESEND_API_KEY=re_Y26vwGNR_PjHSCVSfaGAZtZjpqEcK1Bw3
-MAIL_FROM_ADDRESS=onboarding@resend.dev
+# Brevo Email Configuration (Uses HTTPS Port 443 - Works on Render Free Tier)
+MAIL_MAILER=brevo
+BREVO_API_KEY=your_brevo_api_key_here
+MAIL_FROM_ADDRESS=gasgolpg@gmail.com
 MAIL_FROM_NAME="GasGo"
 
 # Cloudflare R2 Settings

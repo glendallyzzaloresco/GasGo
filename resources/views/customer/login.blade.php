@@ -324,7 +324,22 @@
                         <div class="auth-alert auth-alert-success">{{ session('success') }}</div>
                     @endif
 
-                    @if (session('error'))
+                    @if (session('lockout_seconds'))
+                        <div id="lockoutAlert" class="auth-alert auth-alert-error d-flex align-items-start gap-2" style="background:#fdecec; border: 1px solid #f8d7da; border-radius:14px; padding:14px 16px; margin-bottom:20px;">
+                            <i class="fas fa-user-lock fa-lg text-danger mt-1"></i>
+                            <div>
+                                <strong class="d-block text-danger">Account Temporarily Locked</strong>
+                                <span id="lockoutMsg">Too many failed login attempts. Please wait <strong id="lockoutSeconds">{{ session('lockout_seconds') }}</strong>s before trying again.</span>
+                            </div>
+                        </div>
+                    @elseif (session('attempts_remaining'))
+                        <div class="auth-alert d-flex align-items-start gap-2" style="background:#fff8e6; color:#8a5300; border: 1px solid #ffe58f; border-radius:14px; padding:14px 16px; margin-bottom:20px; font-size:0.9rem;">
+                            <i class="fas fa-exclamation-triangle fa-lg text-warning mt-1"></i>
+                            <div>
+                                <strong>Login Failed:</strong> {{ session('error') }}
+                            </div>
+                        </div>
+                    @elseif (session('error'))
                         <div class="auth-alert auth-alert-error">{{ session('error') }}</div>
                     @endif
 
@@ -370,10 +385,18 @@
                                 </label>
                                 <a href="{{ route('password.request') }}" style="font-size:.85rem;color:var(--gasgo-orange);font-weight:600;text-decoration:none;">Forgot Password?</a>
                             </div>
-                            <button type="submit" class="btn-auth"><i class="fas fa-sign-in-alt me-2"></i>Login</button>
+                            <button type="submit" id="loginSubmitBtn" class="btn-auth" @if (session('lockout_seconds')) disabled style="opacity:0.65;cursor:not-allowed;" @endif>
+                                <i class="fas fa-sign-in-alt me-2"></i>
+                                <span id="loginBtnText">@if (session('lockout_seconds')) Locked ({{ session('lockout_seconds') }}s) @else Login @endif</span>
+                            </button>
                         </form>
                         <div class="divider">or</div>
                         <a href="{{ route('auth.google', request('redirect') === 'checkout' ? ['redirect' => 'checkout'] : []) }}" class="btn-otp" style="display: inline-block; width: 100%; text-align: center; text-decoration: none; color: inherit;"><i class="fab fa-google me-2"></i>Continue with Google</a>
+                        <div class="mt-4 pt-2 text-center" style="border-top: 1px dashed #e2e8f0;">
+                            <small class="text-muted" style="font-size: 0.78rem;">
+                                <i class="fas fa-shield-alt text-success me-1"></i> Protected by Rate Limiting & Anti-Brute-Force Shield
+                            </small>
+                        </div>
                     </div>
 
                     <!-- Register Form -->
@@ -577,5 +600,38 @@ function checkPasswordMatch() {
         matchText.style.color = '#dc3545';
     }
 }
+
+// Live Countdown Timer for Account Lockout
+@if (session('lockout_seconds'))
+document.addEventListener('DOMContentLoaded', function() {
+    let secondsLeft = {{ (int) session('lockout_seconds') }};
+    const countdownEl = document.getElementById('lockoutSeconds');
+    const submitBtn = document.getElementById('loginSubmitBtn');
+    const btnText = document.getElementById('loginBtnText');
+    const lockoutAlert = document.getElementById('lockoutAlert');
+
+    const interval = setInterval(function() {
+        secondsLeft--;
+        if (countdownEl) countdownEl.textContent = Math.max(0, secondsLeft);
+        if (btnText && secondsLeft > 0) btnText.textContent = 'Locked (' + secondsLeft + 's)';
+
+        if (secondsLeft <= 0) {
+            clearInterval(interval);
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+            }
+            if (btnText) btnText.textContent = 'Login';
+            if (lockoutAlert) {
+                lockoutAlert.style.background = '#e8f7ee';
+                lockoutAlert.style.border = '1px solid #b7eb8f';
+                lockoutAlert.style.color = '#1f7a45';
+                lockoutAlert.innerHTML = '<i class="fas fa-lock-open fa-lg text-success mt-1"></i><div><strong>Lockout Expired:</strong> You may now attempt to log in again.</div>';
+            }
+        }
+    }, 1000);
+});
+@endif
 </script>
 @endsection

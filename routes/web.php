@@ -197,7 +197,7 @@ Route::post('/customer/cart', [CartController::class, 'store'])->name('customer.
 Route::match(['get', 'post'], '/customer/checkout', [OrderController::class, 'checkout'])->name('customer.checkout');
 
 // ===== CUSTOMER ROUTES =====
-Route::middleware(['auth', 'verified'])->prefix('customer')->group(function () {
+Route::middleware(['auth', 'verified', 'role:customer,admin'])->prefix('customer')->group(function () {
     Route::get('/customerDashboard', [CustomerController::class, 'dashboard'])->name('customer.dashboard');
 
     // Cart (Additional operations for authenticated users)
@@ -230,7 +230,7 @@ Route::middleware(['auth', 'verified'])->prefix('customer')->group(function () {
 });
 
 // ===== ADMIN ROUTES =====
-Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
+Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/notifications', [DashboardController::class, 'notifications'])->name('admin.notifications');
     Route::get('/profile', [DashboardController::class, 'profile'])->name('admin.profile');
@@ -348,7 +348,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
 });
 
 // ===== RIDER ROUTES =====
-Route::prefix('rider')->middleware(['auth', 'verified'])->group(function () {
+Route::prefix('rider')->middleware(['auth', 'verified', 'role:rider'])->group(function () {
     Route::get('/dashboard', [RiderController::class, 'dashboard'])->name('rider.dashboard');
     Route::get('/notifications', [RiderController::class, 'notifications'])->name('rider.notifications');
     Route::get('/profile', [RiderController::class, 'profile'])->name('rider.profile');

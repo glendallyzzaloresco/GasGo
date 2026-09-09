@@ -2,6 +2,8 @@
 
 use App\Http\Middleware\EnsureCustomerEmailVerified;
 use App\Http\Middleware\EnsureSignupComplete;
+use App\Http\Middleware\EnsureUserRole;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,8 +17,14 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
-        $middleware->web(append: [EnsureSignupComplete::class]);
-        $middleware->alias(['verified' => EnsureCustomerEmailVerified::class]);
+        $middleware->web(append: [
+            EnsureSignupComplete::class,
+            SecurityHeaders::class,
+        ]);
+        $middleware->alias([
+            'verified' => EnsureCustomerEmailVerified::class,
+            'role' => EnsureUserRole::class,
+        ]);
         $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
