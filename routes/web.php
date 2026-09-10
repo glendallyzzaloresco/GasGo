@@ -247,6 +247,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->group(fu
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('admin.orders.show');
     Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('admin.orders.status');
     Route::post('/orders/bulk-update-status', [OrderController::class, 'bulkUpdateStatus'])->name('admin.orders.bulk-update-status');
+    Route::post('/orders/{order}/mark-cylinder-returned', [InventoryController::class, 'markOrderCylinderReturned'])->name('admin.orders.mark-cylinder-returned');
 
     // Products
     Route::get('/products', [ProductController::class, 'adminIndex'])->name('admin.products');

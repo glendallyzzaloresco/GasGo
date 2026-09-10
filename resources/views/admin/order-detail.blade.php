@@ -194,6 +194,72 @@
             </div>
         </div>
 
+        <!-- Cylinder Return Status Card (For New Cylinder Orders) -->
+        @if($order->isNewCylinderTransaction())
+        <div class="detail-card" style="border-left: 4px solid {{ $order->cylinder_return_status === 'returned' ? '#28a745' : '#f7941d' }} !important;">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-gas-pump" style="color: {{ $order->cylinder_return_status === 'returned' ? '#28a745' : '#f7941d' }};"></i>
+                    Cylinder Deposit & Return Status
+                </h5>
+                @if($order->cylinder_return_status === 'returned')
+                    <span class="badge bg-success py-2 px-3 fs-6">
+                        <i class="fas fa-check-circle me-1"></i>Returned
+                    </span>
+                @elseif($order->cylinder_return_status === 'pending_return')
+                    <span class="badge bg-warning text-dark py-2 px-3 fs-6">
+                        <i class="fas fa-clock me-1"></i>Pending Return
+                    </span>
+                @else
+                    <span class="badge bg-secondary py-2 px-3 fs-6">
+                        <i class="fas fa-truck me-1"></i>Awaiting Delivery
+                    </span>
+                @endif
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-col">
+                    <span class="detail-label">Cylinders Issued</span>
+                    <div class="detail-value fw-bold">
+                        {{ $order->total_cylinder_quantity }} tank(s)
+                    </div>
+                </div>
+                <div class="detail-col">
+                    <span class="detail-label">Duration Held</span>
+                    <div class="detail-value">
+                        @if($order->cylinder_return_status === 'returned')
+                            Returned on {{ $order->cylinder_returned_at ? $order->cylinder_returned_at->format('M d, Y - g:i A') : 'Completed' }}
+                        @elseif($order->status === 'delivered')
+                            <span class="fw-semibold {{ ($order->days_held ?? 0) >= 14 ? 'text-danger' : 'text-warning-emphasis' }}">
+                                {{ $order->days_held ?? 0 }} day{{ ($order->days_held ?? 0) == 1 ? '' : 's' }} held
+                                @if(($order->days_held ?? 0) >= 14)
+                                    (Overdue for return)
+                                @endif
+                            </span>
+                        @else
+                            <span class="text-muted">Not yet delivered to customer</span>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            @if($order->cylinder_return_status === 'pending_return')
+                <div class="mt-3 pt-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="small text-muted">
+                        <i class="fas fa-info-circle me-1 text-primary"></i>
+                        When customer returns the {{ $order->total_cylinder_quantity }} empty tank(s), click below to restore empty stock and log the return movement.
+                    </div>
+                    <form method="POST" action="{{ route('admin.orders.mark-cylinder-returned', $order) }}" onsubmit="return confirm('Mark empty cylinder(s) as returned for this order? Empty inventory will be incremented by {{ $order->total_cylinder_quantity }}.');">
+                        @csrf
+                        <button type="submit" class="btn btn-primary btn-sm px-3 fw-bold">
+                            <i class="fas fa-arrow-down-left-circle me-1"></i>Mark Cylinders as Returned
+                        </button>
+                    </form>
+                </div>
+            @endif
+        </div>
+        @endif
+
         <!-- Order Items -->
         <div class="detail-card">
             <h5><i class="fas fa-box"></i>Order Items</h5>

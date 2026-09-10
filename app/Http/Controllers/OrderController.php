@@ -39,7 +39,9 @@ class OrderController extends Controller
 
         $orders = $query->get();
 
-        return view('customer.orders', compact('orders'));
+        $cylinderStats = \App\Services\CylinderTrackingService::getUserCylinderStats(Auth::id());
+
+        return view('customer.orders', compact('orders', 'cylinderStats'));
     }
 
     // Customer: show checkout form

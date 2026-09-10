@@ -456,6 +456,32 @@
     </div>
 </section>
 
+<!-- Unreturned Cylinders Alert for Authenticated Customer -->
+@auth
+@if(!empty($unreturnedCylinderStats['has_unreturned']))
+<section class="container mt-4 mb-2" style="position:relative;z-index:2;" data-aos="fade-up">
+    <div class="alert shadow-sm border-0 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 p-3 px-4" style="background: linear-gradient(135deg, #fffbf2 0%, #ffffff 100%); border-radius: 16px; border-left: 5px solid #f7941d !important;">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fff3cd; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;">
+                <i class="fas fa-gas-pump"></i>
+            </div>
+            <div>
+                <div class="fw-bold text-dark" style="font-size: 1rem;">
+                    You have {{ $unreturnedCylinderStats['unreturned_count'] }} unreturned cylinder{{ $unreturnedCylinderStats['unreturned_count'] == 1 ? '' : 's' }}
+                </div>
+                <div class="small text-muted">
+                    Empty tank(s) from your New Cylinder purchase(s) are awaiting return to GasGo.
+                </div>
+            </div>
+        </div>
+        <a href="{{ route('customer.orders') }}" class="btn btn-sm btn-outline-warning text-dark fw-bold text-nowrap align-self-start align-self-md-center" style="border-radius: 20px; padding: 6px 16px; border-color: #f7941d;">
+            <i class="fas fa-receipt me-1 text-warning"></i>View Unreturned Tanks
+        </a>
+    </div>
+</section>
+@endif
+@endauth
+
 <!-- Promo Banner -->
 @guest
 <section class="container" style="position:relative;z-index:2;" data-aos="fade-up">
