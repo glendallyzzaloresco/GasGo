@@ -315,6 +315,17 @@ class InventoryController extends Controller
 
         $totalEmptyReturnedByDate = (int) $emptyTankReturnsByDate->sum('returned_qty');
 
+        // Cylinder Return Monitor for New Cylinder orders
+        $cylinderTrackingFilters = [
+            'search' => $request->input('tracking_search'),
+            'status' => $request->input('tracking_status', 'pending_return'),
+            'product_id' => $request->input('tracking_product_id'),
+            'sort_by' => $request->input('tracking_sort_by', 'days_held_desc'),
+        ];
+        $cylinderTrackingList = \App\Services\CylinderTrackingService::getAdminTrackingList($cylinderTrackingFilters);
+        $cylinderTrackingStats = \App\Services\CylinderTrackingService::getAdminTrackingStats();
+        $cylinderProducts = Product::where('is_active', true)->cylinders()->orderBy('name')->get();
+
         return view('admin.inventory.index', compact(
             'inventories',
             'categories',
@@ -328,7 +339,11 @@ class InventoryController extends Controller
             'selectedEmptyDate',
             'totalEmptyReturnedByDate',
             'totalEmptyReturned',
-            'totalStockReceived'
+            'totalStockReceived',
+            'cylinderTrackingList',
+            'cylinderTrackingStats',
+            'cylinderTrackingFilters',
+            'cylinderProducts'
         ));
     }
 
@@ -550,9 +565,39 @@ class InventoryController extends Controller
                 'movement_date' => now(),
                 'created_by' => $user->id,
             ]);
+
+            // Sync with order if linked
+            if ($movement->reference) {
+                $order = \App\Models\Order::where('order_number', $movement->reference)
+                    ->orWhere('id', (int) filter_var($movement->reference, FILTER_SANITIZE_NUMBER_INT))
+                    ->first();
+                if ($order && !$order->cylinder_returned_at) {
+                    $order->update(['cylinder_returned_at' => now()]);
+                }
+            }
         });
 
         return redirect()->back()->with('success', 'Marked returned: ' . $quantity . ' empty cylinder(s).');
+    }
+
+    /**
+     * Mark an order's cylinders as returned directly by Order
+     */
+    public function markOrderCylinderReturned(Request $request, \App\Models\Order $order)
+    {
+        $user = Auth::user();
+
+        if (!$user || $user->role !== 'admin') {
+            abort(403, 'Unauthorized');
+        }
+
+        $result = \App\Services\CylinderTrackingService::markReturned($order, $user->id);
+
+        if (!$result['success']) {
+            return redirect()->back()->with('error', $result['message']);
+        }
+
+        return redirect()->back()->with('success', $result['message']);
     }
 
     /**

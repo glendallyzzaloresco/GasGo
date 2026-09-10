@@ -837,6 +837,246 @@
         </div>
     </div>
 
+    <!-- Cylinder Return Tracking & Monitor (New Cylinders) -->
+    <div class="card border-0 shadow-sm mb-4" id="cylinderReturnTrackingCard">
+        <div class="card-body">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-1">
+                        <i class="bi bi-clock-history me-2 text-warning"></i>Cylinder Return Monitor (New Cylinders)
+                    </h5>
+                    <p class="text-muted mb-0">Organized tracking of tanks released under "New Cylinder" orders awaiting customer return.</p>
+                </div>
+                <div class="text-muted small mt-2 mt-lg-0">
+                    Showing {{ $cylinderTrackingList->count() }} of {{ $cylinderTrackingList->total() }} records
+                </div>
+            </div>
+
+            <!-- Mini KPI Summary -->
+            <div class="row g-2 g-md-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="p-3 rounded-3 border bg-light text-center h-100">
+                        <div class="small text-muted fw-semibold text-uppercase" style="font-size:0.7rem;">Total Issued</div>
+                        <div class="h5 fw-bold mb-0 text-dark mt-1">{{ number_format($cylinderTrackingStats['total_issued']) }}</div>
+                        <div class="small text-muted" style="font-size:0.68rem;">New Cylinder Orders</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 rounded-3 border bg-warning-subtle text-center h-100">
+                        <div class="small text-warning-emphasis fw-semibold text-uppercase" style="font-size:0.7rem;">Pending Return</div>
+                        <div class="h5 fw-bold mb-0 text-warning mt-1">{{ number_format($cylinderTrackingStats['pending_return']) }}</div>
+                        <div class="small text-muted" style="font-size:0.68rem;">Tanks in Customer Possession</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 rounded-3 border bg-success-subtle text-center h-100">
+                        <div class="small text-success fw-semibold text-uppercase" style="font-size:0.7rem;">Returned</div>
+                        <div class="h5 fw-bold mb-0 text-success mt-1">{{ number_format($cylinderTrackingStats['returned']) }}</div>
+                        <div class="small text-muted" style="font-size:0.68rem;">Empty Tanks Restored</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 rounded-3 border bg-danger-subtle text-center h-100">
+                        <div class="small text-danger fw-semibold text-uppercase" style="font-size:0.7rem;">Overdue (> 14 days)</div>
+                        <div class="h5 fw-bold mb-0 text-danger mt-1">{{ number_format($cylinderTrackingStats['overdue']) }}</div>
+                        <div class="small text-muted" style="font-size:0.68rem;">Needs Follow-Up</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter & Sort Controls -->
+            <form method="GET" action="{{ route('admin.inventory.index') }}#cylinderReturnTrackingCard" class="row g-2 g-md-3 align-items-end mb-4">
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Search Customer / Order</label>
+                    <input type="text" name="tracking_search" class="form-control" 
+                           placeholder="Name, phone, or order #" 
+                           value="{{ request('tracking_search') }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold">Return Status</label>
+                    <select name="tracking_status" class="form-select">
+                        <option value="pending_return" {{ request('tracking_status', 'pending_return') === 'pending_return' ? 'selected' : '' }}>Pending Return</option>
+                        <option value="returned" {{ request('tracking_status') === 'returned' ? 'selected' : '' }}>Returned</option>
+                        <option value="all" {{ request('tracking_status') === 'all' ? 'selected' : '' }}>All Records</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold">Cylinder Type</label>
+                    <select name="tracking_product_id" class="form-select">
+                        <option value="">All Cylinders</option>
+                        @foreach(($cylinderProducts ?? []) as $cylProduct)
+                            <option value="{{ $cylProduct->id }}" {{ request('tracking_product_id') == $cylProduct->id ? 'selected' : '' }}>
+                                {{ $cylProduct->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Sort By</label>
+                    <select name="tracking_sort_by" class="form-select">
+                        <option value="days_held_desc" {{ request('tracking_sort_by', 'days_held_desc') === 'days_held_desc' ? 'selected' : '' }}>Oldest Unreturned / Days Held (High to Low)</option>
+                        <option value="days_held_asc" {{ request('tracking_sort_by') === 'days_held_asc' ? 'selected' : '' }}>Days Held (Low to High)</option>
+                        <option value="date_desc" {{ request('tracking_sort_by') === 'date_desc' ? 'selected' : '' }}>Order Date: Newest First</option>
+                        <option value="date_asc" {{ request('tracking_sort_by') === 'date_asc' ? 'selected' : '' }}>Order Date: Oldest First</option>
+                        <option value="customer_asc" {{ request('tracking_sort_by') === 'customer_asc' ? 'selected' : '' }}>Customer Name (A-Z)</option>
+                        <option value="customer_desc" {{ request('tracking_sort_by') === 'customer_desc' ? 'selected' : '' }}>Customer Name (Z-A)</option>
+                        <option value="qty_desc" {{ request('tracking_sort_by') === 'qty_desc' ? 'selected' : '' }}>Quantity (High to Low)</option>
+                        <option value="status" {{ request('tracking_sort_by') === 'status' ? 'selected' : '' }}>Status (Pending First)</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-funnel me-1"></i>Filter</button>
+                    @if(request()->hasAny(['tracking_search', 'tracking_status', 'tracking_product_id', 'tracking_sort_by']))
+                        <a href="{{ route('admin.inventory.index') }}#cylinderReturnTrackingCard" class="btn btn-outline-secondary" title="Reset Filters"><i class="bi bi-arrow-counterclockwise"></i></a>
+                    @endif
+                </div>
+            </form>
+
+            <!-- Table of Tracking Records -->
+            <div class="table-responsive">
+                <table class="table align-middle table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Customer & Contact</th>
+                            <th>Order # & Date</th>
+                            <th>Cylinder Product(s)</th>
+                            <th class="text-center">Tanks</th>
+                            <th>Days Held</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($cylinderTrackingList as $trackOrder)
+                            @php
+                                $isReturned = $trackOrder->isCylinderReturned();
+                                $daysHeld = $trackOrder->days_held ?? 0;
+                                $isOverdue = !$isReturned && $daysHeld >= 14;
+                                $cylinderItems = $trackOrder->getCylinderItems();
+                                $totalQty = $trackOrder->total_cylinder_quantity;
+                            @endphp
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ $trackOrder->customer_name ?: ($trackOrder->user?->name ?? 'Guest Customer') }}</div>
+                                    @if($trackOrder->contact_number)
+                                        <div class="small">
+                                            <a href="tel:{{ $trackOrder->contact_number }}" class="text-decoration-none text-primary">
+                                                <i class="bi bi-telephone me-1"></i>{{ $trackOrder->contact_number }}
+                                            </a>
+                                        </div>
+                                    @endif
+                                    <div class="small text-muted text-truncate" style="max-width: 200px;" title="{{ $trackOrder->delivery_address }}">
+                                        {{ $trackOrder->delivery_address ?: 'No address' }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <a href="{{ route('admin.orders.show', $trackOrder) }}" class="fw-semibold text-decoration-none">
+                                            #{{ $trackOrder->order_number }}
+                                        </a>
+                                    </div>
+                                    <div class="small text-muted">
+                                        {{ $trackOrder->created_at ? $trackOrder->created_at->format('M d, Y') : '—' }}
+                                    </div>
+                                    @if($trackOrder->delivered_at)
+                                        <div class="small text-success" style="font-size: 0.72rem;">
+                                            Delivered {{ $trackOrder->delivered_at->format('M d, Y') }}
+                                        </div>
+                                    @endif
+                                </td>
+                                <td>
+                                    @foreach($cylinderItems as $cylItem)
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            @php
+                                                $prodImg = $cylItem->product?->resolved_image ?? asset('images/default-product.png');
+                                            @endphp
+                                            <img src="{{ $prodImg }}" alt="{{ $cylItem->product_name }}" style="width: 28px; height: 28px; object-fit: contain; border-radius: 4px; border: 1px solid #eee;">
+                                            <span class="small fw-semibold">{{ $cylItem->product_name }}</span>
+                                            <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.68rem;">&times;{{ $cylItem->quantity }}</span>
+                                        </div>
+                                    @endforeach
+                                </td>
+                                <td class="text-center fw-bold">
+                                    <span class="badge bg-light text-dark border px-2 py-1 fs-6">
+                                        {{ $totalQty }}
+                                    </span>
+                                </td>
+                                <td>
+                                    @if($isReturned)
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2">
+                                            <i class="bi bi-check-circle me-1"></i>Returned
+                                        </span>
+                                        <div class="small text-muted mt-1" style="font-size:0.7rem;">
+                                            {{ $trackOrder->cylinder_returned_at ? $trackOrder->cylinder_returned_at->format('M d, Y') : 'Completed' }}
+                                        </div>
+                                    @elseif($trackOrder->status !== 'delivered')
+                                        <span class="badge bg-secondary-subtle text-secondary py-1 px-2">
+                                            <i class="bi bi-truck me-1"></i>Awaiting Delivery
+                                        </span>
+                                    @elseif($isOverdue)
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle py-1 px-2">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ $daysHeld }} days held
+                                        </span>
+                                        <div class="small text-danger fw-semibold mt-1" style="font-size:0.7rem;">Overdue</div>
+                                    @else
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle py-1 px-2">
+                                            <i class="bi bi-clock me-1"></i>{{ $daysHeld }} day{{ $daysHeld == 1 ? '' : 's' }} held
+                                        </span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($isReturned)
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>Returned
+                                        </span>
+                                    @elseif($trackOrder->status === 'delivered')
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-hourglass-split me-1"></i>Pending Return
+                                        </span>
+                                    @else
+                                        <span class="badge bg-info text-white">
+                                            {{ ucfirst(str_replace('_', ' ', $trackOrder->status)) }}
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-1 justify-content-end align-items-center">
+                                        @if(!$isReturned && $trackOrder->status === 'delivered')
+                                            <form method="POST" action="{{ route('admin.orders.mark-cylinder-returned', $trackOrder) }}" onsubmit="return confirm('Mark {{ $totalQty }} cylinder(s) as returned for Order #{{ $trackOrder->order_number }}? Empty stock will be incremented.');">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-primary text-nowrap" title="Mark Empty Cylinder(s) as Returned">
+                                                    <i class="bi bi-arrow-down-left-circle me-1"></i>Mark Returned
+                                                </button>
+                                            </form>
+                                        @elseif($isReturned)
+                                            <span class="text-success small fw-semibold me-2">
+                                                <i class="bi bi-check-all me-1"></i>Returned
+                                            </span>
+                                        @endif
+                                        <a href="{{ route('admin.orders.show', $trackOrder) }}" class="btn btn-sm btn-outline-secondary" title="View Order Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    <i class="bi bi-inbox fs-3 d-block mb-2 text-secondary opacity-50"></i>
+                                    No cylinder return records found matching the current filters.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-end mt-3">
+                {{ $cylinderTrackingList->appends(request()->query())->fragment('cylinderReturnTrackingCard')->links('pagination::bootstrap-5') }}
+            </div>
+        </div>
+    </div>
+
     <div class="card border-0 shadow-sm">
         <div class="card-body">
             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-3">

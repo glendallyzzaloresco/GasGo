@@ -112,7 +112,12 @@ class CustomerController extends Controller
             // Graceful fallback if table doesn't exist yet on production
         }
 
-        return view('customer.dashboard', compact('products', 'serviceReviews', 'averageRating', 'totalReviewCount'));
+        $unreturnedCylinderStats = null;
+        if (Auth::check()) {
+            $unreturnedCylinderStats = \App\Services\CylinderTrackingService::getUserCylinderStats(Auth::id());
+        }
+
+        return view('customer.dashboard', compact('products', 'serviceReviews', 'averageRating', 'totalReviewCount', 'unreturnedCylinderStats'));
     }
 
     public function products()

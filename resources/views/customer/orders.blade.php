@@ -136,6 +136,61 @@
         </div>
     @endif
 
+    <!-- Active Tank Deposits / Unreturned Cylinders Banner -->
+    @if(!empty($cylinderStats['has_unreturned']))
+    <div class="card border-0 mb-4 shadow-sm" style="border-radius: 18px; background: linear-gradient(135deg, #fffbf2 0%, #ffffff 100%); border-left: 5px solid #f7941d !important;" data-aos="fade-up">
+        <div class="card-body p-4">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; background: #fff3cd; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0;">
+                        <i class="fas fa-gas-pump"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-1 text-dark" style="font-size: 1.15rem;">
+                            Unreturned Cylinders Tracker
+                            <span class="badge bg-warning text-dark ms-2" style="font-size: .75rem; border-radius: 20px;">
+                                {{ $cylinderStats['unreturned_count'] }} Tank{{ $cylinderStats['unreturned_count'] == 1 ? '' : 's' }} Held
+                            </span>
+                        </h5>
+                        <p class="text-muted small mb-0">
+                            You currently have unreturned cylinder(s) from your "New Cylinder" orders. Please remember to return the empty tanks upon your next refill or exchange.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                @foreach($cylinderStats['unreturned_orders'] as $unreturnedOrder)
+                    @foreach($unreturnedOrder->getCylinderItems() as $cylItem)
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="p-3 bg-white rounded-3 border h-100 d-flex flex-column justify-content-between shadow-xs">
+                            <div class="d-flex align-items-center gap-3 mb-2">
+                                @php
+                                    $itemImg = $cylItem->product?->resolved_image ?? asset('images/default-product.png');
+                                @endphp
+                                <img src="{{ $itemImg }}" alt="{{ $cylItem->product_name }}" style="width: 44px; height: 44px; object-fit: contain; border-radius: 8px; background: #f8fafc; padding: 4px; border: 1px solid #e2e8f0;">
+                                <div class="overflow-hidden">
+                                    <div class="fw-bold text-truncate" style="font-size: 0.92rem;">{{ $cylItem->product_name }}</div>
+                                    <div class="small text-muted">Qty: <strong>{{ $cylItem->quantity }}</strong> tank{{ $cylItem->quantity > 1 ? 's' : '' }}</div>
+                                </div>
+                            </div>
+                            <div class="pt-2 border-top d-flex justify-content-between align-items-center small">
+                                <span class="text-muted">
+                                    Order <a href="#order-{{ $unreturnedOrder->id }}" class="fw-semibold text-decoration-none text-primary">#{{ $unreturnedOrder->order_number }}</a>
+                                </span>
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 0.72rem;">
+                                    <i class="fas fa-clock me-1"></i>{{ $unreturnedOrder->days_held }}d held
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                @endforeach
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Filters -->
     <div class="filter-tabs" data-aos="fade-up">
         <button class="filter-tab active" data-filter="all">All Orders</button>
@@ -143,6 +198,12 @@
         <button class="filter-tab" data-filter="approved">Approved</button>
         <button class="filter-tab" data-filter="out_for_delivery">Out for Delivery</button>
         <button class="filter-tab" data-filter="delivered">Delivered</button>
+        @if(($cylinderStats['unreturned_count'] ?? 0) > 0)
+            <button class="filter-tab" data-filter="unreturned" style="border-color: #f7941d; color: #d97706;">
+                <i class="fas fa-clock me-1"></i>Pending Returns
+                <span class="badge bg-warning text-dark ms-1" style="font-size:0.7rem;">{{ $cylinderStats['unreturned_count'] }}</span>
+            </button>
+        @endif
         <button class="filter-tab" data-filter="cancelled">Cancelled</button>
     </div>
 
@@ -166,7 +227,7 @@
                 'cancelled' => 'Cancelled',
             ];
         @endphp
-        <div class="order-card" data-status="{{ $order->status }}" data-aos="fade-up">
+        <div class="order-card" id="order-{{ $order->id }}" data-status="{{ $order->status }}" data-cylinder-status="{{ $order->cylinder_return_status }}" data-aos="fade-up">
             <div class="order-header">
                 <div>
                     <span class="order-id">Order #{{ $order->order_number }}</span>
@@ -176,6 +237,17 @@
                         <span class="badge ms-2" style="background:#e8f4fc;color:#1a6db0;font-size:.72rem;font-weight:600;"><i class="fas fa-exchange-alt me-1"></i>Exchange</span>
                     @elseif($txType === 'new_cylinder')
                         <span class="badge ms-2" style="background:#fff5e6;color:#e07d0a;font-size:.72rem;font-weight:600;"><i class="fas fa-plus-circle me-1"></i>New Cylinder</span>
+                        @if($order->isNewCylinderTransaction())
+                            @if($order->cylinder_return_status === 'pending_return')
+                                <span class="badge ms-2" style="background:#fff3cd;color:#856404;border:1px solid #ffeeba;font-size:.72rem;font-weight:600;">
+                                    <i class="fas fa-clock me-1"></i>Tank Not Yet Returned ({{ $order->days_held }}d)
+                                </span>
+                            @elseif($order->cylinder_return_status === 'returned')
+                                <span class="badge ms-2" style="background:#d4edda;color:#155724;border:1px solid #c3e6cb;font-size:.72rem;font-weight:600;">
+                                    <i class="fas fa-check-circle me-1"></i>Tank Returned
+                                </span>
+                            @endif
+                        @endif
                     @else
                         <span class="badge ms-2" style="background:#f1f5f9;color:#475569;font-size:.72rem;font-weight:600;"><i class="fas fa-box me-1"></i>{{ ucfirst(str_replace('_', ' ', $txType)) }}</span>
                     @endif
@@ -380,6 +452,32 @@
                     </table>
                 </div>
 
+                @if($order->isNewCylinderTransaction())
+                    <div class="p-3 mb-3 rounded-3" style="background: {{ $order->cylinder_return_status === 'returned' ? '#f0fdf4; border: 1px solid #bbf7d0;' : '#fffbeb; border: 1px solid #fde68a;' }}">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="fw-bold small" style="color: {{ $order->cylinder_return_status === 'returned' ? '#15803d;' : '#b45309;' }}">
+                                <i class="fas fa-gas-pump me-1"></i>Cylinder Deposit & Return Status
+                            </span>
+                            @if($order->cylinder_return_status === 'returned')
+                                <span class="badge bg-success" style="font-size:0.7rem;"><i class="fas fa-check-circle me-1"></i>Returned</span>
+                            @elseif($order->cylinder_return_status === 'pending_return')
+                                <span class="badge bg-warning text-dark" style="font-size:0.7rem;"><i class="fas fa-clock me-1"></i>Pending Return ({{ $order->days_held }} days held)</span>
+                            @else
+                                <span class="badge bg-secondary" style="font-size:0.7rem;">Awaiting Delivery</span>
+                            @endif
+                        </div>
+                        <div class="small text-muted">
+                            @if($order->cylinder_return_status === 'returned')
+                                You have successfully returned the empty cylinder(s) for this order{{ $order->cylinder_returned_at ? ' on ' . $order->cylinder_returned_at->format('M d, Y') : '' }}.
+                            @elseif($order->cylinder_return_status === 'pending_return')
+                                You purchased a new cylinder without trading in an empty tank. You currently hold <strong>{{ $order->total_cylinder_quantity }}</strong> cylinder(s) to return upon your next refill or exchange.
+                            @else
+                                This order includes a new cylinder. Once delivered, you can track its return here.
+                            @endif
+                        </div>
+                    </div>
+                @endif
+
                 <div class="p-3 rounded" style="background:#f8f9fa; border:1px solid #e9ecef;">
                     <div class="d-flex justify-content-between mb-1 small">
                         <span class="text-muted">Subtotal:</span>
@@ -503,7 +601,13 @@ document.querySelectorAll('.filter-tab').forEach(tab => {
         this.classList.add('active');
         const filter = this.dataset.filter;
         document.querySelectorAll('.order-card').forEach(card => {
-            card.style.display = (filter === 'all' || card.dataset.status === filter) ? '' : 'none';
+            if (filter === 'all') {
+                card.style.display = '';
+            } else if (filter === 'unreturned') {
+                card.style.display = (card.dataset.cylinderStatus === 'pending_return') ? '' : 'none';
+            } else {
+                card.style.display = (card.dataset.status === filter) ? '' : 'none';
+            }
         });
     });
 });
