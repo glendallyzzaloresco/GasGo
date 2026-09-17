@@ -756,8 +756,6 @@
                                         <td class="fw-semibold">
                                             @if($isExchangeable)
                                                 {{ (int) $inventory->empty_on_hand }}
-                                            @else
-                                                <span class="text-muted">N/A</span>
                                             @endif
                                         </td>
                                         <td><span class="badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
@@ -812,7 +810,7 @@
                                             </div>
                                         </td>
                                         <td class="fw-semibold">{{ (int) $freebie->stock }}</td>
-                                        <td class="fw-semibold"><span class="text-muted">N/A</span></td>
+                                        <td class="fw-semibold"></td>
                                         <td><span class="badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
                                         <td class="text-muted small">{{ $freebie->updated_at ? $freebie->updated_at->format('M d, Y') : '—' }}</td>
                                         <td>

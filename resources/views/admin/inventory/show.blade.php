@@ -352,11 +352,6 @@
                         {{ $inventory->empty_on_hand ?? 0 }} units
                     </span>
                 </div>
-                @else
-                <div class="detail-row">
-                    <span class="detail-label">Empty Tanks Collected</span>
-                    <span class="detail-value text-muted">N/A</span>
-                </div>
                 @endif
                 
                 <div class="detail-row">
