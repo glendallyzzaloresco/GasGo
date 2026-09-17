@@ -49,17 +49,29 @@ return [
 
         's3' => [
             'driver' => 's3',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION'),
-            'bucket' => env('AWS_BUCKET'),
-            'url' => env('AWS_URL'),
-            'endpoint' => env('AWS_ENDPOINT'),
-            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'key' => env('AWS_ACCESS_KEY_ID', env('SUPABASE_STORAGE_ACCESS_KEY_ID')),
+            'secret' => env('AWS_SECRET_ACCESS_KEY', env('SUPABASE_STORAGE_SECRET_ACCESS_KEY')),
+            'region' => env('AWS_DEFAULT_REGION', env('SUPABASE_STORAGE_REGION', 'us-east-1')),
+            'bucket' => env('AWS_BUCKET', env('SUPABASE_STORAGE_BUCKET')),
+            'url' => env('AWS_URL', env('SUPABASE_STORAGE_URL')),
+            'endpoint' => env('AWS_ENDPOINT', env('SUPABASE_STORAGE_ENDPOINT')),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', env('SUPABASE_STORAGE_USE_PATH_STYLE_ENDPOINT', true)),
             'throw' => true,
             'report' => true,
         ],
 
+        'supabase' => [
+            'driver' => 's3',
+            'key' => env('SUPABASE_STORAGE_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
+            'secret' => env('SUPABASE_STORAGE_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
+            'region' => env('SUPABASE_STORAGE_REGION', env('AWS_DEFAULT_REGION', 'us-east-1')),
+            'bucket' => env('SUPABASE_STORAGE_BUCKET', env('AWS_BUCKET')),
+            'url' => env('SUPABASE_STORAGE_URL', env('AWS_URL')),
+            'endpoint' => env('SUPABASE_STORAGE_ENDPOINT', env('AWS_ENDPOINT')),
+            'use_path_style_endpoint' => env('SUPABASE_STORAGE_USE_PATH_STYLE_ENDPOINT', env('AWS_USE_PATH_STYLE_ENDPOINT', true)),
+            'throw' => true,
+            'report' => true,
+        ],
     ],
 
     /*

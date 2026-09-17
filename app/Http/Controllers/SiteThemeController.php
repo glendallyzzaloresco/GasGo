@@ -56,7 +56,7 @@ class SiteThemeController extends Controller
             'contactPhone' => $request->input('contactPhone', $theme->contactPhone),
         ];
 
-        $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+        $disk = in_array(config('filesystems.default'), ['s3', 'supabase'], true) ? config('filesystems.default') : 'public';
 
         if ($request->hasFile('logo')) {
             $logoPath = $request->file('logo')->store('theme', $disk);

@@ -57,8 +57,7 @@ class MigrateStorageToR2Command extends Command
                 $stream = fopen($file->getRealPath(), 'r+');
 
                 $uploaded = $r2Disk->put($relativePath, $stream, [
-                    'visibility' => 'public',
-                    'mimetype'   => $mimeType,
+                    'mimetype' => $mimeType,
                 ]);
 
                 if (is_resource($stream)) {

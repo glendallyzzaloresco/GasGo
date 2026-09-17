@@ -169,7 +169,7 @@ class ProductController extends Controller
         unset($validated['reorder_level']);
 
         if ($request->hasFile('image')) {
-            $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+            $disk = in_array(config('filesystems.default'), ['s3', 'supabase'], true) ? config('filesystems.default') : 'public';
             $validated['image'] = $request->file('image')->store('products', $disk);
         }
 
@@ -304,7 +304,7 @@ class ProductController extends Controller
         unset($validated['reorder_level']);
 
         if ($request->hasFile('image')) {
-            $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+            $disk = in_array(config('filesystems.default'), ['s3', 'supabase'], true) ? config('filesystems.default') : 'public';
             $validated['image'] = $request->file('image')->store('products', $disk);
         }
 
@@ -528,7 +528,7 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+            $disk = in_array(config('filesystems.default'), ['s3', 'supabase'], true) ? config('filesystems.default') : 'public';
             $validated['image'] = $request->file('image')->store('freebies', $disk);
         }
 
@@ -565,7 +565,7 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+            $disk = in_array(config('filesystems.default'), ['s3', 'supabase'], true) ? config('filesystems.default') : 'public';
             $validated['image'] = $request->file('image')->store('freebies', $disk);
         }
 

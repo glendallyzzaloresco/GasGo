@@ -300,7 +300,7 @@ class DeliveryController extends Controller
             'delivery_notes' => 'nullable|string|max:500',
         ]);
 
-        $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+        $disk = in_array(config('filesystems.default'), ['s3', 'supabase'], true) ? config('filesystems.default') : 'public';
         $path = $request->file('proof_photo')->store('delivery-proofs', $disk);
         $delivery->update([
             'proof_photo'    => $path,

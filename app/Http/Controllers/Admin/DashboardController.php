@@ -596,7 +596,7 @@ class DashboardController extends Controller
         ]);
 
         $homepageSettings = HomepageSetting::singleton();
-        $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+        $disk = in_array(config('filesystems.default'), ['s3', 'supabase'], true) ? config('filesystems.default') : 'public';
 
         if ($request->hasFile('gcash_image')) {
             if (!empty($homepageSettings->gcash_image_path)) {
@@ -624,7 +624,7 @@ class DashboardController extends Controller
             'payment_methods.*.image' => 'nullable|image|max:2048',
         ]);
 
-        $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+        $disk = in_array(config('filesystems.default'), ['s3', 'supabase'], true) ? config('filesystems.default') : 'public';
         $uploadedMethods = $request->file('payment_methods', []);
         $methods = collect($validated['payment_methods'] ?? [])
             ->map(function ($method, $index) use ($uploadedMethods, $disk) {

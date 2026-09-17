@@ -683,9 +683,10 @@ class OrderController extends Controller
             $proofOfPaymentPath = null;
             if (isset($validated['proof_of_payment']) && $request->file('proof_of_payment')) {
                 // Store the proof of payment file
+                $disk = in_array(config('filesystems.default'), ['s3', 'supabase'], true) ? config('filesystems.default') : 'public';
                 $file = $request->file('proof_of_payment');
                 $fileName = 'proof_' . $order->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-                $proofOfPaymentPath = $file->storeAs('payments/proofs', $fileName, 'public');
+                $proofOfPaymentPath = $file->storeAs('payments/proofs', $fileName, $disk);
             }
 
             Payment::create([
