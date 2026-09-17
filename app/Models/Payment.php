@@ -39,8 +39,29 @@ class Payment extends Model
             return $this->proof_of_payment;
         }
 
+        // Prioritize Supabase / S3 public URL when configured
+        $cloudUrl = config('filesystems.disks.supabase.url')
+            ?: config('filesystems.disks.s3.url')
+            ?: env('SUPABASE_STORAGE_URL')
+            ?: env('AWS_URL');
+        $defaultDisk = config('filesystems.default');
+
+        if (in_array($defaultDisk, ['s3', 'supabase'], true) && $cloudUrl) {
+            return rtrim($cloudUrl, '/') . '/' . $path;
+        }
+
+        if (in_array($defaultDisk, ['s3', 'supabase'], true)) {
+            try {
+                return \Illuminate\Support\Facades\Storage::disk($defaultDisk)->url($path);
+            } catch (\Throwable $e) {}
+        }
+
         if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
             return \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+        }
+
+        if ($cloudUrl) {
+            return rtrim($cloudUrl, '/') . '/' . $path;
         }
 
         return asset('storage/' . $path);
