@@ -25,7 +25,13 @@ class GoogleAuthController extends Controller
     public function callback(Request $request)
     {
         try {
-            $google = Socialite::driver('google')->user();
+            try {
+                $google = Socialite::driver('google')->user();
+            } catch (\Throwable $e) {
+                // Reverse proxies (Cloudflare Workers) may lose session state across cross-site OAuth redirects
+                $google = Socialite::driver('google')->stateless()->user();
+            }
+
             $email = strtolower(trim($google->getEmail() ?? ''));
             $verified = filter_var($google->user['email_verified'] ?? $google->user['verified_email'] ?? false, FILTER_VALIDATE_BOOLEAN);
             if (! $verified || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -60,10 +66,16 @@ class GoogleAuthController extends Controller
             }
 
             return redirect()->intended(route($user->isAdmin() ? 'admin.dashboard' : ($user->isRider() ? 'rider.dashboard' : 'customer.dashboard')));
-        } catch (\Exception $e) {
-            report($e);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Google login error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
 
-            return redirect()->route('customer.login')->with('error', 'Google login failed. Please try again.');
+            $friendlyMessage = str_contains($e->getMessage(), 'redirect_uri_mismatch')
+                ? 'Google redirect URI mismatch. Please verify GOOGLE_CLIENT_REDIRECT in Render.'
+                : 'Google login failed: ' . $e->getMessage();
+
+            return redirect()->route('customer.login')->with('error', $friendlyMessage);
         }
     }
 }
