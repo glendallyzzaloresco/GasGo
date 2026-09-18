@@ -472,10 +472,15 @@ class OrderController extends Controller
                         ]);
                     }
 
+                    $freebieCategory = \App\Models\Category::firstOrCreate(
+                        ['slug' => 'freebie'],
+                        ['name' => 'Freebie', 'is_active' => true]
+                    );
+
                     $selectedFreebieProduct = Product::firstOrCreate(
                         ['name' => $selectedFreebie->name],
                         [
-                            'category' => 'freebie',
+                            'category_id' => $freebieCategory->id,
                             'description' => $selectedFreebie->description,
                             'price' => 0.00,
                             'stock' => max(999, (int) $selectedFreebie->stock),
@@ -485,9 +490,9 @@ class OrderController extends Controller
                         ]
                     );
 
-                    if (! $selectedFreebieProduct->is_active || $selectedFreebieProduct->category !== 'freebie') {
+                    if (! $selectedFreebieProduct->is_active || (int) $selectedFreebieProduct->category_id !== (int) $freebieCategory->id) {
                         $selectedFreebieProduct->is_active = true;
-                        $selectedFreebieProduct->category = 'freebie';
+                        $selectedFreebieProduct->category_id = $freebieCategory->id;
                         $selectedFreebieProduct->save();
                     }
                 }
@@ -709,11 +714,15 @@ class OrderController extends Controller
                 Cart::where('user_id', Auth::id())->delete();
             }
 
-            // Send admin notification if order has rewards
+            // Send admin notification if order has rewards (fail-safe so checkout never crashes)
             if ($hasRewardItems) {
-                $adminUser = \App\Models\User::where('role', 'admin')->first();
-                if ($adminUser) {
-                    $adminUser->notify(new \App\Notifications\OrderPlacedNotification($order, true));
+                try {
+                    $adminUser = \App\Models\User::where('role', 'admin')->first();
+                    if ($adminUser) {
+                        $adminUser->notify(new \App\Notifications\OrderPlacedNotification($order, true));
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Failed to dispatch order reward notification: ' . $e->getMessage());
                 }
             }
 
