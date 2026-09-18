@@ -209,6 +209,7 @@ Route::middleware(['auth', 'verified', 'role:customer,admin'])->prefix('customer
     Route::delete('/cart', [CartController::class, 'clear'])->name('customer.cart.clear');
 
     // Orders
+    Route::get('/order', fn () => redirect()->route('customer.orders'));
     Route::post('/order', [OrderController::class, 'store'])->name('customer.order.store');
     Route::patch('/order/{order}/cancel', [OrderController::class, 'cancelByCustomer'])->name('customer.order.cancel');
     Route::get('/orderHistory', [OrderController::class, 'index'])->name('customer.orders');
