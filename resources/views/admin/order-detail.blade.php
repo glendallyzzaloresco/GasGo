@@ -277,7 +277,9 @@
                     <tbody>
                         @forelse($order->orderItems as $item)
                             @php
-                                $itemImg = $item->product?->resolved_image ?? $item->reward_image_url ?? asset('images/default-product.png');
+                                $itemImg = $item->is_reward
+                                    ? ($item->reward_image_url ?? $item->product?->resolved_image ?? asset('images/default-product.png'))
+                                    : ($item->product?->resolved_image ?? asset('images/default-product.png'));
                             @endphp
                             <tr>
                                 <td>

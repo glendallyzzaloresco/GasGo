@@ -475,6 +475,7 @@ class OrderController extends Controller
                     $selectedFreebieProduct = Product::firstOrCreate(
                         ['name' => $selectedFreebie->name],
                         [
+                            'category' => 'freebie',
                             'description' => $selectedFreebie->description,
                             'price' => 0.00,
                             'stock' => max(999, (int) $selectedFreebie->stock),
@@ -484,8 +485,9 @@ class OrderController extends Controller
                         ]
                     );
 
-                    if (! $selectedFreebieProduct->is_active) {
+                    if (! $selectedFreebieProduct->is_active || $selectedFreebieProduct->category !== 'freebie') {
                         $selectedFreebieProduct->is_active = true;
+                        $selectedFreebieProduct->category = 'freebie';
                         $selectedFreebieProduct->save();
                     }
                 }
