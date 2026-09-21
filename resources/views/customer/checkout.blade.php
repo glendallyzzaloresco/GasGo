@@ -1005,7 +1005,7 @@ function reverseGeocode(lat, lng, zoomLevel = null, updateDeliveryAddress = fals
     reverseAbortController = new AbortController();
     const signal = reverseAbortController.signal;
 
-    // Server-side proxy promise (goes through Laravel -> Nominatim/Geoapify)
+    // Server-side proxy promise (goes through Laravel -> Nominatim)
     const serverParams = new URLSearchParams({ lat: String(lat), lng: String(lng), zoom: String(zoom) });
     const serverPromise = fetch(locationReverseUrl + '?' + serverParams.toString(), { signal })
         .then(r => r.json())
