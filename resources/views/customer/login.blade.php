@@ -633,5 +633,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 1000);
 });
 @endif
+
+// Auto-refresh page if restored from browser back-forward cache (bfcache)
+// This prevents submitting expired CSRF tokens when navigating back
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
 </script>
 @endsection
