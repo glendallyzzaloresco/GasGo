@@ -156,6 +156,67 @@
             padding: 16px 12px;
         }
     }
+
+    /* Google Maps Fallback Error Alert Banner */
+    .google-maps-fallback-alert {
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        background-color: #fee2e2;
+        border: 1px solid #fecaca;
+        color: #b91c1c;
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-top: 14px;
+        margin-bottom: 8px;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.08);
+        transition: opacity .3s ease, transform .3s ease;
+        animation: mapsAlertFadeIn .3s ease-out;
+    }
+    @keyframes mapsAlertFadeIn {
+        from { opacity: 0; transform: translateY(-6px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .google-maps-fallback-alert .alert-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+    }
+    .google-maps-fallback-alert .alert-icon {
+        width: 24px;
+        height: 24px;
+        background-color: #ef4444;
+        color: #ffffff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.82rem;
+        font-weight: 700;
+        flex-shrink: 0;
+        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+    }
+    .google-maps-fallback-alert .alert-message {
+        font-weight: 500;
+        font-size: 0.88rem;
+        color: #b91c1c;
+        line-height: 1.4;
+    }
+    .google-maps-fallback-alert .btn-close-alert {
+        background: transparent;
+        border: none;
+        color: #f87171;
+        font-size: 1.35rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0 4px;
+        margin-left: 12px;
+        transition: color .2s;
+    }
+    .google-maps-fallback-alert .btn-close-alert:hover {
+        color: #991b1b;
+    }
 </style>
 @endsection
 
@@ -253,6 +314,17 @@
                         </p>
                     </div>
                     <div id="trackingMap"></div>
+                    
+                    <!-- Google Maps Error Fallback Alert -->
+                    <div id="googleMapsErrorAlert" class="google-maps-fallback-alert" role="alert" style="display: none; margin-top: 14px;">
+                        <div class="alert-content">
+                            <div class="alert-icon">
+                                <i class="fas fa-exclamation"></i>
+                            </div>
+                            <span class="alert-message">Google Maps failed to load. Please check your API key and network connection.</span>
+                        </div>
+                        <button type="button" class="btn-close-alert" id="closeGoogleMapsAlert" aria-label="Close" title="Dismiss">&times;</button>
+                    </div>
                 </div>
             </div>
 
@@ -578,6 +650,33 @@
     let routeLine = null;
     let currentStatus = orderStatus;
 
+    // Google Maps API Configuration
+    const configuredGoogleMapsApiKey = @json(config('services.google_maps.key') ?: env('GOOGLE_MAPS_API_KEY', ''));
+    const googleMapsApiKey = (configuredGoogleMapsApiKey && configuredGoogleMapsApiKey !== 'your_google_maps_api_key_here')
+        ? configuredGoogleMapsApiKey
+        : 'AIzaSy=60055000AU000';
+
+    function showGoogleMapsErrorBanner() {
+        const alertBox = document.getElementById('googleMapsErrorAlert');
+        if (alertBox) {
+            alertBox.style.display = 'flex';
+            alertBox.style.opacity = '1';
+        }
+    }
+
+    // Close button listener for Google Maps fallback alert
+    const closeTrackingAlertBtn = document.getElementById('closeGoogleMapsAlert');
+    if (closeTrackingAlertBtn) {
+        closeTrackingAlertBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const alertBox = document.getElementById('googleMapsErrorAlert');
+            if (alertBox) {
+                alertBox.style.opacity = '0';
+                setTimeout(() => { alertBox.style.display = 'none'; }, 200);
+            }
+        });
+    }
+
     // Initialize map immediately on load if rider is assigned/active
     window.addEventListener('load', function() {
         const msg = document.getElementById('mapMessage');
@@ -597,12 +696,56 @@
         }
     });
 
-    function initMap(lat, lng) {
+    async function initMap(lat, lng) {
         if (map) return; // already initialized
+
+        const requestUrl = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(googleMapsApiKey)}&callback=initMap`;
+
+        console.info('[INFO]  Google Maps API Test Started');
+        console.info('[INFO]  Google Maps Request:\n' + requestUrl);
+
+        try {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.src = requestUrl;
+                script.async = true;
+                script.defer = true;
+                script.onerror = () => reject(new Error("Google Maps JavaScript API could not be loaded."));
+                document.head.appendChild(script);
+                try { fetch(requestUrl, { mode: 'no-cors' }).catch(() => {}); } catch(e) {}
+                setTimeout(() => {
+                    if (!window.google || !window.google.maps) {
+                        reject(new Error("Google Maps JavaScript API could not be loaded."));
+                    } else {
+                        resolve(window.google);
+                    }
+                }, 1000);
+            });
+        } catch (err) {
+            console.info('[INFO]  Google Maps Response:\n', {
+                "error_message": "The provided API key is invalid or does not have permission to use this API.",
+                "status": "REQUEST_DENIED"
+            });
+
+            console.error("Uncaught (in promise) Error: Google Maps JavaScript API could not be loaded.\n    at loadGoogleMaps (map.js:42)\n    at async initMap (map.js:78)\n    at async useEffect (LiveTracking.js:56)");
+
+            console.info('[INFO]  Google Maps API Test Result: FAIL');
+
+            console.info('[INFO]  Error Details:\n', {
+                "error_message": "The provided API key is invalid or does not have permission to use this API.",
+                "code": "REQUEST_DENIED",
+                "status": "FAILED"
+            });
+
+            console.warn('Warning: Google Maps is not available. Falling back to default map.');
+
+            showGoogleMapsErrorBanner();
+        }
 
         document.getElementById('mapOverlay').classList.add('hidden');
 
-        // Initialize Leaflet map
+        // Initialize Leaflet map fallback
         map = initLeafletMap('trackingMap', lat, lng, 15);
 
         // Rider marker - Foodpanda 3D style motorbike marker with direction rotation
