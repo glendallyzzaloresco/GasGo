@@ -151,117 +151,6 @@
             max-height: 130px;
         }
     }
-
-    /* Google Maps Fallback Error Alert Banner */
-    .google-maps-fallback-alert {
-        display: none;
-        align-items: center;
-        justify-content: space-between;
-        background-color: #fee2e2;
-        border: 1px solid #fecaca;
-        color: #b91c1c;
-        border-radius: 12px;
-        padding: 12px 16px;
-        margin-top: 14px;
-        margin-bottom: 8px;
-        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.08);
-        transition: opacity .3s ease, transform .3s ease;
-        animation: mapsAlertFadeIn .3s ease-out;
-    }
-    @keyframes mapsAlertFadeIn {
-        from { opacity: 0; transform: translateY(-6px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .google-maps-fallback-alert .alert-content {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex: 1;
-    }
-    .google-maps-fallback-alert .alert-icon {
-        width: 24px;
-        height: 24px;
-        background-color: #ef4444;
-        color: #ffffff;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.82rem;
-        font-weight: 700;
-        flex-shrink: 0;
-        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
-    }
-    .google-maps-fallback-alert .alert-message {
-        font-weight: 500;
-        font-size: 0.88rem;
-        color: #b91c1c;
-        line-height: 1.4;
-    }
-    .google-maps-fallback-alert .btn-close-alert {
-        background: transparent;
-        border: none;
-        color: #f87171;
-        font-size: 1.35rem;
-        line-height: 1;
-        cursor: pointer;
-        padding: 0 4px;
-        margin-left: 12px;
-        transition: color .2s;
-    }
-    .google-maps-fallback-alert .btn-close-alert:hover {
-        color: #991b1b;
-    }
-
-    /* Custom Map Badges (Matching Google Maps Pickup & Delivery Mockup) */
-    .custom-leaflet-pill-icon {
-        background: transparent !important;
-        border: none !important;
-    }
-    .map-badge-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: #ffffff;
-        padding: 3px 10px 3px 4px;
-        border-radius: 20px;
-        box-shadow: 0 3px 10px rgba(0,0,0,0.25);
-        font-size: 12px;
-        font-weight: 700;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-        white-space: nowrap;
-        cursor: grab;
-        border: 1px solid rgba(0,0,0,0.08);
-        user-select: none;
-        transition: transform 0.15s ease;
-    }
-    .map-badge-pill:active {
-        cursor: grabbing;
-        transform: scale(1.08);
-    }
-    .map-badge-pill .pin-dot {
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        color: #ffffff;
-        font-size: 11px;
-        flex-shrink: 0;
-    }
-    .map-badge-pill.pickup-pill {
-        color: #1a73e8;
-    }
-    .map-badge-pill.pickup-pill .pin-dot {
-        background: #1a73e8;
-    }
-    .map-badge-pill.delivery-pill {
-        color: #ea4335;
-    }
-    .map-badge-pill.delivery-pill .pin-dot {
-        background: #ea4335;
-    }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
@@ -377,31 +266,13 @@
                             <input type="text" class="form-control form-control-gasgo" name="notes" value="{{ old('notes') }}" placeholder="Landmark, gate color, etc.">
                         </div>
                         <div class="col-12 mt-2">
-                            <label class="form-label"><i class="fas fa-map-marker-alt me-1" style="color:var(--gasgo-blue)"></i>Choose Delivery Location <span style="color: #e74c3c; font-weight: 600;">*</span></label>
+                            <label class="form-label"><i class="fas fa-map me-1" style="color:var(--gasgo-orange)"></i>Pin Your Location <span style="color: #e74c3c; font-weight: 600;">*</span></label>
                             <div class="map-search-wrap">
                                 <input type="text" id="mapSearch" placeholder="Search address or place..." autocomplete="off">
                                     <button type="button" class="search-btn" id="mapSearchBtn"><i class="fas fa-search" id="mapSearchBtnIcon"></i></button>
                                 <div class="map-search-results" id="searchResults"></div>
                             </div>
-                            <div class="map-wrapper-relative" style="position: relative;">
-                                <div id="checkoutMap" style="height: 320px; width: 100%; border-radius: 14px; z-index: 1; border: 2px solid #eee; background: #e5e3df;"></div>
-                                <!-- Google Logo Watermark Badge (Matching Screenshot) -->
-                                <div class="google-watermark-badge" style="position: absolute; bottom: 8px; left: 10px; z-index: 500; pointer-events: none; user-select: none;">
-                                    <img src="https://maps.gstatic.com/mapfiles/api-3/images/google4.png" alt="Google" style="height: 18px; width: auto; display: block;" onerror="this.outerHTML='<span style=\'font-weight:700;font-size:14px;font-family:Roboto,Arial,sans-serif;color:#4285F4;\'>G<span style=\'color:#EA4335;\'>o</span><span style=\'color:#FBBC05;\'>o</span><span style=\'color:#4285F4;\'>g</span><span style=\'color:#34A853;\'>l</span><span style=\'color:#EA4335;\'>e</span></span>';">
-                                </div>
-                            </div>
-                            
-                            <!-- Google Maps Error Fallback Alert -->
-                            <div id="googleMapsErrorAlert" class="google-maps-fallback-alert" role="alert" style="display: none;">
-                                <div class="alert-content">
-                                    <div class="alert-icon">
-                                        <i class="fas fa-exclamation"></i>
-                                    </div>
-                                    <span class="alert-message" id="mapServiceAlertText">Google Maps failed to load. Please check your API key and network connection.</span>
-                                </div>
-                                <button type="button" class="btn-close-alert" id="closeGoogleMapsAlert" aria-label="Close" title="Dismiss">&times;</button>
-                            </div>
-
+                            <div id="checkoutMap" style="height: 320px; width: 100%; border-radius: 14px; z-index: 1; border: 2px solid #eee; background: #f8f9fa;"></div>
                             <div class="d-flex justify-content-between align-items-center" style="margin-top: 12px;">
                                 <p class="map-hint mb-0"><i class="fas fa-info-circle me-1"></i>Click on the map or drag the pin to set your exact delivery location</p>
                                       <button type="button" id="useMyLocationBtn" class="btn btn-sm mt-1" style="background:var(--gasgo-blue);color:white;border-radius:8px;font-size:.78rem;"><i class="fas fa-crosshairs me-1"></i>Use My Location</button>
@@ -923,25 +794,7 @@ const defaultLng = 120.3654;
 const locationSearchUrl = "{{ route('geocode.search') }}";
 const locationReverseUrl = "{{ route('geocode.reverse') }}";
 
-// Map Provider API Configuration (Geoapify & Google Maps)
-const configuredGeoapifyApiKey = @json(config('services.geoapify.key') ?: env('GEOAPIFY_API_KEY', '209322fa2c0a4def925bfb28c4c30461'));
-const geoapifyApiKey = (configuredGeoapifyApiKey && configuredGeoapifyApiKey !== 'your_geoapify_api_key_here')
-    ? configuredGeoapifyApiKey
-    : '209322fa2c0a4def925bfb28c4c30461';
-
-const configuredGoogleMapsApiKey = @json(config('services.google_maps.key') ?: env('GOOGLE_MAPS_API_KEY', ''));
-const googleMapsApiKey = (configuredGoogleMapsApiKey && configuredGoogleMapsApiKey !== 'your_google_maps_api_key_here')
-    ? configuredGoogleMapsApiKey
-    : 'AIzaSy=60055000AU000';
-
-const urlParams = new URLSearchParams(window.location.search);
-const mapProvider = urlParams.get('provider') || 'google';
-
-let isGoogleMapActive = false;
-let googleMapInstance = null;
-let googleMarkerInstance = null;
-
-let map, marker, pickupMarker;
+let map, marker;
 let userPinnedLocation = false; // when true, do not auto-reposition map/address
 function setUserPinnedFlag() {
     const el = document.getElementById('userPinnedFlag');
@@ -1209,14 +1062,7 @@ function scoreResult(result, query) {
     if (name.includes(q)) score += 30;
     if (/\bbarangay\b/.test(name)) score += 10;
 
-    let center = { lat: defaultLat, lng: defaultLng };
-    if (isGoogleMapActive && googleMapInstance) {
-        const gCenter = googleMapInstance.getCenter();
-        if (gCenter) center = { lat: gCenter.lat(), lng: gCenter.lng() };
-    } else if (map && typeof map.getCenter === 'function') {
-        center = map.getCenter();
-    }
-
+    const center = map.getCenter();
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lon);
     if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
@@ -1229,15 +1075,8 @@ function scoreResult(result, query) {
 function applySearchResult(result) {
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lon);
-    if (isGoogleMapActive && googleMapInstance && googleMarkerInstance) {
-        const pos = { lat, lng };
-        googleMapInstance.setCenter(pos);
-        googleMapInstance.setZoom(17);
-        googleMarkerInstance.setPosition(pos);
-    } else if (map && marker) {
-        map.setView([lat, lng], 17);
-        marker.setLatLng([lat, lng]);
-    }
+    map.setView([lat, lng], 17);
+    marker.setLatLng([lat, lng]);
     // Selecting a search result is considered an explicit user action
     userPinnedLocation = true;
     setUserPinnedFlag();
@@ -1251,30 +1090,13 @@ async function fetchSearchCandidates(query) {
         return searchCache.get(query);
     }
 
-    let boundsParams = {};
-    if (isGoogleMapActive && googleMapInstance) {
-        const bounds = googleMapInstance.getBounds();
-        if (bounds) {
-            boundsParams = {
-                left: String(bounds.getSouthWest().lng()),
-                top: String(bounds.getNorthEast().lat()),
-                right: String(bounds.getNorthEast().lng()),
-                bottom: String(bounds.getSouthWest().lat()),
-            };
-        }
-    } else if (map && typeof map.getBounds === 'function') {
-        const bounds = map.getBounds();
-        boundsParams = {
-            left: String(bounds.getWest()),
-            top: String(bounds.getNorth()),
-            right: String(bounds.getEast()),
-            bottom: String(bounds.getSouth()),
-        };
-    }
-
+    const bounds = map.getBounds();
     const params = new URLSearchParams({
         q: query,
-        ...boundsParams,
+        left: String(bounds.getWest()),
+        top: String(bounds.getNorth()),
+        right: String(bounds.getEast()),
+        bottom: String(bounds.getSouth()),
         limit: '8'
     });
 
@@ -1369,113 +1191,7 @@ async function searchAddress(autoSelectFirst = false) {
     }
 }
 
-function showGoogleMapsErrorBanner(customMessage) {
-    const alertBox = document.getElementById('googleMapsErrorAlert');
-    const msgEl = document.getElementById('mapServiceAlertText');
-    if (msgEl && customMessage) {
-        msgEl.textContent = customMessage;
-    }
-    if (alertBox) {
-        alertBox.style.display = 'flex';
-        alertBox.style.opacity = '1';
-    }
-}
-
-function loadGoogleMapsScript(apiKey, requestUrl) {
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.id = 'googleMapsScriptTag';
-        script.type = 'text/javascript';
-        script.src = requestUrl;
-        script.async = true;
-        script.defer = true;
-
-        let finished = false;
-
-        window.initMap = function () {
-            if (!finished) {
-                finished = true;
-                resolve(window.google);
-            }
-        };
-
-        window.gm_authFailure = function () {
-            if (!finished) {
-                finished = true;
-                reject(new Error("Google Maps authentication failed (REQUEST_DENIED)"));
-            }
-        };
-
-        script.onerror = function () {
-            if (!finished) {
-                finished = true;
-                reject(new Error("Google Maps JavaScript API could not be loaded."));
-            }
-        };
-
-        document.head.appendChild(script);
-
-        // Fetch test to ensure 403 Forbidden is registered in browser network console
-        try {
-            fetch(requestUrl, { mode: 'no-cors' }).catch(() => {});
-        } catch (e) {}
-
-        // Timeout fallback after 1.5 seconds if script loading hangs
-        setTimeout(() => {
-            if (!finished) {
-                finished = true;
-                if (!window.google || !window.google.maps) {
-                    reject(new Error("Google Maps JavaScript API could not be loaded."));
-                } else {
-                    resolve(window.google);
-                }
-            }
-        }, 1200);
-    });
-}
-
-function initGoogleMapInstance() {
-    const mapElement = document.getElementById('checkoutMap');
-    if (!mapElement || !window.google || !window.google.maps) {
-        initLeafletMapFallback();
-        return;
-    }
-
-    isGoogleMapActive = true;
-    const existingLat = parseFloat(document.getElementById('latitude')?.value) || defaultLat;
-    const existingLng = parseFloat(document.getElementById('longitude')?.value) || defaultLng;
-    const centerPos = { lat: existingLat, lng: existingLng };
-
-    googleMapInstance = new google.maps.Map(mapElement, {
-        center: centerPos,
-        zoom: 15,
-        mapTypeControl: false,
-        streetViewControl: false
-    });
-
-    googleMarkerInstance = new google.maps.Marker({
-        position: centerPos,
-        map: googleMapInstance,
-        draggable: true,
-        title: 'Delivery Location'
-    });
-
-    google.maps.event.addListener(googleMarkerInstance, 'dragend', function () {
-        const pos = googleMarkerInstance.getPosition();
-        userPinnedLocation = true;
-        setUserPinnedFlag();
-        reverseGeocode(pos.lat(), pos.lng(), googleMapInstance.getZoom(), true);
-    });
-
-    google.maps.event.addListener(googleMapInstance, 'click', function (e) {
-        googleMarkerInstance.setPosition(e.latLng);
-        userPinnedLocation = true;
-        setUserPinnedFlag();
-        reverseGeocode(e.latLng.lat(), e.latLng.lng(), googleMapInstance.getZoom(), true);
-    });
-}
-
-function initLeafletMapFallback() {
+function initMap() {
     const mapElement = document.getElementById('checkoutMap');
     if (!mapElement) {
         return;
@@ -1483,7 +1199,7 @@ function initLeafletMapFallback() {
 
     if (typeof L === 'undefined') {
         console.warn('Leaflet is still loading, retrying map initialization in 200ms...');
-        setTimeout(initLeafletMapFallback, 200);
+        setTimeout(initMap, 200);
         return;
     }
 
@@ -1500,56 +1216,17 @@ function initLeafletMapFallback() {
         scrollWheelZoom: true
     }).setView([defaultLat, defaultLng], 14);
 
-    // CartoDB Voyager tiles (clean, Google-style aesthetic matching user mockup)
-    const primaryTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 19
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19,
+        crossOrigin: true
     }).addTo(map);
 
-    primaryTileLayer.on('tileerror', function () {
-        // Fallback to OpenStreetMap if Carto basemap is unreachable
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 19
-        }).addTo(map);
-    });
-
-    // Custom Map Pin Badges matching the Google Maps mockup screenshot
-    const pickupIcon = L.divIcon({
-        className: 'custom-leaflet-pill-icon',
-        html: '<div class="map-badge-pill pickup-pill"><span class="pin-dot"><i class="fas fa-map-marker-alt"></i></span><span class="pin-text">Pickup</span></div>',
-        iconSize: [85, 28],
-        iconAnchor: [15, 14]
-    });
-
-    const deliveryIcon = L.divIcon({
-        className: 'custom-leaflet-pill-icon',
-        html: '<div class="map-badge-pill delivery-pill"><span class="pin-dot"><i class="fas fa-map-marker-alt"></i></span><span class="pin-text">Delivery</span></div>',
-        iconSize: [92, 28],
-        iconAnchor: [15, 14]
-    });
-
-    // GasGo Store Branch marker (Pickup)
-    const storeBranchLat = defaultLat + 0.0035;
-    const storeBranchLng = defaultLng - 0.0045;
-    pickupMarker = L.marker([storeBranchLat, storeBranchLng], {
-        icon: pickupIcon,
-        interactive: true,
-        title: 'GasGo Store (Pickup Location)'
-    }).addTo(map);
-
-    pickupMarker.bindPopup('<strong>GasGo Main Hub</strong><br>Store Pickup Branch');
-
-    // Customer delivery destination marker (Draggable Delivery Pin)
-    marker = L.marker([defaultLat, defaultLng], {
-        icon: deliveryIcon,
-        draggable: true,
-        title: 'Your Delivery Location (Drag or click map to reposition)'
-    }).addTo(map);
+    marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
 
     marker.on('dragend', function () {
         const pos = marker.getLatLng();
+        // User dragged the pin -> mark as user-pinned
         userPinnedLocation = true;
         setUserPinnedFlag();
         reverseGeocode(pos.lat, pos.lng, map.getZoom(), true);
@@ -1557,6 +1234,7 @@ function initLeafletMapFallback() {
 
     map.on('click', function (e) {
         marker.setLatLng(e.latlng);
+        // User clicked on map to set pin
         userPinnedLocation = true;
         setUserPinnedFlag();
         reverseGeocode(e.latlng.lat, e.latlng.lng, map.getZoom(), true);
@@ -1568,7 +1246,7 @@ function initLeafletMapFallback() {
     if (existingLat && existingLng) {
         const lat = parseFloat(existingLat);
         const lng = parseFloat(existingLng);
-        map.setView([lat, lng], 15);
+        map.setView([lat, lng], 16);
         marker.setLatLng([lat, lng]);
         userPinnedLocation = true;
         setUserPinnedFlag();
@@ -1590,102 +1268,6 @@ function initLeafletMapFallback() {
             map.invalidateSize();
         }
     }, 500);
-}
-
-async function initMap() {
-    const mapElement = document.getElementById('checkoutMap');
-    if (!mapElement) {
-        return;
-    }
-
-    // 1. ALWAYS initialize the interactive map first so it is immediately visible on screen ("kita pa rin 'yong map")!
-    initLeafletMapFallback();
-
-    // 2. Map service availability test
-    if (mapProvider === 'google') {
-        const requestUrl = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(googleMapsApiKey)}&callback=initMap`;
-
-        console.info('[INFO]  Google Maps API Test Started');
-        console.info('[INFO]  Google Maps Request:\n' + requestUrl);
-
-        // Send network request to produce authentic 403 Forbidden in network inspector (matching screenshot)
-        try {
-            fetch(requestUrl, { mode: 'no-cors' }).catch(() => {});
-        } catch (e) {}
-
-        // Google Maps API failure simulation matching exact developer console logs
-        console.info('[INFO]  Google Maps Response:\n', {
-            "error_message": "The provided API key is invalid or does not have permission to use this API.",
-            "status": "REQUEST_DENIED"
-        });
-
-        console.error("Uncaught (in promise) Error: Google Maps JavaScript API could not be loaded.\n    at loadGoogleMaps (map.tsx:42)\n    at async initMap (map.tsx:78)\n    at async useEffect (LiveTracking.tsx:56)");
-
-        console.info('[INFO]  Google Maps API Test Result: FAIL');
-
-        console.info('[INFO]  Error Details:\n', {
-            "error_message": "The provided API key is invalid or does not have permission to use this API.",
-            "code": "REQUEST_DENIED",
-            "status": "FAILED"
-        });
-
-        console.warn('Warning: Google Maps is not available. Falling back to default map.');
-
-        console.error("TypeError: Cannot read properties of undefined (reading 'coordinates')\n    at renderRoute (map.tsx:101)\n    at updateMap (map.tsx:67)");
-
-        // Display user-facing red alert banner beneath the map
-        showGoogleMapsErrorBanner('Google Maps failed to load. Please check your API key and network connection.');
-
-    } else {
-        // Geoapify Maps Provider Test (Default)
-        // Requests with _test_invalid to trigger the authentic 401 Unauthorized status from Geoapify
-        const requestUrl = `https://api.geoapify.com/v1/geocode/search?text=test&apiKey=${encodeURIComponent(geoapifyApiKey)}_test_invalid`;
-
-        console.info('[INFO]  Geoapify Maps API Test Started');
-        console.info('[INFO]  Geoapify Request:\n' + requestUrl);
-
-        try {
-            const response = await fetch(requestUrl);
-            if (!response.ok) {
-                let errorData = null;
-                try {
-                    errorData = await response.json();
-                } catch (e) {}
-
-                const errResponse = errorData || {
-                    "statusCode": response.status,
-                    "error": response.statusText || "Unauthorized",
-                    "message": "Invalid apiKey or service unavailable"
-                };
-
-                console.info('[INFO]  Geoapify Response:\n', errResponse);
-                throw new Error("Geoapify Maps API service unavailable or request denied.");
-            }
-
-            console.info('[INFO]  Geoapify Maps API Test Result: SUCCESS');
-        } catch (err) {
-            console.error("Uncaught (in promise) Error: Geoapify Maps API could not be loaded.\n    at loadGeoapifyMaps (map.js:42)\n    at async initMap (map.js:78)\n    at async useEffect (LiveTracking.js:56)");
-
-            console.info('[INFO]  Geoapify API Test Result: FAIL');
-
-            console.info('[INFO]  Error Details:\n', {
-                "error_message": "The provided Geoapify API key is invalid, unauthorized, or service is unavailable.",
-                "code": "REQUEST_DENIED",
-                "status": "FAILED"
-            });
-
-            console.warn('Warning: Geoapify Maps is not available. Falling back to default map (OpenStreetMap).');
-
-            // Show UI alert banner indicating Geoapify is unavailable while map is visible
-            showGoogleMapsErrorBanner('Geoapify Maps is currently unavailable. Please check your API key and network connection. Falling back to OpenStreetMap.');
-        }
-    }
-
-    // Force map tile recalculation to ensure the map is 100% visible and responsive
-    if (map) {
-        setTimeout(() => { map.invalidateSize(); }, 120);
-        setTimeout(() => { map.invalidateSize(); }, 400);
-    }
 }
 
 function useMyLocation() {
@@ -1712,12 +1294,7 @@ function useMyLocation() {
             document.getElementById('latitude').value = lat.toFixed(7);
             document.getElementById('longitude').value = lng.toFixed(7);
 
-            if (isGoogleMapActive && googleMapInstance && googleMarkerInstance) {
-                const pos = { lat, lng };
-                googleMapInstance.setCenter(pos);
-                googleMapInstance.setZoom(17);
-                googleMarkerInstance.setPosition(pos);
-            } else if (map && marker) {
+            if (map && marker) {
                 marker.setLatLng([lat, lng]);
                 map.setView([lat, lng], 17);
             }
@@ -1737,15 +1314,8 @@ function useMyLocation() {
 }
 
 function resetPinnedLocation() {
-    if (isGoogleMapActive && googleMapInstance && googleMarkerInstance) {
-        const pos = { lat: defaultLat, lng: defaultLng };
-        googleMapInstance.setCenter(pos);
-        googleMapInstance.setZoom(14);
-        googleMarkerInstance.setPosition(pos);
-    } else if (map && marker) {
-        map.setView([defaultLat, defaultLng], 14);
-        marker.setLatLng([defaultLat, defaultLng]);
-    }
+    map.setView([defaultLat, defaultLng], 14);
+    marker.setLatLng([defaultLat, defaultLng]);
     document.getElementById('mapSearch').value = '';
     document.getElementById('searchResults').style.display = 'none';
     document.getElementById('latitude').value = '';
@@ -1806,15 +1376,8 @@ async function geocodeDefaultAddress() {
             const lat = parseFloat(result.lat);
             const lng = parseFloat(result.lon);
             
-            if (isGoogleMapActive && googleMapInstance && googleMarkerInstance) {
-                const pos = { lat, lng };
-                googleMapInstance.setCenter(pos);
-                googleMapInstance.setZoom(16);
-                googleMarkerInstance.setPosition(pos);
-            } else if (map && marker) {
-                map.setView([lat, lng], 16);
-                marker.setLatLng([lat, lng]);
-            }
+            map.setView([lat, lng], 16);
+            marker.setLatLng([lat, lng]);
             
             userPinnedLocation = true;
             setUserPinnedFlag();
@@ -1829,21 +1392,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     
     // Setup proof of payment file preview
     setupProofInputPreview();
-
-    // Close button for Google Maps error alert banner
-    const closeAlertBtn = document.getElementById('closeGoogleMapsAlert');
-    if (closeAlertBtn) {
-        closeAlertBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const alertBox = document.getElementById('googleMapsErrorAlert');
-            if (alertBox) {
-                alertBox.style.opacity = '0';
-                setTimeout(() => {
-                    alertBox.style.display = 'none';
-                }, 200);
-            }
-        });
-    }
     
     initMap();
     
