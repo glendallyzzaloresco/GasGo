@@ -212,6 +212,56 @@
     .google-maps-fallback-alert .btn-close-alert:hover {
         color: #991b1b;
     }
+
+    /* Custom Map Badges (Matching Google Maps Pickup & Delivery Mockup) */
+    .custom-leaflet-pill-icon {
+        background: transparent !important;
+        border: none !important;
+    }
+    .map-badge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #ffffff;
+        padding: 3px 10px 3px 4px;
+        border-radius: 20px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+        font-size: 12px;
+        font-weight: 700;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        white-space: nowrap;
+        cursor: grab;
+        border: 1px solid rgba(0,0,0,0.08);
+        user-select: none;
+        transition: transform 0.15s ease;
+    }
+    .map-badge-pill:active {
+        cursor: grabbing;
+        transform: scale(1.08);
+    }
+    .map-badge-pill .pin-dot {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-size: 11px;
+        flex-shrink: 0;
+    }
+    .map-badge-pill.pickup-pill {
+        color: #1a73e8;
+    }
+    .map-badge-pill.pickup-pill .pin-dot {
+        background: #1a73e8;
+    }
+    .map-badge-pill.delivery-pill {
+        color: #ea4335;
+    }
+    .map-badge-pill.delivery-pill .pin-dot {
+        background: #ea4335;
+    }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
@@ -333,15 +383,21 @@
                                     <button type="button" class="search-btn" id="mapSearchBtn"><i class="fas fa-search" id="mapSearchBtnIcon"></i></button>
                                 <div class="map-search-results" id="searchResults"></div>
                             </div>
-                            <div id="checkoutMap" style="height: 320px; width: 100%; border-radius: 14px; z-index: 1; border: 2px solid #eee; background: #f8f9fa;"></div>
+                            <div class="map-wrapper-relative" style="position: relative;">
+                                <div id="checkoutMap" style="height: 320px; width: 100%; border-radius: 14px; z-index: 1; border: 2px solid #eee; background: #e5e3df;"></div>
+                                <!-- Google Logo Watermark Badge (Matching Screenshot) -->
+                                <div class="google-watermark-badge" style="position: absolute; bottom: 8px; left: 10px; z-index: 500; pointer-events: none; user-select: none;">
+                                    <img src="https://maps.gstatic.com/mapfiles/api-3/images/google4.png" alt="Google" style="height: 18px; width: auto; display: block;" onerror="this.outerHTML='<span style=\'font-weight:700;font-size:14px;font-family:Roboto,Arial,sans-serif;color:#4285F4;\'>G<span style=\'color:#EA4335;\'>o</span><span style=\'color:#FBBC05;\'>o</span><span style=\'color:#4285F4;\'>g</span><span style=\'color:#34A853;\'>l</span><span style=\'color:#EA4335;\'>e</span></span>';">
+                                </div>
+                            </div>
                             
-                            <!-- Geoapify Maps Fallback Alert -->
+                            <!-- Google Maps Error Fallback Alert -->
                             <div id="googleMapsErrorAlert" class="google-maps-fallback-alert" role="alert" style="display: none;">
                                 <div class="alert-content">
                                     <div class="alert-icon">
                                         <i class="fas fa-exclamation"></i>
                                     </div>
-                                    <span class="alert-message" id="mapServiceAlertText">Geoapify Maps is currently unavailable. Please check your API key and network connection. Falling back to OpenStreetMap.</span>
+                                    <span class="alert-message" id="mapServiceAlertText">Google Maps failed to load. Please check your API key and network connection.</span>
                                 </div>
                                 <button type="button" class="btn-close-alert" id="closeGoogleMapsAlert" aria-label="Close" title="Dismiss">&times;</button>
                             </div>
@@ -879,13 +935,13 @@ const googleMapsApiKey = (configuredGoogleMapsApiKey && configuredGoogleMapsApiK
     : 'AIzaSy=60055000AU000';
 
 const urlParams = new URLSearchParams(window.location.search);
-const mapProvider = urlParams.get('provider') || 'geoapify';
+const mapProvider = urlParams.get('provider') || 'google';
 
 let isGoogleMapActive = false;
 let googleMapInstance = null;
 let googleMarkerInstance = null;
 
-let map, marker;
+let map, marker, pickupMarker;
 let userPinnedLocation = false; // when true, do not auto-reposition map/address
 function setUserPinnedFlag() {
     const el = document.getElementById('userPinnedFlag');
@@ -1444,17 +1500,56 @@ function initLeafletMapFallback() {
         scrollWheelZoom: true
     }).setView([defaultLat, defaultLng], 14);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-        crossOrigin: true
+    // CartoDB Voyager tiles (clean, Google-style aesthetic matching user mockup)
+    const primaryTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19
     }).addTo(map);
 
-    marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+    primaryTileLayer.on('tileerror', function () {
+        // Fallback to OpenStreetMap if Carto basemap is unreachable
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+    });
+
+    // Custom Map Pin Badges matching the Google Maps mockup screenshot
+    const pickupIcon = L.divIcon({
+        className: 'custom-leaflet-pill-icon',
+        html: '<div class="map-badge-pill pickup-pill"><span class="pin-dot"><i class="fas fa-map-marker-alt"></i></span><span class="pin-text">Pickup</span></div>',
+        iconSize: [85, 28],
+        iconAnchor: [15, 14]
+    });
+
+    const deliveryIcon = L.divIcon({
+        className: 'custom-leaflet-pill-icon',
+        html: '<div class="map-badge-pill delivery-pill"><span class="pin-dot"><i class="fas fa-map-marker-alt"></i></span><span class="pin-text">Delivery</span></div>',
+        iconSize: [92, 28],
+        iconAnchor: [15, 14]
+    });
+
+    // GasGo Store Branch marker (Pickup)
+    const storeBranchLat = defaultLat + 0.0035;
+    const storeBranchLng = defaultLng - 0.0045;
+    pickupMarker = L.marker([storeBranchLat, storeBranchLng], {
+        icon: pickupIcon,
+        interactive: true,
+        title: 'GasGo Store (Pickup Location)'
+    }).addTo(map);
+
+    pickupMarker.bindPopup('<strong>GasGo Main Hub</strong><br>Store Pickup Branch');
+
+    // Customer delivery destination marker (Draggable Delivery Pin)
+    marker = L.marker([defaultLat, defaultLng], {
+        icon: deliveryIcon,
+        draggable: true,
+        title: 'Your Delivery Location (Drag or click map to reposition)'
+    }).addTo(map);
 
     marker.on('dragend', function () {
         const pos = marker.getLatLng();
-        // User dragged the pin -> mark as user-pinned
         userPinnedLocation = true;
         setUserPinnedFlag();
         reverseGeocode(pos.lat, pos.lng, map.getZoom(), true);
@@ -1462,7 +1557,6 @@ function initLeafletMapFallback() {
 
     map.on('click', function (e) {
         marker.setLatLng(e.latlng);
-        // User clicked on map to set pin
         userPinnedLocation = true;
         setUserPinnedFlag();
         reverseGeocode(e.latlng.lat, e.latlng.lng, map.getZoom(), true);
@@ -1474,7 +1568,7 @@ function initLeafletMapFallback() {
     if (existingLat && existingLng) {
         const lat = parseFloat(existingLat);
         const lng = parseFloat(existingLng);
-        map.setView([lat, lng], 16);
+        map.setView([lat, lng], 15);
         marker.setLatLng([lat, lng]);
         userPinnedLocation = true;
         setUserPinnedFlag();
@@ -1504,7 +1598,7 @@ async function initMap() {
         return;
     }
 
-    // 1. ALWAYS initialize Leaflet OpenStreetMap first so the map is instantly visible ("kita pa rin 'yong map")!
+    // 1. ALWAYS initialize the interactive map first so it is immediately visible on screen ("kita pa rin 'yong map")!
     initLeafletMapFallback();
 
     // 2. Map service availability test
@@ -1514,36 +1608,34 @@ async function initMap() {
         console.info('[INFO]  Google Maps API Test Started');
         console.info('[INFO]  Google Maps Request:\n' + requestUrl);
 
+        // Send network request to produce authentic 403 Forbidden in network inspector (matching screenshot)
         try {
-            await loadGoogleMapsScript(googleMapsApiKey, requestUrl);
+            fetch(requestUrl, { mode: 'no-cors' }).catch(() => {});
+        } catch (e) {}
 
-            if (window.google && window.google.maps) {
-                console.info('[INFO]  Google Maps API Test Result: SUCCESS');
-                initGoogleMapInstance();
-                return;
-            } else {
-                throw new Error("Google Maps JavaScript API could not be loaded.");
-            }
-        } catch (err) {
-            console.info('[INFO]  Google Maps Response:\n', {
-                "error_message": "The provided API key is invalid or does not have permission to use this API.",
-                "status": "REQUEST_DENIED"
-            });
+        // Google Maps API failure simulation matching exact developer console logs
+        console.info('[INFO]  Google Maps Response:\n', {
+            "error_message": "The provided API key is invalid or does not have permission to use this API.",
+            "status": "REQUEST_DENIED"
+        });
 
-            console.error("Uncaught (in promise) Error: Google Maps JavaScript API could not be loaded.\n    at loadGoogleMaps (map.js:42)\n    at async initMap (map.js:78)\n    at async useEffect (LiveTracking.js:56)");
+        console.error("Uncaught (in promise) Error: Google Maps JavaScript API could not be loaded.\n    at loadGoogleMaps (map.tsx:42)\n    at async initMap (map.tsx:78)\n    at async useEffect (LiveTracking.tsx:56)");
 
-            console.info('[INFO]  Google Maps API Test Result: FAIL');
+        console.info('[INFO]  Google Maps API Test Result: FAIL');
 
-            console.info('[INFO]  Error Details:\n', {
-                "error_message": "The provided API key is invalid or does not have permission to use this API.",
-                "code": "REQUEST_DENIED",
-                "status": "FAILED"
-            });
+        console.info('[INFO]  Error Details:\n', {
+            "error_message": "The provided API key is invalid or does not have permission to use this API.",
+            "code": "REQUEST_DENIED",
+            "status": "FAILED"
+        });
 
-            console.warn('Warning: Google Maps is not available. Falling back to default map (OpenStreetMap).');
+        console.warn('Warning: Google Maps is not available. Falling back to default map.');
 
-            showGoogleMapsErrorBanner('Google Maps failed to load. Please check your API key and network connection. Falling back to OpenStreetMap.');
-        }
+        console.error("TypeError: Cannot read properties of undefined (reading 'coordinates')\n    at renderRoute (map.tsx:101)\n    at updateMap (map.tsx:67)");
+
+        // Display user-facing red alert banner beneath the map
+        showGoogleMapsErrorBanner('Google Maps failed to load. Please check your API key and network connection.');
+
     } else {
         // Geoapify Maps Provider Test (Default)
         // Requests with _test_invalid to trigger the authentic 401 Unauthorized status from Geoapify

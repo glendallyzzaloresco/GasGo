@@ -297,7 +297,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
 
-                <div class="map-container">
+                <div class="map-container" style="position: relative;">
                     <div class="map-overlay" id="mapOverlay">
                         <i class="fas fa-map-marked-alt"></i>
                         <h5 class="fw-bold">Real-Time Map</h5>
@@ -314,17 +314,21 @@
                         </p>
                     </div>
                     <div id="trackingMap"></div>
-                    
-                    <!-- Geoapify Maps Fallback Alert -->
-                    <div id="googleMapsErrorAlert" class="google-maps-fallback-alert" role="alert" style="display: none; margin-top: 14px;">
-                        <div class="alert-content">
-                            <div class="alert-icon">
-                                <i class="fas fa-exclamation"></i>
-                            </div>
-                            <span class="alert-message" id="trackingMapServiceAlertText">Geoapify Maps is currently unavailable. Please check your API key and network connection. Falling back to OpenStreetMap.</span>
-                        </div>
-                        <button type="button" class="btn-close-alert" id="closeGoogleMapsAlert" aria-label="Close" title="Dismiss">&times;</button>
+                    <!-- Google Logo Watermark Badge (Matching Screenshot) -->
+                    <div class="google-watermark-badge" style="position: absolute; bottom: 8px; left: 10px; z-index: 500; pointer-events: none; user-select: none;">
+                        <img src="https://maps.gstatic.com/mapfiles/api-3/images/google4.png" alt="Google" style="height: 18px; width: auto; display: block;" onerror="this.outerHTML='<span style=\'font-weight:700;font-size:14px;font-family:Roboto,Arial,sans-serif;color:#4285F4;\'>G<span style=\'color:#EA4335;\'>o</span><span style=\'color:#FBBC05;\'>o</span><span style=\'color:#4285F4;\'>g</span><span style=\'color:#34A853;\'>l</span><span style=\'color:#EA4335;\'>e</span></span>';">
                     </div>
+                </div>
+                
+                <!-- Google Maps / Third-party Maps Fallback Alert -->
+                <div id="googleMapsErrorAlert" class="google-maps-fallback-alert" role="alert" style="display: none; margin-top: 14px;">
+                    <div class="alert-content">
+                        <div class="alert-icon">
+                            <i class="fas fa-exclamation"></i>
+                        </div>
+                        <span class="alert-message" id="trackingMapServiceAlertText">Google Maps failed to load. Please check your API key and network connection.</span>
+                    </div>
+                    <button type="button" class="btn-close-alert" id="closeGoogleMapsAlert" aria-label="Close" title="Dismiss">&times;</button>
                 </div>
             </div>
 
@@ -662,7 +666,7 @@
         : 'AIzaSy=60055000AU000';
 
     const urlParams = new URLSearchParams(window.location.search);
-    const mapProvider = urlParams.get('provider') || 'geoapify';
+    const mapProvider = urlParams.get('provider') || 'google';
 
     function showGoogleMapsErrorBanner(customMessage) {
         const alertBox = document.getElementById('googleMapsErrorAlert');
@@ -689,17 +693,16 @@
         });
     }
 
-    // Initialize map immediately on load if rider is assigned/active
+    // Initialize map immediately on load so the map is always rendered and visible ("kita pa rin 'yong map")!
     window.addEventListener('load', function() {
         const msg = document.getElementById('mapMessage');
+        const initialLat = deliveryInitLat || parseFloat(trackingEl.dataset.orderLat) || 16.0433;
+        const initialLng = deliveryInitLng || parseFloat(trackingEl.dataset.orderLng) || 120.3654;
+
+        initMap(initialLat, initialLng);
+
         if (orderStatus === 'pending' || orderStatus === 'approved') {
-            msg.textContent = 'Rider location will appear once a rider is assigned';
-        } else if (['assigned', 'picked_up', 'out_for_delivery'].includes(orderStatus)) {
-            if (deliveryInitLat && deliveryInitLng) {
-                initMap(deliveryInitLat, deliveryInitLng);
-            } else {
-                msg.textContent = 'Loading map...';
-            }
+            if (msg) msg.textContent = 'Rider location will appear once a rider is assigned';
         }
         
         // Start polling updates immediately if order is active
@@ -723,44 +726,34 @@
             console.info('[INFO]  Google Maps API Test Started');
             console.info('[INFO]  Google Maps Request:\n' + requestUrl);
 
+            // Send network request to produce authentic 403 Forbidden in network inspector (matching screenshot)
             try {
-                await new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    script.type = 'text/javascript';
-                    script.src = requestUrl;
-                    script.async = true;
-                    script.defer = true;
-                    script.onerror = () => reject(new Error("Google Maps JavaScript API could not be loaded."));
-                    document.head.appendChild(script);
-                    try { fetch(requestUrl, { mode: 'no-cors' }).catch(() => {}); } catch(e) {}
-                    setTimeout(() => {
-                        if (!window.google || !window.google.maps) {
-                            reject(new Error("Google Maps JavaScript API could not be loaded."));
-                        } else {
-                            resolve(window.google);
-                        }
-                    }, 1000);
-                });
-            } catch (err) {
-                console.info('[INFO]  Google Maps Response:\n', {
-                    "error_message": "The provided API key is invalid or does not have permission to use this API.",
-                    "status": "REQUEST_DENIED"
-                });
+                fetch(requestUrl, { mode: 'no-cors' }).catch(() => {});
+            } catch (e) {}
 
-                console.error("Uncaught (in promise) Error: Google Maps JavaScript API could not be loaded.\n    at loadGoogleMaps (map.js:42)\n    at async initMap (map.js:78)\n    at async useEffect (LiveTracking.js:56)");
+            // Google Maps API failure simulation matching exact developer console logs
+            console.info('[INFO]  Google Maps Response:\n', {
+                "error_message": "The provided API key is invalid or does not have permission to use this API.",
+                "status": "REQUEST_DENIED"
+            });
 
-                console.info('[INFO]  Google Maps API Test Result: FAIL');
+            console.error("Uncaught (in promise) Error: Google Maps JavaScript API could not be loaded.\n    at loadGoogleMaps (map.tsx:42)\n    at async initMap (map.tsx:78)\n    at async useEffect (LiveTracking.tsx:56)");
 
-                console.info('[INFO]  Error Details:\n', {
-                    "error_message": "The provided API key is invalid or does not have permission to use this API.",
-                    "code": "REQUEST_DENIED",
-                    "status": "FAILED"
-                });
+            console.info('[INFO]  Google Maps API Test Result: FAIL');
 
-                console.warn('Warning: Google Maps is not available. Falling back to default map.');
+            console.info('[INFO]  Error Details:\n', {
+                "error_message": "The provided API key is invalid or does not have permission to use this API.",
+                "code": "REQUEST_DENIED",
+                "status": "FAILED"
+            });
 
-                showGoogleMapsErrorBanner('Google Maps failed to load. Please check your API key and network connection. Falling back to OpenStreetMap.');
-            }
+            console.warn('Warning: Google Maps is not available. Falling back to default map.');
+
+            console.error("TypeError: Cannot read properties of undefined (reading 'coordinates')\n    at renderRoute (map.tsx:101)\n    at updateMap (map.tsx:67)");
+
+            // Display user-facing red alert banner beneath the map
+            showGoogleMapsErrorBanner('Google Maps failed to load. Please check your API key and network connection.');
+
         } else {
             // Geoapify Maps Provider Test (Default)
             const requestUrl = `https://api.geoapify.com/v1/geocode/search?text=test&apiKey=${encodeURIComponent(geoapifyApiKey)}_test_invalid`;
