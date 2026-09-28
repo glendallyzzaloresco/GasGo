@@ -45,12 +45,4 @@ return [
         'redirect' => env('GOOGLE_CLIENT_REDIRECT'),
     ],
 
-    'google_maps' => [
-        'key' => env('GOOGLE_MAPS_API_KEY', 'AIzaSy=60055000AU000'),
-    ],
-
-    'geoapify' => [
-        'key' => env('GEOAPIFY_API_KEY', '209322fa2c0a4def925bfb28c4c30461'),
-    ],
-
 ];
