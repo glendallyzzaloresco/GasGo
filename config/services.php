@@ -45,4 +45,8 @@ return [
         'redirect' => env('GOOGLE_CLIENT_REDIRECT'),
     ],
 
+    'google_maps' => [
+        'key' => env('GOOGLE_MAPS_API_KEY', 'AIzaSy=60055000AU000'),
+    ],
+
 ];
