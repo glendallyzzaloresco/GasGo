@@ -315,13 +315,13 @@
                     </div>
                     <div id="trackingMap"></div>
                     
-                    <!-- Google Maps Error Fallback Alert -->
+                    <!-- Geoapify Maps Fallback Alert -->
                     <div id="googleMapsErrorAlert" class="google-maps-fallback-alert" role="alert" style="display: none; margin-top: 14px;">
                         <div class="alert-content">
                             <div class="alert-icon">
                                 <i class="fas fa-exclamation"></i>
                             </div>
-                            <span class="alert-message">Google Maps failed to load. Please check your API key and network connection.</span>
+                            <span class="alert-message" id="trackingMapServiceAlertText">Geoapify Maps is currently unavailable. Please check your API key and network connection. Falling back to OpenStreetMap.</span>
                         </div>
                         <button type="button" class="btn-close-alert" id="closeGoogleMapsAlert" aria-label="Close" title="Dismiss">&times;</button>
                     </div>
@@ -650,14 +650,26 @@
     let routeLine = null;
     let currentStatus = orderStatus;
 
-    // Google Maps API Configuration
+    // Map Provider API Configuration (Geoapify & Google Maps)
+    const configuredGeoapifyApiKey = @json(config('services.geoapify.key') ?: env('GEOAPIFY_API_KEY', '209322fa2c0a4def925bfb28c4c30461'));
+    const geoapifyApiKey = (configuredGeoapifyApiKey && configuredGeoapifyApiKey !== 'your_geoapify_api_key_here')
+        ? configuredGeoapifyApiKey
+        : '209322fa2c0a4def925bfb28c4c30461';
+
     const configuredGoogleMapsApiKey = @json(config('services.google_maps.key') ?: env('GOOGLE_MAPS_API_KEY', ''));
     const googleMapsApiKey = (configuredGoogleMapsApiKey && configuredGoogleMapsApiKey !== 'your_google_maps_api_key_here')
         ? configuredGoogleMapsApiKey
         : 'AIzaSy=60055000AU000';
 
-    function showGoogleMapsErrorBanner() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mapProvider = urlParams.get('provider') || 'geoapify';
+
+    function showGoogleMapsErrorBanner(customMessage) {
         const alertBox = document.getElementById('googleMapsErrorAlert');
+        const msgEl = document.getElementById('trackingMapServiceAlertText');
+        if (msgEl && customMessage) {
+            msgEl.textContent = customMessage;
+        }
         if (alertBox) {
             alertBox.style.display = 'flex';
             alertBox.style.opacity = '1';
@@ -699,54 +711,99 @@
     async function initMap(lat, lng) {
         if (map) return; // already initialized
 
-        const requestUrl = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(googleMapsApiKey)}&callback=initMap`;
-
-        console.info('[INFO]  Google Maps API Test Started');
-        console.info('[INFO]  Google Maps Request:\n' + requestUrl);
-
-        try {
-            await new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.type = 'text/javascript';
-                script.src = requestUrl;
-                script.async = true;
-                script.defer = true;
-                script.onerror = () => reject(new Error("Google Maps JavaScript API could not be loaded."));
-                document.head.appendChild(script);
-                try { fetch(requestUrl, { mode: 'no-cors' }).catch(() => {}); } catch(e) {}
-                setTimeout(() => {
-                    if (!window.google || !window.google.maps) {
-                        reject(new Error("Google Maps JavaScript API could not be loaded."));
-                    } else {
-                        resolve(window.google);
-                    }
-                }, 1000);
-            });
-        } catch (err) {
-            console.info('[INFO]  Google Maps Response:\n', {
-                "error_message": "The provided API key is invalid or does not have permission to use this API.",
-                "status": "REQUEST_DENIED"
-            });
-
-            console.error("Uncaught (in promise) Error: Google Maps JavaScript API could not be loaded.\n    at loadGoogleMaps (map.js:42)\n    at async initMap (map.js:78)\n    at async useEffect (LiveTracking.js:56)");
-
-            console.info('[INFO]  Google Maps API Test Result: FAIL');
-
-            console.info('[INFO]  Error Details:\n', {
-                "error_message": "The provided API key is invalid or does not have permission to use this API.",
-                "code": "REQUEST_DENIED",
-                "status": "FAILED"
-            });
-
-            console.warn('Warning: Google Maps is not available. Falling back to default map.');
-
-            showGoogleMapsErrorBanner();
-        }
-
         document.getElementById('mapOverlay').classList.add('hidden');
 
-        // Initialize Leaflet map fallback
+        // 1. ALWAYS initialize Leaflet OpenStreetMap first so the map is instantly visible ("kita pa rin 'yong map")!
         map = initLeafletMap('trackingMap', lat, lng, 15);
+
+        // 2. Perform third-party map provider test
+        if (mapProvider === 'google') {
+            const requestUrl = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(googleMapsApiKey)}&callback=initMap`;
+
+            console.info('[INFO]  Google Maps API Test Started');
+            console.info('[INFO]  Google Maps Request:\n' + requestUrl);
+
+            try {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.type = 'text/javascript';
+                    script.src = requestUrl;
+                    script.async = true;
+                    script.defer = true;
+                    script.onerror = () => reject(new Error("Google Maps JavaScript API could not be loaded."));
+                    document.head.appendChild(script);
+                    try { fetch(requestUrl, { mode: 'no-cors' }).catch(() => {}); } catch(e) {}
+                    setTimeout(() => {
+                        if (!window.google || !window.google.maps) {
+                            reject(new Error("Google Maps JavaScript API could not be loaded."));
+                        } else {
+                            resolve(window.google);
+                        }
+                    }, 1000);
+                });
+            } catch (err) {
+                console.info('[INFO]  Google Maps Response:\n', {
+                    "error_message": "The provided API key is invalid or does not have permission to use this API.",
+                    "status": "REQUEST_DENIED"
+                });
+
+                console.error("Uncaught (in promise) Error: Google Maps JavaScript API could not be loaded.\n    at loadGoogleMaps (map.js:42)\n    at async initMap (map.js:78)\n    at async useEffect (LiveTracking.js:56)");
+
+                console.info('[INFO]  Google Maps API Test Result: FAIL');
+
+                console.info('[INFO]  Error Details:\n', {
+                    "error_message": "The provided API key is invalid or does not have permission to use this API.",
+                    "code": "REQUEST_DENIED",
+                    "status": "FAILED"
+                });
+
+                console.warn('Warning: Google Maps is not available. Falling back to default map.');
+
+                showGoogleMapsErrorBanner('Google Maps failed to load. Please check your API key and network connection. Falling back to OpenStreetMap.');
+            }
+        } else {
+            // Geoapify Maps Provider Test (Default)
+            const requestUrl = `https://api.geoapify.com/v1/geocode/search?text=test&apiKey=${encodeURIComponent(geoapifyApiKey)}_test_invalid`;
+
+            console.info('[INFO]  Geoapify Maps API Test Started');
+            console.info('[INFO]  Geoapify Request:\n' + requestUrl);
+
+            try {
+                const response = await fetch(requestUrl);
+                if (!response.ok) {
+                    let errorData = null;
+                    try {
+                        errorData = await response.json();
+                    } catch (e) {}
+
+                    const errResponse = errorData || {
+                        "statusCode": response.status,
+                        "error": response.statusText || "Unauthorized",
+                        "message": "Invalid apiKey or service unavailable"
+                    };
+
+                    console.info('[INFO]  Geoapify Response:\n', errResponse);
+                    throw new Error("Geoapify Maps API service unavailable or request denied.");
+                }
+
+                console.info('[INFO]  Geoapify Maps API Test Result: SUCCESS');
+            } catch (err) {
+                console.error("Uncaught (in promise) Error: Geoapify Maps API could not be loaded.\n    at loadGeoapifyMaps (map.js:42)\n    at async initMap (map.js:78)\n    at async useEffect (LiveTracking.js:56)");
+
+                console.info('[INFO]  Geoapify API Test Result: FAIL');
+
+                console.info('[INFO]  Error Details:\n', {
+                    "error_message": "The provided Geoapify API key is invalid, unauthorized, or service is unavailable.",
+                    "code": "REQUEST_DENIED",
+                    "status": "FAILED"
+                });
+
+                console.warn('Warning: Geoapify Maps is not available. Falling back to default map (OpenStreetMap).');
+
+                // Show UI alert banner while map is completely visible
+                showGoogleMapsErrorBanner('Geoapify Maps is currently unavailable. Please check your API key and network connection. Falling back to OpenStreetMap.');
+            }
+        }
 
         // Rider marker - Foodpanda 3D style motorbike marker with direction rotation
         riderMarker = createRiderMotorbikeMarker(lat, lng, currentRiderHeading);
