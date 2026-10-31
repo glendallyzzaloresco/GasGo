@@ -422,8 +422,8 @@
 
         $fullStockLabel = $isWaterNiche ? 'Full Gallons' : ($isFoodNiche ? 'Menu Items' : ($isApplianceNiche ? 'In-Stock Units' : 'Full Tanks'));
         $emptyStockLabel = $isWaterNiche ? 'Empty Gallons' : ($isFoodNiche ? 'Portions Sold' : ($isApplianceNiche ? 'Total Stocked' : 'Empty Tanks'));
-        $receivedTodayLabel = $isWaterNiche ? 'Full Gallons Received Today' : ($isFoodNiche ? 'Stock Units Received Today' : ($isApplianceNiche ? 'Units Restocked Today' : 'Full Cylinders Received Today'));
-        $releasedTodayLabel = $isWaterNiche ? 'Gallons Delivered Today' : ($isFoodNiche ? 'Orders Dispatched Today' : ($isApplianceNiche ? 'Units Dispatched / Sold Today' : 'Full Cylinders Released Today'));
+        $receivedTodayLabel = $isWaterNiche ? 'Gallons Received Today' : ($isFoodNiche ? 'Stock Units Received Today' : ($isApplianceNiche ? 'Units Restocked Today' : 'Cylinders Received Today'));
+        $releasedTodayLabel = $isWaterNiche ? 'Gallons Delivered Today' : ($isFoodNiche ? 'Orders Dispatched Today' : ($isApplianceNiche ? 'Units Dispatched / Sold Today' : 'Cylinders Released Today'));
         $emptyReceivedTodayLabel = $isWaterNiche ? 'Empty Gallons Returned Today' : ($isFoodNiche ? 'Orders Completed Today' : ($isApplianceNiche ? 'Registered / In Service' : 'Empty Cylinders Received Today'));
         $inventorySubtitle = $isWaterNiche ? 'Live stock overview by water container types and accessories.' : ($isFoodNiche ? 'Live stock overview by menu items, snacks, and beverages.' : ($isApplianceNiche ? 'Live stock overview by appliance models and parts.' : 'Live stock overview by product and cylinder size.'));
         $movementSubtitle = $isWaterNiche ? 'Recent water container movements with refill and return flow details.' : ($isFoodNiche ? 'Recent food portion movements and dispatch history.' : ($isApplianceNiche ? 'Recent appliance replenishment and distribution flow details.' : 'Recent cylinder movements with full and empty flow details.'));
@@ -763,7 +763,7 @@
                                         <td>
                                             <div class="inventory-card-actions">
                                                 <button type="button" class="btn btn-sm btn-success" onclick="setAdjustInventory('{{ $inventory->id }}', '{{ addslashes($inventory->product->name) }}', '{{ (int) $inventory->quantity_on_hand }}', {{ $isExchangeable ? 'true' : 'false' }}, '{{ addslashes($inventory->supplier ?? '') }}')" data-bs-toggle="modal" data-bs-target="#adjustStockModal">
-                                                    <i class="bi bi-plus-circle me-1"></i>Add Stock
+                                                    <i class="bi bi-sliders me-1"></i>Manage
                                                 </button>
                                                 <a href="{{ route('admin.inventory.show', $inventory) }}" class="btn btn-sm btn-outline-primary">
                                                     <i class="bi bi-eye me-1"></i>Details
@@ -815,7 +815,7 @@
                                         <td class="text-muted small">{{ $freebie->updated_at ? $freebie->updated_at->format('M d, Y') : '—' }}</td>
                                         <td>
                                             <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#adjustStockModal" onclick="setAdjustFreebie({{ $freebie->id }}, '{{ addslashes($freebie->name) }}', '{{ (int)$freebie->stock }}', '{{ addslashes($freebie->supplier ?? '') }}')">
-                                                <i class="bi bi-plus-circle me-1"></i>Add Stock
+                                                <i class="bi bi-sliders me-1"></i>Manage
                                             </button>
                                             <a href="{{ route('admin.products', ['tab' => 'freebies']) }}" class="btn btn-sm btn-outline-secondary ms-1" title="Edit details">
                                                 <i class="bi bi-pencil"></i>
@@ -1246,7 +1246,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="adjustStockModalLabel"><i class="bi bi-plus-circle me-2"></i>Add Stock</h5>
+                <h5 class="modal-title" id="adjustStockModalLabel"><i class="bi bi-sliders me-2"></i>Manage Stock</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="adjustStockForm" method="POST">
@@ -1261,8 +1261,8 @@
                         <label class="form-label fw-semibold">Adjustment Type</label>
                         <select name="type" id="adjustType" class="form-select" required>
                             <option value="">Select type</option>
-                            <option value="stock_in">Stock In (Full Cylinders Received)</option>
-                            <option value="stock_out">Stock Out (Full Cylinders Released)</option>
+                            <option value="stock_in">Stock In (Cylinders Received)</option>
+                            <option value="stock_out">Stock Out (Cylinders Released)</option>
                             <option value="empty_in">Empty Cylinders Received (Returned Empties)</option>
                             <option value="empty_out">Empty Cylinders Released (Sent for Refill)</option>
                             <option value="return">Customer Return</option>
@@ -1319,8 +1319,8 @@ function setAdjustInventory(inventoryId, productName, currentStock, isCylinder =
     const containerWord = "{{ $containerNameSingular }}";
     if (isCylinder) {
         const options = [
-            { value: 'stock_in', label: `Stock In (Full ${containerWord}s Received / Restocked)` },
-            { value: 'stock_out', label: `Stock Out (Full ${containerWord}s Released / Sold)` },
+            { value: 'stock_in', label: `Stock In (${containerWord}s Received / Restocked)` },
+            { value: 'stock_out', label: `Stock Out (${containerWord}s Released / Sold)` },
             { value: 'empty_in', label: `Empty ${containerWord}s Received (Returned Empties)` },
             { value: 'empty_out', label: `Empty ${containerWord}s Released (Sent for Refill / Supplier)` },
             { value: 'return', label: 'Customer Return' },
@@ -1334,7 +1334,7 @@ function setAdjustInventory(inventoryId, productName, currentStock, isCylinder =
         });
     } else {
         const options = [
-            { value: 'stock_in', label: 'Stock In (Add Stock / Restock)' },
+            { value: 'stock_in', label: 'Stock In (Restock)' },
             { value: 'stock_out', label: 'Stock Out (Manual Stock Out)' },
             { value: 'return', label: 'Customer Return' },
             { value: 'damage', label: 'Damage / Defective' }
@@ -1371,7 +1371,7 @@ function setAdjustFreebie(freebieId, freebieName, currentStock, supplier = '') {
     select.appendChild(defaultOpt);
 
     const options = [
-        { value: 'stock_in', label: 'Stock In (Add Stock / Freebies Received)' },
+        { value: 'stock_in', label: 'Stock In (Restock / Freebies Received)' },
         { value: 'stock_out', label: 'Stock Out (Manual Stock Out)' },
         { value: 'return', label: 'Customer Return' },
         { value: 'damage', label: 'Damage / Defective / Lost' },
